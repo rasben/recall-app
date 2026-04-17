@@ -17,6 +17,8 @@ button {
 }
 
 @theme inline {
+  --breakpoint-xs: 32rem;
+
   --font-head: "Archivo Black", sans-serif;
   --font-sans: "Space Grotesk", sans-serif;
   --shadow-xs: 1px 1px 0 0 var(--border);

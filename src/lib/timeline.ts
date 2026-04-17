@@ -15,14 +15,17 @@ export function addDaysIso(iso: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function formatDayHeading(iso: string): string {
+export function formatDayHeadingParts(iso: string): { weekday: string; monthDay: string } {
   const d = new Date(iso + "T12:00:00");
-  const today = todayIso();
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().slice(0, 10);
+  return {
+    weekday: d.toLocaleDateString("en-US", { weekday: "long" }),
+    monthDay: d.toLocaleDateString("en-US", { month: "long", day: "numeric" }),
+  };
+}
 
-  return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+export function formatDayHeading(iso: string): string {
+  const { weekday, monthDay } = formatDayHeadingParts(iso);
+  return `${weekday}, ${monthDay}`;
 }
 
 export function groupEventsByHour(events: TimelineEvent[]): HourGroup[] {

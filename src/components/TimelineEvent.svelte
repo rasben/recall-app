@@ -30,7 +30,7 @@
 <button
   type="button"
   onclick={onToggle}
-  class="timeline-event-btn relative flex w-full min-w-0 max-w-full cursor-pointer items-start gap-3 border-2 bg-card py-2 pl-3 pr-2 text-left shadow-sm transition-all hover:z-10 focus-within:z-10 hover:shadow-none
+  class="timeline-event-btn relative flex w-full min-w-0 max-w-full cursor-pointer items-start gap-3 border-2 bg-card py-2 pl-3 pr-2 text-left shadow-sm transition-all hover:shadow-none
     {done ? 'opacity-50' : ''}"
 >
   <span class="w-10 shrink-0 pt-0.5 font-mono text-xs text-muted-foreground">{event.time}</span>
@@ -44,10 +44,10 @@
     </div>
   {/if}
 
-  <div class="min-w-0 max-w-full flex-1 pr-10">
-    <p class="truncate text-sm font-medium leading-tight {done ? 'line-through' : ''}">{event.title}</p>
+  <div class="timeline-event-body min-w-0 max-w-full flex-1 pr-10">
+    <p class="timeline-clamp-1 text-sm font-medium leading-tight {done ? 'line-through' : ''}">{event.title}</p>
     {#if event.detail}
-      <p class="detail-expand mt-0.5 min-w-0 max-w-full text-xs text-muted-foreground">
+      <p class="timeline-clamp-1 mt-0.5 min-w-0 max-w-full text-xs text-muted-foreground">
         {event.detail}
       </p>
     {/if}
@@ -74,16 +74,20 @@
 </button>
 
 <style>
-  /* Single-line ellipsis by default; full wrapped text when hovering the row (Tailwind group-hover was unreliable). */
-  .timeline-event-btn .detail-expand {
+  /* One-line ellipsis; unwrap on hover/focus-within. Title used to use Tailwind truncate (no hover reset). */
+  .timeline-event-btn .timeline-clamp-1 {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     overflow-wrap: anywhere;
   }
-  .timeline-event-btn:hover .detail-expand {
+  .timeline-event-btn:is(:hover, :focus-within) .timeline-clamp-1 {
     white-space: normal;
     overflow: visible;
     text-overflow: clip;
+  }
+  .timeline-event-btn:is(:hover, :focus-within) .timeline-event-body {
+    position: relative;
+    z-index: 1;
   }
 </style>

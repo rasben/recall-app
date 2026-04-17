@@ -103,7 +103,7 @@
           <div class="min-w-0 flex-1 space-y-2">
             {#each group.items as { event, index } (`${selectedDate}-${event.id}`)}
               <div
-                class="will-change-transform"
+                class="relative z-0 will-change-transform has-[.timeline-event-btn:is(:hover,:focus-within)]:z-10 has-[.timeline-event-btn:is(:hover,:focus-within)]:overflow-visible"
                 in:fly|global={{
                   y: 22,
                   duration: ROW_FLY_MS,
