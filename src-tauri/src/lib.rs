@@ -1,6 +1,7 @@
 mod commands;
 mod db;
 mod state;
+mod timeline;
 
 use tauri_specta::Builder;
 use tauri::Manager;
@@ -19,6 +20,7 @@ pub fn run() {
             commands::settings::set_git_enabled,
             commands::settings::get_git_scan_path,
             commands::settings::set_git_scan_path,
+            commands::timeline::get_timeline_for_day,
         ]);
 
     #[cfg(debug_assertions)]

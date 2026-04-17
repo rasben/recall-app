@@ -6,54 +6,58 @@
   import FileText from "@lucide/svelte/icons/file-text";
   import MessageSquare from "@lucide/svelte/icons/message-square";
   import TicketCheck from "@lucide/svelte/icons/ticket-check";
-  import type { RecallEvent } from "$lib/timeline";
+  import type { TimelineEvent, TimelineEventSource } from "../bindings";
   import type { Component } from "svelte";
 
-  let { event, done = false, onToggle }: { event: RecallEvent; done?: boolean; onToggle?: () => void } = $props();
+  let { event, done = false, onToggle }: { event: TimelineEvent; done?: boolean; onToggle?: () => void } = $props();
 
-  const sourceConfig: Record<string, { icon: Component; label: string; color: string }> = {
-    git:      { icon: GitCommit,     label: "Git",      color: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300" },
-    github:   { icon: Github,        label: "GitHub",   color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
-    calendar: { icon: Calendar,      label: "Calendar", color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" },
-    gmail:    { icon: Mail,          label: "Gmail",    color: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300" },
-    drive:    { icon: FileText,      label: "Drive",    color: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" },
-    jira:     { icon: TicketCheck,   label: "JIRA",     color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" },
-    zulip:    { icon: MessageSquare, label: "Zulip",    color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300" },
+  const sourceConfig: Record<
+    TimelineEventSource,
+    { icon: Component; label: string; color: string }
+  > = {
+    git: { icon: GitCommit, label: "Git", color: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300" },
+    github: { icon: Github, label: "GitHub", color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
+    calendar: { icon: Calendar, label: "Calendar", color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" },
+    gmail: { icon: Mail, label: "Gmail", color: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300" },
+    drive: { icon: FileText, label: "Drive", color: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" },
+    jira: { icon: TicketCheck, label: "JIRA", color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" },
+    zulip: { icon: MessageSquare, label: "Zulip", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300" },
   };
 
-  let config = $derived(sourceConfig[event.source] ?? sourceConfig.git);
+  let config = $derived(sourceConfig[event.source]);
 </script>
 
 <button
   type="button"
   onclick={onToggle}
-  class="w-full flex relative items-start gap-3 border-2 bg-card pl-3 pr-2 py-2 shadow-sm hover:shadow-none transition-all cursor-pointer text-left
+  class="timeline-event-btn relative flex w-full min-w-0 max-w-full cursor-pointer items-start gap-3 overflow-x-hidden border-2 bg-card py-2 pl-3 pr-2 text-left shadow-sm transition-all hover:shadow-none
     {done ? 'opacity-50' : ''}"
 >
-
-  <span class="text-xs font-mono text-muted-foreground pt-0.5 w-10 shrink-0">{event.time}</span>
+  <span class="w-10 shrink-0 pt-0.5 font-mono text-xs text-muted-foreground">{event.time}</span>
 
   {#if config}
     {@const Icon = config.icon}
-    <div class="shrink-0 mt-0.5">
-      <span class="inline-flex items-center justify-center size-6 border {config.color}">
+    <div class="mt-0.5 shrink-0">
+      <span class="inline-flex size-6 items-center justify-center border {config.color}">
         <Icon class="size-3.5" />
       </span>
     </div>
   {/if}
 
-  <div class="flex-1 min-w-0">
-    <p class="font-medium text-sm leading-tight truncate {done ? 'line-through' : ''}">{event.title}</p>
+  <div class="min-w-0 max-w-full flex-1 pr-10">
+    <p class="truncate text-sm font-medium leading-tight {done ? 'line-through' : ''}">{event.title}</p>
     {#if event.detail}
-      <p class="text-xs text-muted-foreground mt-0.5 truncate">{event.detail}</p>
+      <p class="detail-expand mt-0.5 min-w-0 max-w-full text-xs text-muted-foreground">
+        {event.detail}
+      </p>
     {/if}
   </div>
 
-  <div class="relative shrink-0 self-end mt-0.5">
+  <div class="relative mt-0.5 shrink-0 self-end">
     <img
       src="/harvest.svg"
       alt={done ? "Logged in Harvest" : "Not logged in Harvest"}
-      class="block size-3 transition-all {done ? '' : 'grayscale opacity-25'}"
+      class="block size-3 transition-all {done ? '' : 'opacity-25 grayscale'}"
     />
     {#if done}
       <span
@@ -62,9 +66,24 @@
       >✔︎</span>
     {/if}
   </div>
-  <span class="absolute bg-foreground text-background top-0 right-0 py-0.5 px-1 text-[10px] font-head uppercase tracking-wide shrink-0">
-      {config.label}
+  <span
+    class="absolute right-0 top-0 shrink-0 bg-foreground px-1 py-0.5 font-head text-[8px] uppercase tracking-widest text-background"
+  >
+    {config.label}
   </span>
-
-
 </button>
+
+<style>
+  /* Single-line ellipsis by default; full wrapped text when hovering the row (Tailwind group-hover was unreliable). */
+  .timeline-event-btn .detail-expand {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow-wrap: anywhere;
+  }
+  .timeline-event-btn:hover .detail-expand {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+  }
+</style>

@@ -1,12 +1,8 @@
-export type RecallEvent = {
-  time: string;
-  source: string;
-  title: string;
-  detail?: string;
-  url?: string;
-};
+import type { TimelineEvent } from "../bindings";
 
-export type IndexedEvent = { event: RecallEvent; index: number };
+export type { TimelineEvent, TimelineEventSource } from "../bindings";
+
+export type IndexedEvent = { event: TimelineEvent; index: number };
 export type HourGroup = { hour: string; items: IndexedEvent[] };
 
 export function todayIso(): string {
@@ -26,13 +22,10 @@ export function formatDayHeading(iso: string): string {
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = yesterday.toISOString().slice(0, 10);
 
-  const weekday = d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
-  if (iso === today) return `Today — ${weekday}`;
-  if (iso === yesterdayStr) return `Yesterday — ${weekday}`;
-  return weekday;
+  return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 }
 
-export function groupEventsByHour(events: RecallEvent[]): HourGroup[] {
+export function groupEventsByHour(events: TimelineEvent[]): HourGroup[] {
   const groups: HourGroup[] = [];
   let currentHour = "";
   for (let i = 0; i < events.length; i++) {

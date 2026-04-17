@@ -89,6 +89,15 @@ pub(crate) fn save_val(state: &State<'_, AppState>, key: &str, value: &str) -> R
     Ok(())
 }
 
+/// Git source enabled + optional scan root (used by timeline commands).
+pub(crate) fn git_source_settings(state: &State<'_, AppState>) -> (bool, Option<String>) {
+    let enabled = get_val(state, KEY_GIT_ENABLED)
+        .map(|v| v == "true")
+        .unwrap_or(false);
+    let path = get_val(state, KEY_GIT_SCAN_PATH);
+    (enabled, path)
+}
+
 pub(crate) fn get_val(state: &State<'_, AppState>, key: &str) -> Option<String> {
     let conn = state.db.lock().ok()?;
 

@@ -48,6 +48,14 @@ async setGitScanPath(path: string) : Promise<Result<null, string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async getTimelineForDay(day: string) : Promise<Result<TimelineEvent[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_timeline_for_day", { day }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -62,6 +70,22 @@ async setGitScanPath(path: string) : Promise<Result<null, string>> {
 /** user-defined types **/
 
 export type Language = "Danish" | "English"
+/**
+ * One row on the timeline (all sources normalize to this shape).
+ */
+export type TimelineEvent = { 
+/**
+ * Stable id for UI state (e.g. Harvest toggles), e.g. `git:<repo>:<sha>`.
+ */
+id: string; 
+/**
+ * Local time `HH:MM` for the selected calendar day.
+ */
+time: string; source: TimelineEventSource; title: string; detail: string | null; url: string | null }
+/**
+ * Activity source for the day timeline (matches frontend `TimelineEvent` styling keys).
+ */
+export type TimelineEventSource = "git" | "github" | "calendar" | "gmail" | "drive" | "jira" | "zulip"
 
 /** tauri-specta globals **/
 
