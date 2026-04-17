@@ -2,6 +2,7 @@
   import { fade } from "svelte/transition";
   import { Button } from "$lib/components/ui/button/index.js";
   import SettingsIcon from "@lucide/svelte/icons/settings";
+  import CloseIcon from "@lucide/svelte/icons/x";
   import Settings from "../components/Settings.svelte";
   import Main from "../components/Main.svelte";
 
@@ -9,14 +10,18 @@
 </script>
 
 <Button
-  variant="outline"
+  variant={settingsOpen ? "secondary" : "outline"}
   size="icon"
-  class="fixed bg-background top-8 right-8 z-50"
+  class="fixed top-8 right-8 z-50"
   aria-pressed={settingsOpen}
   aria-label={settingsOpen ? "Close settings" : "Open settings"}
   onclick={() => (settingsOpen = !settingsOpen)}
 >
-  <SettingsIcon />
+  {#if settingsOpen}
+    <CloseIcon />
+  {:else}
+    <SettingsIcon />
+  {/if}
 </Button>
 
 <main class="flex min-h-screen flex-col p-8">
