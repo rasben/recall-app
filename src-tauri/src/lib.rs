@@ -12,14 +12,10 @@ use state::AppState;
 pub fn run() {
     let builder = Builder::<tauri::Wry>::new()
         .commands(tauri_specta::collect_commands![
-            commands::settings::get_language,
-            commands::settings::set_language,
-            commands::settings::get_theme,
-            commands::settings::set_theme,
-            commands::settings::get_git_enabled,
-            commands::settings::set_git_enabled,
-            commands::settings::get_git_scan_path,
-            commands::settings::set_git_scan_path,
+            commands::settings_ui::set_settings_ui,
+            commands::settings_ui::get_settings_ui,
+            commands::settings_git::set_settings_git,
+            commands::settings_git::get_settings_git,
             commands::timeline::get_timeline_for_day,
             commands::harvest_done::get_timeline_harvest_done_for_event_ids,
             commands::harvest_done::set_timeline_harvest_done,

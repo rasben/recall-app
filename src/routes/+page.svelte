@@ -3,7 +3,7 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import SettingsIcon from "@lucide/svelte/icons/settings";
   import CloseIcon from "@lucide/svelte/icons/x";
-  import Settings from "../components/Settings.svelte";
+  import Settings from "../components/settings/Settings.svelte";
   import Main from "../components/Main.svelte";
 
   let settingsOpen = $state(false);

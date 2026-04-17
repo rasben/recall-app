@@ -5,49 +5,27 @@
 
 
 export const commands = {
-async getLanguage() : Promise<Language | null> {
-    return await TAURI_INVOKE("get_language");
-},
-async setLanguage(language: Language) : Promise<Result<null, string>> {
+async setSettingsUi(settings: SettingsUi) : Promise<Result<null, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("set_language", { language }) };
+    return { status: "ok", data: await TAURI_INVOKE("set_settings_ui", { settings }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async getTheme() : Promise<string | null> {
-    return await TAURI_INVOKE("get_theme");
+async getSettingsUi() : Promise<SettingsUi | null> {
+    return await TAURI_INVOKE("get_settings_ui");
 },
-async setTheme(theme: string) : Promise<Result<null, string>> {
+async setSettingsGit(settings: SettingsGit) : Promise<Result<null, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("set_theme", { theme }) };
+    return { status: "ok", data: await TAURI_INVOKE("set_settings_git", { settings }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async getGitEnabled() : Promise<boolean> {
-    return await TAURI_INVOKE("get_git_enabled");
-},
-async setGitEnabled(enabled: boolean) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("set_git_enabled", { enabled }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async getGitScanPath() : Promise<string | null> {
-    return await TAURI_INVOKE("get_git_scan_path");
-},
-async setGitScanPath(path: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("set_git_scan_path", { path }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
+async getSettingsGit() : Promise<SettingsGit | null> {
+    return await TAURI_INVOKE("get_settings_git");
 },
 async getTimelineForDay(day: string) : Promise<Result<TimelineEvent[], string>> {
     try {
@@ -85,7 +63,8 @@ async setTimelineHarvestDone(eventId: string, done: boolean) : Promise<Result<nu
 
 /** user-defined types **/
 
-export type Language = "Danish" | "English"
+export type SettingsGit = { enabled: boolean; path: string }
+export type SettingsUi = { theme: string }
 /**
  * One row on the timeline (all sources normalize to this shape).
  */

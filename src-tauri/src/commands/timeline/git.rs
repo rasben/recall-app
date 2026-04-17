@@ -5,24 +5,28 @@ use std::process::Command;
 use chrono::{Local, NaiveDate, TimeZone};
 use tauri::State;
 
-use crate::commands::settings::git_source_settings;
+use crate::commands::settings_git::get_settings_git;
 use crate::state::AppState;
 use crate::timeline::{TimelineEvent, TimelineEventSource};
 
 const MAX_SCAN_DEPTH: u32 = 14;
 
-#[tauri::command]
-#[specta::specta]
-pub fn get_timeline_for_day(state: State<'_, AppState>, day: String) -> Result<Vec<TimelineEvent>, String> {
-    let (git_enabled, scan_path) = git_source_settings(&state);
-    if !git_enabled {
-        return Ok(Vec::new());
-    }
-    let Some(root) = scan_path.filter(|s| !s.is_empty()) else {
+pub(super) fn events_for_day(
+    state: &State<'_, AppState>,
+    day: &str,
+) -> Result<Vec<TimelineEvent>, String> {
+    let Some(settings) = get_settings_git(state.clone()) else {
         return Ok(Vec::new());
     };
+    if !settings.enabled {
+        return Ok(Vec::new());
+    }
+    let root = settings.path;
+    if root.is_empty() {
+        return Ok(Vec::new());
+    }
 
-    let day_naive = NaiveDate::parse_from_str(&day, "%Y-%m-%d").map_err(|_| {
+    let day_naive = NaiveDate::parse_from_str(day, "%Y-%m-%d").map_err(|_| {
         format!("Invalid date (expected YYYY-MM-DD): {day}")
     })?;
 
@@ -51,7 +55,8 @@ pub fn get_timeline_for_day(state: State<'_, AppState>, day: String) -> Result<V
     }
 
     let mut repos = Vec::new();
-    collect_git_repo_roots(&root_path, &mut repos, 0).map_err(|e| format!("Failed to scan {root}: {e}"))?;
+    collect_git_repo_roots(&root_path, &mut repos, 0)
+        .map_err(|e| format!("Failed to scan {root}: {e}"))?;
 
     if repos.is_empty() {
         return Ok(Vec::new());

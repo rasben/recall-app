@@ -8,8 +8,8 @@
     const { children } = $props();
 
     onMount(async () => {
-        const saved = await commands.getTheme();
-        applyTheme(saved ?? "system");
+        const settingsUI = await commands.getSettingsUi();
+        applyTheme(settingsUI?.theme ?? "system");
     });
 </script>
 
