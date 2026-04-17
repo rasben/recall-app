@@ -14,7 +14,7 @@ const MAX_SCAN_DEPTH: u32 = 14;
 pub(super) fn events_for_day(
     state: &State<'_, AppState>,
     day: &str,
-) -> Result<Vec<TimelineEvent>, String> {
+) -> Result<Vec<(i64, TimelineEvent)>, String> {
     let Some(settings) = get_settings_git(state.clone()) else {
         return Ok(Vec::new());
     };
@@ -26,16 +26,11 @@ pub(super) fn events_for_day(
         return Ok(Vec::new());
     }
 
-    let day_naive = NaiveDate::parse_from_str(day, "%Y-%m-%d").map_err(|_| {
-        format!("Invalid date (expected YYYY-MM-DD): {day}")
-    })?;
+    let day_naive = NaiveDate::parse_from_str(day, "%Y-%m-%d")
+        .map_err(|_| format!("Invalid date (expected YYYY-MM-DD): {day}"))?;
 
-    let since = day_naive
-        .and_hms_opt(0, 0, 0)
-        .ok_or("Invalid day start")?;
-    let until = day_naive
-        .and_hms_opt(23, 59, 59)
-        .ok_or("Invalid day end")?;
+    let since = day_naive.and_hms_opt(0, 0, 0).ok_or("Invalid day start")?;
+    let until = day_naive.and_hms_opt(23, 59, 59).ok_or("Invalid day end")?;
 
     let since_local = Local
         .from_local_datetime(&since)
@@ -137,7 +132,7 @@ pub(super) fn events_for_day(
     }
 
     rows.sort_by_key(|(ts, _)| *ts);
-    Ok(rows.into_iter().map(|(_, ev)| ev).collect())
+    Ok(rows)
 }
 
 fn collect_git_repo_roots(dir: &Path, out: &mut Vec<PathBuf>, depth: u32) -> std::io::Result<()> {

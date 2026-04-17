@@ -42,7 +42,9 @@ pub fn get_timeline_harvest_done_for_event_ids(
 
     let mut stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
     let found: HashSet<String> = stmt
-        .query_map(params_from_iter(row_ids.iter()), |row| row.get::<_, String>(0))
+        .query_map(params_from_iter(row_ids.iter()), |row| {
+            row.get::<_, String>(0)
+        })
         .map_err(|e| e.to_string())?
         .collect::<Result<_, _>>()
         .map_err(|e| e.to_string())?;

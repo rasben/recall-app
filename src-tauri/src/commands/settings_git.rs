@@ -1,8 +1,8 @@
+use crate::commands::settings::{get_val, save_val};
+use crate::state::AppState;
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use tauri::State;
-use crate::commands::settings::{get_val, save_val};
-use crate::state::AppState;
 
 const KEY: &str = "settings_git";
 

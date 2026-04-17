@@ -1,8 +1,8 @@
+use crate::commands::settings::{get_val, save_val};
+use crate::state::AppState;
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use tauri::State;
-use crate::commands::settings::{get_val, save_val};
-use crate::state::AppState;
 
 const KEY: &str = "settings_github";
 
@@ -16,7 +16,10 @@ pub struct SettingsGitHub {
 
 #[tauri::command]
 #[specta::specta]
-pub fn set_settings_github(state: State<'_, AppState>, settings: SettingsGitHub) -> Result<(), String> {
+pub fn set_settings_github(
+    state: State<'_, AppState>,
+    settings: SettingsGitHub,
+) -> Result<(), String> {
     let json_data = serde_json::to_string(&settings).map_err(|e| e.to_string())?;
     save_val(&state, KEY, &json_data)
 }

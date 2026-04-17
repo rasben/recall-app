@@ -1,7 +1,7 @@
-use std::time::{SystemTime, UNIX_EPOCH};
-use rusqlite::params;
-use tauri::State;
 use crate::state::AppState;
+use rusqlite::params;
+use std::time::{SystemTime, UNIX_EPOCH};
+use tauri::State;
 
 pub(crate) fn now() -> i64 {
     SystemTime::now()
@@ -16,7 +16,8 @@ pub(crate) fn save_val(state: &State<'_, AppState>, key: &str, value: &str) -> R
     conn.execute(
         "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?1, ?2, ?3)",
         params![key, value, now()],
-    ).map_err(|e| e.to_string())?;
+    )
+    .map_err(|e| e.to_string())?;
 
     Ok(())
 }
@@ -24,7 +25,9 @@ pub(crate) fn save_val(state: &State<'_, AppState>, key: &str, value: &str) -> R
 pub(crate) fn get_val(state: &State<'_, AppState>, key: &str) -> Option<String> {
     let conn = state.db.lock().ok()?;
 
-    let mut stmt = conn.prepare("SELECT value FROM settings WHERE key = ?1").ok()?;
+    let mut stmt = conn
+        .prepare("SELECT value FROM settings WHERE key = ?1")
+        .ok()?;
 
     stmt.query_row(params![key], |row| row.get(0)).ok()
 }
