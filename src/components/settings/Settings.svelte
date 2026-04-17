@@ -1,6 +1,7 @@
 <script lang="ts">
   import SettingsGit from "./Git.svelte";
   import SettingsUI from "./UI.svelte";
+  import SettingsGitHub from "./GitHub.svelte";
 
 </script>
 
@@ -10,3 +11,4 @@
 
 <SettingsUI />
 <SettingsGit />
+<SettingsGitHub />

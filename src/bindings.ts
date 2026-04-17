@@ -27,6 +27,17 @@ async setSettingsGit(settings: SettingsGit) : Promise<Result<null, string>> {
 async getSettingsGit() : Promise<SettingsGit | null> {
     return await TAURI_INVOKE("get_settings_git");
 },
+async setSettingsGithub(settings: SettingsGitHub) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_settings_github", { settings }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getSettingsGithub() : Promise<SettingsGitHub | null> {
+    return await TAURI_INVOKE("get_settings_github");
+},
 async getTimelineForDay(day: string) : Promise<Result<TimelineEvent[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_timeline_for_day", { day }) };
@@ -64,6 +75,7 @@ async setTimelineHarvestDone(eventId: string, done: boolean) : Promise<Result<nu
 /** user-defined types **/
 
 export type SettingsGit = { enabled: boolean; path: string }
+export type SettingsGitHub = { enabled: boolean; use_cli: boolean; token: string }
 export type SettingsUi = { theme: string }
 /**
  * One row on the timeline (all sources normalize to this shape).

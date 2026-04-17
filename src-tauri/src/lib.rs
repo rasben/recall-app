@@ -16,6 +16,8 @@ pub fn run() {
             commands::settings_ui::get_settings_ui,
             commands::settings_git::set_settings_git,
             commands::settings_git::get_settings_git,
+            commands::settings_github::set_settings_github,
+            commands::settings_github::get_settings_github,
             commands::timeline::get_timeline_for_day,
             commands::harvest_done::get_timeline_harvest_done_for_event_ids,
             commands::harvest_done::set_timeline_harvest_done,
