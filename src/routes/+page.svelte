@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { fade } from "svelte/transition";
   import { Button } from "$lib/components/ui/button/index.js";
   import SettingsIcon from "@lucide/svelte/icons/settings";
   import Settings from "../components/Settings.svelte";
@@ -20,8 +21,12 @@
 
 <main class="flex min-h-screen flex-col p-8">
   {#if settingsOpen}
-    <Settings />
+    <div in:fade={{ duration: 220 }} out:fade={{ duration: 160 }}>
+      <Settings />
+    </div>
   {:else}
-    <Main />
+    <div in:fade={{ duration: 220 }} out:fade={{ duration: 160 }}>
+      <Main />
+    </div>
   {/if}
 </main>
