@@ -1,15 +1,15 @@
 <script lang="ts">
-  import * as Card from "$lib/components/ui/card/index.js";
   import { Label } from "$lib/components/ui/label/index.js";
   import * as ToggleGroup from "$lib/components/ui/toggle-group/index.js";
   import { toast } from "svelte-sonner";
   import { commands } from "../bindings";
   import { applyTheme } from "$lib/theme";
+  import SettingsGit from "./SettingsGit.svelte";
 
   let theme = $state("system");
 
   $effect(() => {
-    commands.getTheme().then((saved) => {
+    commands.getTheme().then((saved: string | null) => {
       theme = saved ?? "system";
     });
   });
@@ -31,12 +31,12 @@
 <fieldset class="border-2 p-4">
   <legend class="mb-2">Theme</legend>
   <ToggleGroup.Root
-          variant="outlined"
-          type="single"
-          class="w-full"
-          id="theme"
-          value={theme}
-          onValueChange={setTheme}
+    variant="outlined"
+    type="single"
+    class="w-full"
+    id="theme"
+    value={theme}
+    onValueChange={setTheme}
   >
     <ToggleGroup.Item value="light">Light</ToggleGroup.Item>
     <ToggleGroup.Item value="dark">Dark</ToggleGroup.Item>
@@ -44,4 +44,4 @@
   </ToggleGroup.Root>
 </fieldset>
 
-
+<SettingsGit />

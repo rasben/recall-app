@@ -26,6 +26,28 @@ async setTheme(theme: string) : Promise<Result<null, string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async getGitEnabled() : Promise<boolean> {
+    return await TAURI_INVOKE("get_git_enabled");
+},
+async setGitEnabled(enabled: boolean) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_git_enabled", { enabled }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getGitScanPath() : Promise<string | null> {
+    return await TAURI_INVOKE("get_git_scan_path");
+},
+async setGitScanPath(path: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_git_scan_path", { path }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 

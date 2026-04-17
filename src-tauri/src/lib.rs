@@ -15,6 +15,10 @@ pub fn run() {
             commands::settings::set_language,
             commands::settings::get_theme,
             commands::settings::set_theme,
+            commands::settings::get_git_enabled,
+            commands::settings::set_git_enabled,
+            commands::settings::get_git_scan_path,
+            commands::settings::set_git_scan_path,
         ]);
 
     #[cfg(debug_assertions)]
@@ -24,6 +28,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
             let conn = db::init_db(app.handle());

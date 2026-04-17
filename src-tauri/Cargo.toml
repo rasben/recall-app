@@ -22,3 +22,4 @@ tauri-specta = { version = "=2.0.0-rc.20", features = ["derive", "typescript"] }
 specta-typescript = "0.0.7"
 rusqlite = { version = "0.38", features = ["bundled"] }
 once_cell = "1.21"
+tauri-plugin-dialog = "2.7.0"

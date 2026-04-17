@@ -7,6 +7,8 @@ use crate::state::AppState;
 
 const KEY_LANGUAGE: &str = "lang";
 const KEY_THEME: &str = "theme";
+const KEY_GIT_ENABLED: &str = "source_git_enabled";
+const KEY_GIT_SCAN_PATH: &str = "source_git_scan_path";
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Type)]
 #[specta(export = false)]
@@ -41,6 +43,32 @@ pub fn get_theme(state: State<'_, AppState>) -> Option<String> {
 #[specta::specta]
 pub fn set_theme(state: State<'_, AppState>, theme: String) -> Result<(), String> {
     save_val(&state, KEY_THEME, &theme)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_git_enabled(state: State<'_, AppState>) -> bool {
+    get_val(&state, KEY_GIT_ENABLED)
+        .map(|v| v == "true")
+        .unwrap_or(false)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn set_git_enabled(state: State<'_, AppState>, enabled: bool) -> Result<(), String> {
+    save_val(&state, KEY_GIT_ENABLED, if enabled { "true" } else { "false" })
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_git_scan_path(state: State<'_, AppState>) -> Option<String> {
+    get_val(&state, KEY_GIT_SCAN_PATH)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn set_git_scan_path(state: State<'_, AppState>, path: String) -> Result<(), String> {
+    save_val(&state, KEY_GIT_SCAN_PATH, &path)
 }
 
 fn now() -> i64 {
