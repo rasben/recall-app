@@ -1,4 +1,5 @@
 mod git;
+mod github;
 
 use tauri::State;
 
@@ -11,6 +12,9 @@ pub fn get_timeline_for_day(
     state: State<'_, AppState>,
     day: String,
 ) -> Result<Vec<TimelineEvent>, String> {
-    // Additional sources (e.g. Zulip) extend here, then merge/sort across sources if needed.
-    git::events_for_day(&state, &day)
+    let mut rows: Vec<(i64, TimelineEvent)> = Vec::new();
+    rows.extend(git::events_for_day(&state, &day)?);
+    rows.extend(github::events_for_day(&state, &day)?);
+    rows.sort_by_key(|(ts, _)| *ts);
+    Ok(rows.into_iter().map(|(_, ev)| ev).collect())
 }

@@ -88,10 +88,16 @@
                     onCheckedChange={(v) => toggleCli(v === true)}
             />
             <Label for="github-use-cli">Use GH CLI</Label>
+
         </div>
 
         {#if !useCli }
+            <div class="-mt-2 mb-4 text-red-600 font-bold">
+                For now, only GH CLI is supported. In the future, we will support GH PAT tokens.
+            </div>
             <PasswordInput bind:password={token} saveAction={setToken} label="GitHub PAT" placeholder="Add token.." />
+
+
         {/if}
     {/if}
 
