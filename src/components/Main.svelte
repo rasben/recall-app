@@ -5,7 +5,7 @@
 <Card.Root class="mt-4">
   <Card.Header>
     <Card.Title>Welcome</Card.Title>
-    <Card.Description>Your new project is ready.</Card.Description>
+    <Card.Description>Recall APP ready.</Card.Description>
   </Card.Header>
   <Card.Content>
     <p>Start building here.</p>

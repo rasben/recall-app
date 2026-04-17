@@ -1,16 +1,17 @@
 ---
-description: Keep AGENTS.md accurate when changing project setup or conventions
+description: Keep AGENTS.md accurate when changing project setup, conventions, or data sources
 alwaysApply: true
 ---
 
 # Keep AGENTS.md up to date
 
-AGENTS.md is the project’s readme for AI agents. When you change any of the following, update AGENTS.md so future agents have correct context:
+AGENTS.md is the project's readme for AI agents. When you change any of the following, update AGENTS.md so future agents have correct context:
 
 - **Scripts and config** — New or changed npm scripts, Vite/SvelteKit/Tauri config, build outputs, or ports
 - **Project structure** — New top-level dirs, moving code between `src/` and `src-tauri/`, or new important paths
-- **Conventions** — Format/lint/test commands, naming, or “do not edit” files (e.g. `src/bindings.ts`)
+- **Conventions** — Format/lint/test commands, naming, or "do not edit" files (e.g. `src/bindings.ts`)
 - **Env and secrets** — New env vars, `.env*` usage, or credential handling
 - **Stack and deps** — New frameworks, UI libs, or Rust crates that affect how to run or build
+- **Data sources** — Adding, removing, or changing a data source (GitHub, Google, local git, JIRA, Zulip, etc.), its auth method, or its API
 
 Edit the relevant section(s) in AGENTS.md; keep the same structure and level of detail so the file stays scannable and accurate.
