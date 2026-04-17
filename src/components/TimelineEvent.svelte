@@ -30,7 +30,7 @@
 <button
   type="button"
   onclick={onToggle}
-  class="timeline-event-btn relative flex w-full min-w-0 max-w-full cursor-pointer items-start gap-3 overflow-x-hidden border-2 bg-card py-2 pl-3 pr-2 text-left shadow-sm transition-all hover:shadow-none
+  class="timeline-event-btn relative flex w-full min-w-0 max-w-full cursor-pointer items-start gap-3 border-2 bg-card py-2 pl-3 pr-2 text-left shadow-sm transition-all hover:z-10 focus-within:z-10 hover:shadow-none
     {done ? 'opacity-50' : ''}"
 >
   <span class="w-10 shrink-0 pt-0.5 font-mono text-xs text-muted-foreground">{event.time}</span>
