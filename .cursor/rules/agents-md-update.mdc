@@ -14,4 +14,12 @@ AGENTS.md is the project's readme for AI agents. When you change any of the foll
 - **Stack and deps** — New frameworks, UI libs, or Rust crates that affect how to run or build
 - **Data sources** — Adding, removing, or changing a data source (GitHub, Google, local git, JIRA, Zulip, etc.), its auth method, or its API
 
+## Recall-specific layout (see AGENTS.md "Code organization conventions")
+
+When touching these areas, align the code **and** AGENTS.md with the established patterns:
+
+- **Settings backend** — New domains use `src-tauri/src/commands/settings_{domain}.rs`: one SQLite key, one JSON struct, `get_*` / `set_*` commands; keep `commands/settings.rs` free of feature commands.
+- **Settings frontend** — New panels live under `src/components/settings/` and are composed from `Settings.svelte`.
+- **Timeline backend** — New providers add `src-tauri/src/commands/timeline/{source}.rs` and are wired from `timeline/mod.rs`.
+
 Edit the relevant section(s) in AGENTS.md; keep the same structure and level of detail so the file stays scannable and accurate.
