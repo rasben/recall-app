@@ -12,7 +12,7 @@
 <Button
   variant={settingsOpen ? "secondary" : "outline"}
   size="icon"
-  class="fixed top-8 right-8 z-50"
+  class="absolute top-8 right-8 z-50"
   aria-pressed={settingsOpen}
   aria-label={settingsOpen ? "Close settings" : "Open settings"}
   onclick={() => (settingsOpen = !settingsOpen)}
