@@ -10,12 +10,17 @@
   let atToday = $derived(selectedDate === todayIso());
 </script>
 
-<div class="flex items-center gap-3">
+<div class="flex items-center gap-4">
   <Button variant="outline" size="icon" onclick={() => onShift(-1)}>
     <ChevronLeft />
   </Button>
-  <h2 class="font-head flex-1 text-center text-xl">{heading}</h2>
-  <Button variant="outline" size="icon" onclick={() => onShift(1)} disabled={atToday}>
-    <ChevronRight />
-  </Button>
+
+  <h2 class="font-head text-center text-xl">{heading}</h2>
+
+  {#if !atToday}
+    <Button variant="outline" size="icon" onclick={() => onShift(1)} disabled={atToday}>
+      <ChevronRight />
+    </Button>
+  {/if}
+
 </div>

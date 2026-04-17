@@ -1,20 +1,27 @@
 <script lang="ts">
-  import * as Tabs from "$lib/components/ui/tabs/index.js";
+  import { Button } from "$lib/components/ui/button/index.js";
+  import SettingsIcon from "@lucide/svelte/icons/settings";
   import Settings from "../components/Settings.svelte";
   import Main from "../components/Main.svelte";
+
+  let settingsOpen = $state(false);
 </script>
 
+<Button
+  variant="outline"
+  size="icon"
+  class="fixed bg-background top-8 right-8 z-50"
+  aria-pressed={settingsOpen}
+  aria-label={settingsOpen ? "Close settings" : "Open settings"}
+  onclick={() => (settingsOpen = !settingsOpen)}
+>
+  <SettingsIcon />
+</Button>
+
 <main class="flex min-h-screen flex-col p-8">
-  <Tabs.Root value="main" class="min-h-0 min-w-0 flex-1">
-    <Tabs.List>
-      <Tabs.Trigger value="main">Main</Tabs.Trigger>
-      <Tabs.Trigger value="settings">Settings</Tabs.Trigger>
-    </Tabs.List>
-    <Tabs.Content value="main" class="mt-4 flex min-h-0 flex-col !border-0 !p-0">
-      <Main />
-    </Tabs.Content>
-    <Tabs.Content value="settings" class="mt-4 flex min-h-0 flex-col !border-0 !p-0">
-      <Settings />
-    </Tabs.Content>
-  </Tabs.Root>
+  {#if settingsOpen}
+    <Settings />
+  {:else}
+    <Main />
+  {/if}
 </main>

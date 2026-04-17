@@ -28,6 +28,11 @@
   }
 </script>
 
+<h2 class="font-head mb-4 text-xl">
+  Settings
+</h2>
+
+
 <fieldset class="border-2 p-4">
   <legend class="mb-2">Theme</legend>
   <ToggleGroup.Root
