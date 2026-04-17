@@ -71,7 +71,7 @@ pub fn set_git_scan_path(state: State<'_, AppState>, path: String) -> Result<(),
     save_val(&state, KEY_GIT_SCAN_PATH, &path)
 }
 
-fn now() -> i64 {
+pub(crate) fn now() -> i64 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()

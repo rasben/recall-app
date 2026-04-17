@@ -53,7 +53,8 @@ Potential future sources: Browser history, terminal/shell history, Harvest (to s
 
 - `src-tauri/src/lib.rs` — Tauri entry, command registration, tauri-specta export
 - `src-tauri/src/commands/settings.rs` — Language get/set + generic key-value helpers (`save_val`, `get_val`)
-- `src-tauri/src/db.rs` — SQLite init (single `settings` table: key, value, updated_at)
+- `src-tauri/src/commands/harvest_done.rs` — Load/save timeline Harvest checkmarks (SQLite rows keyed by UUID v5 of `TimelineEvent.id`)
+- `src-tauri/src/db.rs` — SQLite init (`settings` key-value table; `timeline_harvest_done` for per-event Harvest checkmarks)
 - `src-tauri/src/state.rs` — AppState with DB mutex
 - `src-tauri/capabilities/` — Tauri permissions
 - `src-tauri/icons/` — App icons
@@ -68,7 +69,7 @@ Potential future sources: Browser history, terminal/shell history, Harvest (to s
 | Styling | Tailwind CSS 4 (`@tailwindcss/vite`), tw-animate-css, @tailwindcss/forms, @tailwindcss/typography |
 | UI | bits-ui (shadcn-svelte), svelte-sonner, @lucide/svelte |
 | Desktop | Tauri 2 |
-| Backend | Rust (edition 2021), tauri-specta, rusqlite, once_cell |
+| Backend | Rust (edition 2021), tauri-specta, rusqlite, once_cell, uuid (v5 for Harvest-done row ids) |
 | Package manager | npm (lockfile: `package-lock.json`) |
 
 ---

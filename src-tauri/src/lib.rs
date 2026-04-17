@@ -21,6 +21,8 @@ pub fn run() {
             commands::settings::get_git_scan_path,
             commands::settings::set_git_scan_path,
             commands::timeline::get_timeline_for_day,
+            commands::harvest_done::get_timeline_harvest_done_for_event_ids,
+            commands::harvest_done::set_timeline_harvest_done,
         ]);
 
     #[cfg(debug_assertions)]

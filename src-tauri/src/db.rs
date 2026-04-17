@@ -22,4 +22,14 @@ pub fn init_db(app_handle: &AppHandle) -> Connection {
     ).expect("failed to create settings table");
 
     conn
+        .execute(
+            "CREATE TABLE IF NOT EXISTS timeline_harvest_done (
+            id TEXT PRIMARY KEY,
+            updated_at INTEGER NOT NULL
+        )",
+            [],
+        )
+        .expect("failed to create timeline_harvest_done table");
+
+    conn
 }

@@ -30,13 +30,24 @@
     selectedDate = todayIso();
   }
 
-  function toggleDone(id: string) {
-    if (doneIds.has(id)) {
-      doneIds.delete(id);
-    } else {
+  async function toggleDone(id: string) {
+    const next = !doneIds.has(id);
+    if (next) {
       doneIds.add(id);
+    } else {
+      doneIds.delete(id);
     }
     doneIds = new Set(doneIds);
+
+    const result = await commands.setTimelineHarvestDone(id, next);
+    if (result.status === "error") {
+      if (next) {
+        doneIds.delete(id);
+      } else {
+        doneIds.add(id);
+      }
+      doneIds = new Set(doneIds);
+    }
   }
 
   $effect(() => {
@@ -51,14 +62,23 @@
 
     let cancelled = false;
     const timeoutId = window.setTimeout(() => {
-      commands.getTimelineForDay(day).then((result) => {
+      commands.getTimelineForDay(day).then(async (result) => {
         if (cancelled) return;
         if (result.status === "ok") {
           events = result.data;
           loadError = null;
+          const ids = result.data.map((e) => e.id);
+          const harvest = await commands.getTimelineHarvestDoneForEventIds(ids);
+          if (cancelled) return;
+          if (harvest.status === "ok") {
+            doneIds = new Set(harvest.data);
+          } else {
+            doneIds = new Set();
+          }
         } else {
           loadError = result.error;
           events = [];
+          doneIds = new Set();
         }
         isLoading = false;
       });

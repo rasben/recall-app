@@ -56,6 +56,22 @@ async getTimelineForDay(day: string) : Promise<Result<TimelineEvent[], string>> 
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async getTimelineHarvestDoneForEventIds(eventIds: string[]) : Promise<Result<string[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_timeline_harvest_done_for_event_ids", { eventIds }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async setTimelineHarvestDone(eventId: string, done: boolean) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_timeline_harvest_done", { eventId, done }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -75,7 +91,9 @@ export type Language = "Danish" | "English"
  */
 export type TimelineEvent = { 
 /**
- * Stable id for UI state (e.g. Harvest toggles), e.g. `git:<repo>:<sha>`.
+ * Stable id for UI state (e.g. Harvest toggles). Must be unique per logical activity and
+ * identical across fetches/days — used for DB-backed toggles. Prefer a namespaced string
+ * (`git:…`, `gmail:…`, `zulip:…`) so ids never collide across sources.
  */
 id: string; 
 /**

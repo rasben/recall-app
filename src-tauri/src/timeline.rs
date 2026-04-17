@@ -17,7 +17,9 @@ pub enum TimelineEventSource {
 /// One row on the timeline (all sources normalize to this shape).
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 pub struct TimelineEvent {
-    /// Stable id for UI state (e.g. Harvest toggles), e.g. `git:<repo>:<sha>`.
+    /// Stable id for UI state (e.g. Harvest toggles). Must be unique per logical activity and
+    /// identical across fetches/days — used for DB-backed toggles. Prefer a namespaced string
+    /// (`git:…`, `gmail:…`, `zulip:…`) so ids never collide across sources.
     pub id: String,
     /// Local time `HH:MM` for the selected calendar day.
     pub time: String,
