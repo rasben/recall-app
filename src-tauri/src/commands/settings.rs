@@ -6,6 +6,7 @@ use tauri::State;
 use crate::state::AppState;
 
 const KEY_LANGUAGE: &str = "lang";
+const KEY_THEME: &str = "theme";
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Type)]
 #[specta(export = false)]
@@ -28,6 +29,18 @@ pub fn set_language(state: State<'_, AppState>, language: Language) -> Result<()
     let s = serde_json::to_string(&language).map_err(|e| e.to_string())?;
     save_val(&state, KEY_LANGUAGE, &s)?;
     Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_theme(state: State<'_, AppState>) -> Option<String> {
+    get_val(&state, KEY_THEME)
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn set_theme(state: State<'_, AppState>, theme: String) -> Result<(), String> {
+    save_val(&state, KEY_THEME, &theme)
 }
 
 fn now() -> i64 {

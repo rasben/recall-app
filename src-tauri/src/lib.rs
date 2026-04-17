@@ -13,6 +13,8 @@ pub fn run() {
         .commands(tauri_specta::collect_commands![
             commands::settings::get_language,
             commands::settings::set_language,
+            commands::settings::get_theme,
+            commands::settings::set_theme,
         ]);
 
     #[cfg(debug_assertions)]

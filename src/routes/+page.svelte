@@ -10,10 +10,10 @@
       <Tabs.Trigger value="main">Main</Tabs.Trigger>
       <Tabs.Trigger value="settings">Settings</Tabs.Trigger>
     </Tabs.List>
-    <Tabs.Content value="main">
+    <Tabs.Content value="main" class="!border-0 !p-0 mt-4">
       <Main />
     </Tabs.Content>
-    <Tabs.Content value="settings">
+    <Tabs.Content value="settings" class="!border-0 !p-0 mt-4">
       <Settings />
     </Tabs.Content>
   </Tabs.Root>

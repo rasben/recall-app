@@ -2,7 +2,7 @@
   import * as Card from "$lib/components/ui/card/index.js";
 </script>
 
-<Card.Root class="mt-4">
+<Card.Root>
   <Card.Header>
     <Card.Title>Welcome</Card.Title>
     <Card.Description>Recall APP ready.</Card.Description>
