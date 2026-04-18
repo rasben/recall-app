@@ -6,12 +6,24 @@ use tauri::State;
 
 const KEY: &str = "settings_github";
 
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, Type)]
+#[specta(export = false)]
+#[derive(PartialEq)]
+pub enum GitHubEvent {
+    PullRequestEvent,
+    PullRequestReviewEvent,
+    PullRequestReviewCommentEvent,
+    IssuesEvent,
+    IssueCommentEvent,
+}
+
 #[derive(Debug, Deserialize, Serialize, Type)]
 #[specta(export = false)]
 pub struct SettingsGitHub {
     pub enabled: bool,
     pub use_cli: bool,
     pub token: String,
+    pub enabled_events: Vec<GitHubEvent>
 }
 
 #[tauri::command]

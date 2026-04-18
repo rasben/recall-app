@@ -74,8 +74,9 @@ async setTimelineHarvestDone(eventId: string, done: boolean) : Promise<Result<nu
 
 /** user-defined types **/
 
+export type GitHubEvent = "PullRequestEvent" | "PullRequestReviewEvent" | "PullRequestReviewCommentEvent" | "IssuesEvent" | "IssueCommentEvent"
 export type SettingsGit = { enabled: boolean; path: string }
-export type SettingsGitHub = { enabled: boolean; use_cli: boolean; token: string }
+export type SettingsGitHub = { enabled: boolean; use_cli: boolean; token: string; enabled_events: GitHubEvent[] }
 export type SettingsUi = { theme: string }
 /**
  * One row on the timeline (all sources normalize to this shape).

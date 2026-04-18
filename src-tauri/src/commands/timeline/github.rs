@@ -5,7 +5,7 @@ use serde::Deserialize;
 use serde_json::Value;
 use tauri::State;
 
-use crate::commands::settings_github::get_settings_github;
+use crate::commands::settings_github::{get_settings_github, GitHubEvent};
 use crate::state::AppState;
 use crate::timeline::{TimelineEvent, TimelineEventSource};
 
@@ -35,6 +35,9 @@ pub(super) fn events_for_day(
     if !settings.enabled || !settings.use_cli {
         return Ok(Vec::new());
     }
+    if settings.enabled_events.is_empty() {
+        return Ok(Vec::new());
+    }
 
     let day_naive =
         NaiveDate::parse_from_str(day, "%Y-%m-%d").map_err(|_| format!("Invalid date: {day}"))?;
@@ -58,6 +61,13 @@ pub(super) fn events_for_day(
 
     for ev in raw_events {
         if matches!(ev.event_type.as_str(), "PushEvent") {
+            continue;
+        }
+
+        let Some(kind) = github_api_event_type(&ev.event_type) else {
+            continue;
+        };
+        if !settings.enabled_events.contains(&kind) {
             continue;
         }
 
@@ -99,6 +109,18 @@ struct MappedGithub {
     title: String,
     detail: String,
     url: Option<String>,
+}
+
+/// Maps GitHub public timeline `type` strings to the settings enum (same names as the API).
+fn github_api_event_type(event_type: &str) -> Option<GitHubEvent> {
+    match event_type {
+        "PullRequestEvent" => Some(GitHubEvent::PullRequestEvent),
+        "PullRequestReviewEvent" => Some(GitHubEvent::PullRequestReviewEvent),
+        "PullRequestReviewCommentEvent" => Some(GitHubEvent::PullRequestReviewCommentEvent),
+        "IssuesEvent" => Some(GitHubEvent::IssuesEvent),
+        "IssueCommentEvent" => Some(GitHubEvent::IssueCommentEvent),
+        _ => None,
+    }
 }
 
 fn map_github_event(ev: &GhEvent) -> Option<MappedGithub> {
