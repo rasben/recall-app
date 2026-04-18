@@ -1,3 +1,5 @@
+/// To-Do - this file is completely AI-coded, and not well-reviewed.
+/// We need to review it, and optimize it.
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use chrono::{DateTime, Local, NaiveDate, Utc};
 use serde::Deserialize;

@@ -1,4 +1,6 @@
 <script lang="ts">
+  /// To-Do - this file is completely AI-coded, and not well-reviewed.
+  /// We need to review it, and optimize it.
   import { Label } from "$lib/components/ui/label/index.js";
   import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
