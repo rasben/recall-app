@@ -2,6 +2,7 @@
   import SettingsGit from "./Git.svelte";
   import SettingsUI from "./UI.svelte";
   import SettingsGitHub from "./GitHub.svelte";
+  import SettingsJira from "./Jira.svelte";
 
 </script>
 
@@ -12,3 +13,4 @@
 <SettingsUI />
 <SettingsGit />
 <SettingsGitHub />
+<SettingsJira />

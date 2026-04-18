@@ -23,7 +23,7 @@ pub struct SettingsGitHub {
     pub enabled: bool,
     pub use_cli: bool,
     pub token: String,
-    pub enabled_events: Vec<GitHubEvent>
+    pub enabled_events: Vec<GitHubEvent>,
 }
 
 #[tauri::command]

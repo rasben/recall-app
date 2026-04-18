@@ -92,9 +92,9 @@
         }
     }
 
-    async function setEnabledEvents(value: GitHubEvent | GitHubEvent[] | undefined) {
+    async function setEnabledEvents(value: string[] | undefined) {
         const original = settings.enabled_events;
-        settings.enabled_events = (value != null && Array.isArray(value) ? value : []) as GitHubEvent[];
+        settings.enabled_events = (value ?? []) as GitHubEvent[];
 
         const result = await commands.setSettingsGithub(settings)
 
@@ -137,7 +137,7 @@
             <div class="-mt-2 mb-4 text-red-600 font-bold">
                 For now, only GH CLI is supported. In the future, we will support GH PAT tokens.
             </div>
-            <PasswordInput bind:password={token} saveAction={setToken} label="GitHub PAT" placeholder="Add token.." />
+            <PasswordInput bind:password={token} saveAction={setToken} label="GitHub PAT" placeholder="Add token.." inputId="github-pat" />
 
 
         {/if}
@@ -146,17 +146,16 @@
 
 
 
-        <label for="github-enabled-events" class="mb-2">
+        <label for="github-enabled-events-trigger" class="mb-2">
             Events to show
         </label>
 
         <Select.Root
-                id="github-enabled-events"
                 type="multiple"
                 bind:value={enabledEvents}
                 onValueChange={setEnabledEvents}
         >
-            <Select.Trigger class="w-full">
+            <Select.Trigger id="github-enabled-events-trigger" class="w-full">
                 {enabledEvents.length === 0
                     ? "No events chosen"
                     : [...enabledEvents]

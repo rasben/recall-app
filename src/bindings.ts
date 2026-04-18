@@ -38,6 +38,17 @@ async setSettingsGithub(settings: SettingsGitHub) : Promise<Result<null, string>
 async getSettingsGithub() : Promise<SettingsGitHub | null> {
     return await TAURI_INVOKE("get_settings_github");
 },
+async setSettingsJira(settings: SettingsJira) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_settings_jira", { settings }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getSettingsJira() : Promise<SettingsJira | null> {
+    return await TAURI_INVOKE("get_settings_jira");
+},
 async getTimelineForDay(day: string) : Promise<Result<TimelineEvent[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_timeline_for_day", { day }) };
@@ -75,8 +86,29 @@ async setTimelineHarvestDone(eventId: string, done: boolean) : Promise<Result<nu
 /** user-defined types **/
 
 export type GitHubEvent = "PullRequestEvent" | "PullRequestReviewEvent" | "PullRequestReviewCommentEvent" | "IssuesEvent" | "IssueCommentEvent"
+/**
+ * Timeline categories for Jira activity (mapped to REST/changelog rules in the Jira timeline source).
+ */
+export type JiraEvent = 
+/**
+ * Comments you authored on issues.
+ */
+"CommentWritten" | 
+/**
+ * Issues where you are the reporter/creator.
+ */
+"IssueCreated" | 
+/**
+ * Issues transitioned into a Done-style status category.
+ */
+"IssueCompleted" | 
+/**
+ * You were @mentioned in an issue field or comment body.
+ */
+"Mentioned"
 export type SettingsGit = { enabled: boolean; path: string }
 export type SettingsGitHub = { enabled: boolean; use_cli: boolean; token: string; enabled_events: GitHubEvent[] }
+export type SettingsJira = { enabled: boolean; site_url?: string; email?: string; api_token?: string; enabled_events?: JiraEvent[] }
 export type SettingsUi = { theme: string }
 /**
  * One row on the timeline (all sources normalize to this shape).
