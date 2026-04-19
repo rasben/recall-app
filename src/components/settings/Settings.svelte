@@ -3,6 +3,7 @@
   import SettingsUI from "./UI.svelte";
   import SettingsGitHub from "./GitHub.svelte";
   import SettingsJira from "./Jira.svelte";
+  import SettingsZulip from "./Zulip.svelte";
 
 </script>
 
@@ -14,3 +15,4 @@
 <SettingsGit />
 <SettingsGitHub />
 <SettingsJira />
+<SettingsZulip />

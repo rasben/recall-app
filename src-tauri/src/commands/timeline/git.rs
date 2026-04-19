@@ -127,6 +127,7 @@ pub(super) fn events_for_day(
                     source: TimelineEventSource::Git,
                     title: subject.to_string(),
                     detail: Some(format!("{repo_name} — {short}")),
+
                     url: None,
                 },
             ));

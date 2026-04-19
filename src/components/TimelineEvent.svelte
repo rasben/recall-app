@@ -51,6 +51,7 @@
         {event.detail}
       </p>
     {/if}
+
   </div>
 
   <div class="relative mt-0.5 shrink-0 self-end">

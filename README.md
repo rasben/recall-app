@@ -33,10 +33,8 @@ Svelte 5 + SvelteKit 2 frontend, Tauri 2 + Rust backend, SQLite for settings/cre
 - Google Drive
   - Edited/Creates files (must-have)
   - Read files (nice-to-have)
-- Zulip data source
-  - Sent messages (must-have)
+- Zulip - expanded data
   - Read messages (nice-to-have)
-  - We need to group them together, to not spam the feed
 - Performance
   - When opening app, load the last 7 days automatically
 - UI

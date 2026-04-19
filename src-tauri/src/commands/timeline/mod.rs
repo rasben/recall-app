@@ -2,6 +2,7 @@ mod cache;
 mod git;
 mod github;
 mod jira;
+mod zulip;
 
 use chrono::{Local, NaiveDate};
 use tauri::State;
@@ -33,6 +34,7 @@ pub fn get_timeline_for_day(
     rows.extend(git::events_for_day(&state, &day)?);
     rows.extend(github::events_for_day(&state, &day)?);
     rows.extend(jira::events_for_day(&state, &day)?);
+    rows.extend(zulip::events_for_day(&state, &day)?);
     rows.sort_by_key(|(ts, _)| *ts);
     let events: Vec<TimelineEvent> = rows.into_iter().map(|(_, ev)| ev).collect();
 

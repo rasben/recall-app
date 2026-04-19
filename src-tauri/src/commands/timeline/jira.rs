@@ -172,6 +172,7 @@ pub(super) fn events_for_day(
                 source: TimelineEventSource::Jira,
                 title,
                 detail,
+
                 url: Some(browse),
             },
         ));

@@ -49,6 +49,17 @@ async setSettingsJira(settings: SettingsJira) : Promise<Result<null, string>> {
 async getSettingsJira() : Promise<SettingsJira | null> {
     return await TAURI_INVOKE("get_settings_jira");
 },
+async setSettingsZulip(settings: SettingsZulip) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_settings_zulip", { settings }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getSettingsZulip() : Promise<SettingsZulip | null> {
+    return await TAURI_INVOKE("get_settings_zulip");
+},
 async getTimelineForDay(day: string) : Promise<Result<TimelineEvent[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_timeline_for_day", { day }) };
@@ -110,6 +121,7 @@ export type SettingsGit = { enabled: boolean; path: string }
 export type SettingsGitHub = { enabled: boolean; use_cli: boolean; token: string; enabled_events: GitHubEvent[] }
 export type SettingsJira = { enabled: boolean; site_url?: string; email?: string; api_token?: string; enabled_events?: JiraEvent[] }
 export type SettingsUi = { theme: string }
+export type SettingsZulip = { enabled: boolean; realm_url?: string; email?: string; api_key?: string }
 /**
  * One row on the timeline (all sources normalize to this shape).
  */

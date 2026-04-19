@@ -98,6 +98,7 @@ pub(super) fn events_for_day(
                 source: TimelineEventSource::Github,
                 title: mapped.title,
                 detail: Some(mapped.detail),
+
                 url: mapped.url,
             },
         ));

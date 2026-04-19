@@ -19,6 +19,8 @@ pub fn run() {
         commands::settings_github::get_settings_github,
         commands::settings_jira::set_settings_jira,
         commands::settings_jira::get_settings_jira,
+        commands::settings_zulip::set_settings_zulip,
+        commands::settings_zulip::get_settings_zulip,
         commands::timeline::get_timeline_for_day,
         commands::harvest_done::get_timeline_harvest_done_for_event_ids,
         commands::harvest_done::set_timeline_harvest_done,
