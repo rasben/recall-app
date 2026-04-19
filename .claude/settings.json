@@ -1,7 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Read(/Users/rasben/code/recall/**)"
+      "Read(/Users/rasben/code/recall/**)",
+      "Write(/Users/rasben/code/recall/**)",
+      "Bash(cargo doc *)",
+      "Bash(cargo info *)",
+      "Bash(cargo check *)",
+      "Bash(cargo build *)",
+      "Bash(npm run *)",
+      "Bash(npm install *)",
+      "Bash(timeout * ./target/debug/recall-app)"
     ]
   }
 }

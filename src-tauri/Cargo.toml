@@ -25,6 +25,8 @@ once_cell = "1.21"
 tauri-plugin-dialog = "2.7.0"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde"] }
 uuid = { version = "1", features = ["v5"] }
+ical = "0.11"
+rrule = "0.14"
 ureq = { version = "2.10", features = ["json"] }
 base64 = "0.22"
 urlencoding = "2"

@@ -26,18 +26,21 @@ Svelte 5 + SvelteKit 2 frontend, Tauri 2 + Rust backend, SQLite for settings/cre
 
 ## To-Do's
 
-- Gmail data-source
-  - Sent emails (must-have)
-  - Read emails (nice-to-have)
-- Google Calendar
-- Google Drive
-  - Edited/Creates files (must-have)
-  - Read files (nice-to-have)
+- Gmail data-source (nice-to-have)
+  - Sent emails
+  - Read emails
+- Google Drive (nice-to-have)
+  - Edited/Creates files
+  - Read files
 - Zulip - expanded data
-  - Read messages (nice-to-have)
+  - Messages you've read (nice-to-have)
 - Performance
   - When opening app, load the last 7 days automatically
+  - Add "clear caches" in settings
 - UI
+  - Fix "flashbang" effect when opening app at night
+    - The app flashes white when opening. 
+    - Can we make the default color black? or transparent? or respect system already at that point?
   - Allow timeline items to have links
     - Right now, links conflict with the "cross out" effect. 
       - We need some solution that works, both accessibility- and UX wise.

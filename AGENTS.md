@@ -27,8 +27,9 @@ Each source provides timestamped activity events that are merged into a day time
 | **Local git** | Commits across all local repos, by your git author name | Shell: `git log --all --since=... --author=...` |
 | **JIRA** | Tickets you commented on, transitioned, or were assigned to | JIRA API token |
 | **Zulip** | Messages you **sent** (stream and DMs) | Zulip API key + email |
+| **Google Calendar** | Meetings and events you attended | Google OAuth (Desktop app credentials) |
 
-Planned expansions (see `README.md` "To-Do's" for the full list and priorities): read/inbound signals for Gmail, Google Drive, and Zulip (currently outbound-only); Zulip message grouping so a burst of messages does not spam the feed.
+Planned expansions (see `README.md` "To-Do's" for the full list and priorities): Gmail (sent emails), Google Drive (edited files); read/inbound signals for Gmail, Google Drive, and Zulip (currently outbound-only); Zulip message grouping so a burst of messages does not spam the feed.
 
 ---
 
@@ -56,9 +57,9 @@ Planned expansions (see `README.md` "To-Do's" for the full list and priorities):
 
 - `src-tauri/src/lib.rs` — Tauri entry, command registration, tauri-specta export
 - `src-tauri/src/commands/settings.rs` — **Only** shared SQLite helpers: `get_val`, `save_val`, `now`. No feature-specific commands or per-field keys.
-- `src-tauri/src/commands/settings_{domain}.rs` — One file per settings domain (e.g. `settings_ui`, `settings_git`, `settings_jira`, `settings_github`, `settings_zulip`): a single JSON document per domain in the `settings` table, `get_*` / `set_*` commands, specta types for the frontend.
+- `src-tauri/src/commands/settings_{domain}.rs` — One file per settings domain (e.g. `settings_ui`, `settings_git`, `settings_jira`, `settings_github`, `settings_zulip`, `settings_google`): a single JSON document per domain in the `settings` table, `get_*` / `set_*` commands, specta types for the frontend. `settings_google` also exposes `google_oauth_connect` / `google_oauth_disconnect` Tauri commands that run the browser OAuth flow.
 - `src-tauri/src/commands/timeline/mod.rs` — Timeline Tauri command(s); merges or delegates to per-source modules, and reads/writes the per-day cache for elapsed days.
-- `src-tauri/src/commands/timeline/{source}.rs` — One module per timeline provider (e.g. `git.rs`, `github.rs`, `jira.rs`, `zulip.rs`); implements fetching for that source only.
+- `src-tauri/src/commands/timeline/{source}.rs` — One module per timeline provider (e.g. `git.rs`, `github.rs`, `jira.rs`, `zulip.rs`); implements fetching for that source only. Google sources are grouped under `timeline/google/` (a Rust module directory): `mod.rs` aggregates all Google sub-sources and holds the shared `get_valid_access_token` + token-refresh helper; `calendar.rs` implements the Calendar API fetch. Future Gmail and Drive modules go here too.
 - `src-tauri/src/commands/timeline/cache.rs` — Private helpers for the `timeline_day_cache` SQLite table (`get_cached_day`, `save_cached_day`); not a Tauri command.
 - `src-tauri/src/timeline.rs` — Shared Rust types for timeline rows (`TimelineEvent`, `TimelineEventSource`), not Tauri commands.
 - `src-tauri/src/commands/harvest_done.rs` — Load/save timeline Harvest checkmarks (SQLite rows keyed by UUID v5 of `TimelineEvent.id`)

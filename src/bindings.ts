@@ -60,6 +60,23 @@ async setSettingsZulip(settings: SettingsZulip) : Promise<Result<null, string>> 
 async getSettingsZulip() : Promise<SettingsZulip | null> {
     return await TAURI_INVOKE("get_settings_zulip");
 },
+async setSettingsIcal(settings: SettingsIcal) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_settings_ical", { settings }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getSettingsIcal() : Promise<SettingsIcal | null> {
+    return await TAURI_INVOKE("get_settings_ical");
+},
+/**
+ * Fetches each saved iCal URL and returns a diagnostic report focused on today's events.
+ */
+async debugIcal() : Promise<IcalDebugInfo[]> {
+    return await TAURI_INVOKE("debug_ical");
+},
 async getTimelineForDay(day: string) : Promise<Result<TimelineEvent[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_timeline_for_day", { day }) };
@@ -97,6 +114,15 @@ async setTimelineHarvestDone(eventId: string, done: boolean) : Promise<Result<nu
 /** user-defined types **/
 
 export type GitHubEvent = "PullRequestEvent" | "PullRequestReviewEvent" | "PullRequestReviewCommentEvent" | "IssuesEvent" | "IssueCommentEvent"
+export type IcalDebugInfo = { url: string; error: string | null; total_events: number; all_day_skipped: number; recurring_rrule: number; 
+/**
+ * Events on today's date, formatted as "HH:MM — Title".
+ */
+today_events: string[]; 
+/**
+ * First few raw DTSTART values from the feed, for diagnosing parse failures.
+ */
+dtstart_samples: string[] }
 /**
  * Timeline categories for Jira activity (mapped to REST/changelog rules in the Jira timeline source).
  */
@@ -119,6 +145,7 @@ export type JiraEvent =
 "Mentioned"
 export type SettingsGit = { enabled: boolean; path: string }
 export type SettingsGitHub = { enabled: boolean; use_cli: boolean; token: string; enabled_events: GitHubEvent[] }
+export type SettingsIcal = { enabled?: boolean; urls?: string[] }
 export type SettingsJira = { enabled: boolean; site_url?: string; email?: string; api_token?: string; enabled_events?: JiraEvent[] }
 export type SettingsUi = { theme: string }
 export type SettingsZulip = { enabled: boolean; realm_url?: string; email?: string; api_key?: string }

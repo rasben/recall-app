@@ -1,6 +1,7 @@
 mod cache;
 mod git;
 mod github;
+pub(crate) mod ical;
 mod jira;
 mod zulip;
 
@@ -33,13 +34,13 @@ pub fn get_timeline_for_day(
     let mut rows: Vec<(i64, TimelineEvent)> = Vec::new();
     rows.extend(git::events_for_day(&state, &day)?);
     rows.extend(github::events_for_day(&state, &day)?);
+    rows.extend(ical::events_for_day(&state, &day)?);
     rows.extend(jira::events_for_day(&state, &day)?);
     rows.extend(zulip::events_for_day(&state, &day)?);
     rows.sort_by_key(|(ts, _)| *ts);
     let events: Vec<TimelineEvent> = rows.into_iter().map(|(_, ev)| ev).collect();
 
     if use_cache {
-        // Best-effort: a cache write failure should not break the live fetch.
         let _ = cache::save_cached_day(&state, &day, &events);
     }
 

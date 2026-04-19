@@ -44,5 +44,15 @@ pub fn init_db(app_handle: &AppHandle) -> Connection {
     )
     .expect("failed to create timeline_day_cache table");
 
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS calendar_ical_cache (
+            url TEXT PRIMARY KEY,
+            content TEXT NOT NULL,
+            fetched_at INTEGER NOT NULL
+        )",
+        [],
+    )
+    .expect("failed to create calendar_ical_cache table");
+
     conn
 }

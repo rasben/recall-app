@@ -2,9 +2,9 @@
   import SettingsGit from "./Git.svelte";
   import SettingsUI from "./UI.svelte";
   import SettingsGitHub from "./GitHub.svelte";
+  import SettingsCalendar from "./Calendar.svelte";
   import SettingsJira from "./Jira.svelte";
   import SettingsZulip from "./Zulip.svelte";
-
 </script>
 
 <h2 class="font-head mb-4 text-xl">
@@ -14,5 +14,6 @@
 <SettingsUI />
 <SettingsGit />
 <SettingsGitHub />
+<SettingsCalendar />
 <SettingsJira />
 <SettingsZulip />

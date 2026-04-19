@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo check *)",
+      "Bash(npm run *)",
+      "Bash(cargo build *)",
+      "Bash(timeout 3 ./target/debug/recall-app)",
+      "Bash(timeout 5 ./target/debug/recall-app)",
+      "Bash(cargo search *)",
+      "Bash(cargo info *)",
+      "Bash(cargo doc *)"
+    ]
+  }
+}
