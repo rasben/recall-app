@@ -38,6 +38,14 @@ Svelte 5 + SvelteKit 2 frontend, Tauri 2 + Rust backend, SQLite for settings/cre
 - Performance
   - When opening app, load the last 7 days automatically
 - UI
+  - Allow timeline items to have links
+    - Right now, links conflict with the "cross out" effect. 
+      - We need some solution that works, both accessibility- and UX wise.
+    - Examples of where links could be useful:
+      - Link to the related GH pull request
+      - Link to related Zulip thread
+      - Link to calendar invite
+      - etc.
   - In the calendar view, use colour backgrounds to show how busy a day has been
     - Grey = Not loaded yet/no data
   - Add loading splash screen when app is being opened
