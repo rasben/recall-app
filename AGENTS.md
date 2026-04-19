@@ -46,7 +46,7 @@ Potential future sources: Browser history, terminal/shell history, Harvest (to s
 - `src/components/Main.svelte` — Main tab content (timeline view)
 - `src/components/settings/Settings.svelte` — Settings tab shell; composes domain panels (`UI.svelte`, `Git.svelte`, …)
 - `src/components/settings/*.svelte` — One panel per settings domain (theme, git, GitHub, Jira, …)
-- `src/lib/components/ui/` — shadcn-svelte UI primitives (button, card, tabs, select, toggle, sonner, etc.)
+- `src/lib/components/ui/` — shadcn-svelte UI primitives (button, card, tabs, select, toggle, sonner, popover, calendar, etc.)
 - `src/lib/utils.ts` — `cn()` helper and utility types
 - `src/routes/` — SvelteKit routes: `+layout.svelte` (e.g. theme from saved UI settings), `+page.svelte` (tab shell), `layout.css` (retro theme)
 

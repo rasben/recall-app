@@ -30,4 +30,3 @@ Svelte 5 + SvelteKit 2 frontend, Tauri 2 + Rust backend, SQLite for settings/cre
 - When opening app, if no datasources set, show a message with pointing to cog
 - Save past days in the database, to make re-opening days easier
 - Show last 50 commands run, for clarity
-- Add calendar picker

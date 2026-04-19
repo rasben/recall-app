@@ -30,6 +30,10 @@
     selectedDate = todayIso();
   }
 
+  function pickDate(iso: string) {
+    selectedDate = iso;
+  }
+
   async function toggleDone(id: string) {
     const next = !doneIds.has(id);
     if (next) {
@@ -94,7 +98,7 @@
 </script>
 
 <div class="space-y-6 relative">
-  <TimelineDateNav {selectedDate} onShift={shiftDate} onGoToday={goToday} />
+  <TimelineDateNav {selectedDate} onShift={shiftDate} onGoToday={goToday} onPick={pickDate} />
 
   {#if loadError}
     <p
