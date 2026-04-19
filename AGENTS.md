@@ -10,6 +10,8 @@ Recall is a desktop app that helps you fill in your Harvest time tracking by bui
 
 The target user is a developer at Reload (the company) who uses Harvest for time tracking.
 
+Roadmap / to-do list lives in `README.md` under "To-Do's" — check it before picking up new work so you can pick something that fits the user's current priorities (items are tagged must-have vs. nice-to-have).
+
 ---
 
 ## Data sources
@@ -26,7 +28,7 @@ Each source provides timestamped activity events that are merged into a day time
 | **JIRA** | Tickets you commented on, transitioned, or were assigned to | JIRA API token |
 | **Zulip** | Messages you **sent** | Zulip API key |
 
-Potential future sources: Browser history, terminal/shell history, Harvest (to show already-logged entries alongside the timeline).
+Planned expansions (see `README.md` "To-Do's" for the full list and priorities): read/inbound signals for Gmail, Google Drive, and Zulip (currently outbound-only); Zulip message grouping so a burst of messages does not spam the feed.
 
 ---
 
@@ -55,11 +57,12 @@ Potential future sources: Browser history, terminal/shell history, Harvest (to s
 - `src-tauri/src/lib.rs` — Tauri entry, command registration, tauri-specta export
 - `src-tauri/src/commands/settings.rs` — **Only** shared SQLite helpers: `get_val`, `save_val`, `now`. No feature-specific commands or per-field keys.
 - `src-tauri/src/commands/settings_{domain}.rs` — One file per settings domain (e.g. `settings_ui`, `settings_git`, `settings_jira`, `settings_github`): a single JSON document per domain in the `settings` table, `get_*` / `set_*` commands, specta types for the frontend.
-- `src-tauri/src/commands/timeline/mod.rs` — Timeline Tauri command(s); merges or delegates to per-source modules.
+- `src-tauri/src/commands/timeline/mod.rs` — Timeline Tauri command(s); merges or delegates to per-source modules, and reads/writes the per-day cache for elapsed days.
 - `src-tauri/src/commands/timeline/{source}.rs` — One module per timeline provider (e.g. `git.rs`, `github.rs`, `jira.rs`); implements fetching for that source only.
+- `src-tauri/src/commands/timeline/cache.rs` — Private helpers for the `timeline_day_cache` SQLite table (`get_cached_day`, `save_cached_day`); not a Tauri command.
 - `src-tauri/src/timeline.rs` — Shared Rust types for timeline rows (`TimelineEvent`, `TimelineEventSource`), not Tauri commands.
 - `src-tauri/src/commands/harvest_done.rs` — Load/save timeline Harvest checkmarks (SQLite rows keyed by UUID v5 of `TimelineEvent.id`)
-- `src-tauri/src/db.rs` — SQLite init (`settings` key-value table; `timeline_harvest_done` for per-event Harvest checkmarks)
+- `src-tauri/src/db.rs` — SQLite init (`settings` key-value table; `timeline_harvest_done` for per-event Harvest checkmarks; `timeline_day_cache` for previously loaded day timelines)
 - `src-tauri/src/state.rs` — AppState with DB mutex
 - `src-tauri/capabilities/` — Tauri permissions
 - `src-tauri/icons/` — App icons
@@ -85,6 +88,7 @@ These patterns are intentional; follow them when adding settings areas or data s
 
 - Add a new file under `commands/timeline/` (e.g. `zulip.rs`) with source-specific logic.
 - Expose something like `pub(super) fn events_for_day(state: &State<'_, AppState>, day: &str) -> Result<Vec<TimelineEvent>, String>` from that module, then wire it from `timeline/mod.rs` (merge/sort when multiple sources are active).
+- `timeline/mod.rs` caches the merged result for any day strictly before the local "today" in `timeline_day_cache` (see `timeline/cache.rs`). Today and future days are always fetched live. If a change would invalidate a previously cached day (e.g. changing a data-source's settings in a way that affects history), the cached row for that day should be cleared.
 
 ---
 

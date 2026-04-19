@@ -34,5 +34,15 @@ pub fn init_db(app_handle: &AppHandle) -> Connection {
     )
     .expect("failed to create timeline_harvest_done table");
 
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS timeline_day_cache (
+            day TEXT PRIMARY KEY,
+            events_json TEXT NOT NULL,
+            updated_at INTEGER NOT NULL
+        )",
+        [],
+    )
+    .expect("failed to create timeline_day_cache table");
+
     conn
 }

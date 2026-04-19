@@ -38,7 +38,6 @@ Svelte 5 + SvelteKit 2 frontend, Tauri 2 + Rust backend, SQLite for settings/cre
   - Read messages (nice-to-have)
   - We need to group them together, to not spam the feed
 - Performance
-  - Save previously loaded days in the database, so we don't need to fetch all over again on app re-open.
   - When opening app, load the last 7 days automatically
 - UI
   - If no datasources set, show a message pointing user to settings page
