@@ -24,9 +24,28 @@ npm run tauri dev
 Svelte 5 + SvelteKit 2 frontend, Tauri 2 + Rust backend, SQLite for settings/credentials.
 
 
-## Ideas
+## To-Do's
 
-- When opening app, load the last 7 days
-- When opening app, if no datasources set, show a message with pointing to cog
-- Save past days in the database, to make re-opening days easier
-- Show last 50 commands run, for clarity
+- Gmail data-source
+  - Sent emails (must-have)
+  - Read emails (nice-to-have)
+- Google Calendar
+- Google Drive
+  - Edited/Creates files (must-have)
+  - Read files (nice-to-have)
+- Zulip data source
+  - Sent messages (must-have)
+  - Read messages (nice-to-have)
+  - We need to group them together, to not spam the feed
+- Performance
+  - Save previously loaded days in the database, so we don't need to fetch all over again on app re-open.
+  - When opening app, load the last 7 days automatically
+- UI
+  - If no datasources set, show a message pointing user to settings page
+- Privacy/Ease-of-mind
+  - Add a screen, that shows the last 50 commands that has been run
+    - E.g., the terminal commands that has been run by git data sources, or the APIs called by Jira datasources
+- Fun (nice-to-have)
+  - Add more transitions and animations
+  - Add a TUI
+    - Either a real TUI, or a fake one, making the app easily navigated with keyboard
