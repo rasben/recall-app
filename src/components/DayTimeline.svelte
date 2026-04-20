@@ -8,6 +8,8 @@
   import TimelineDateNav from "./TimelineDateNav.svelte";
   import TimelineEventRow from "./TimelineEvent.svelte";
   import Loading from "./ui/Loading.svelte";
+  import MissingSettings from "./ui/MissingSettings.svelte";
+    import { message } from "@tauri-apps/plugin-dialog";
 
   const LOAD_DEBOUNCE_MS = 500;
   const PREFETCH_DAYS = 6;
@@ -26,6 +28,7 @@
   let loadingSource = $state<string | null>(null);
   let doneSources = $state(new Set<string>());
   let enabledSources = $state<string[]>([]);
+  let settingsLoaded = $state(false);
   /** After first fetch, debounce so rapid day clicks only load the final day. */
   let pastInitialDay = $state(false);
 
@@ -140,10 +143,11 @@
     if (jira?.enabled) enabled.push("Jira");
     if (zulip?.enabled) enabled.push("Zulip");
     enabledSources = enabled;
+    settingsLoaded = true;
   });
 </script>
 
-<div class="space-y-6 relative">
+<div class="relative space-y-6">
   <TimelineDateNav {selectedDate} onShift={shiftDate} onGoToday={goToday} onPick={pickDate} />
 
   {#if loadError}
@@ -155,12 +159,15 @@
     </p>
   {/if}
 
-  {#if isLoading}
+  <div class="relative">
+  {#if settingsLoaded && enabledSources.length === 0}
+    <MissingSettings message="No data sources enabled. Enable atleast one in the settings." />
+  {:else if isLoading}
     <div class="absolute inset-x-0" in:fade={{ duration: 180, easing: cubicOut }} out:fade={{ duration: 240, easing: cubicOut }}>
       <Loading currentSource={loadingSource} {doneSources} {enabledSources} />
     </div>
   {:else if events.length === 0 && !loadError}
-    <p class=" text-muted-foreground" in:fade|global={{ duration: 240, easing: cubicOut }}>
+    <p class="text-muted-foreground" in:fade|global={{ duration: 240, easing: cubicOut }}>
       No activity found for this day.
     </p>
   {:else}
@@ -189,4 +196,5 @@
       {/each}
     </div>
   {/if}
+  </div>
 </div>
