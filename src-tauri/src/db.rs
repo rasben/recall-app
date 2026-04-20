@@ -1,8 +1,9 @@
 use rusqlite::Connection;
 use std::fs;
+use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 
-pub fn init_db(app_handle: &AppHandle) -> Connection {
+pub fn init_db(app_handle: &AppHandle) -> (Connection, PathBuf) {
     let app_dir = app_handle
         .path()
         .app_data_dir()
@@ -13,7 +14,12 @@ pub fn init_db(app_handle: &AppHandle) -> Connection {
     }
 
     let db_path = app_dir.join("db.sqlite");
-    let conn = Connection::open(db_path).expect("failed to open db");
+    let conn = Connection::open(&db_path).expect("failed to open db");
+
+    // WAL mode allows the background iCal sync (separate connection) to write
+    // concurrently while the main connection reads the timeline.
+    conn.execute_batch("PRAGMA journal_mode=WAL;")
+        .expect("failed to enable WAL mode");
 
     conn.execute(
         "CREATE TABLE IF NOT EXISTS settings (
@@ -45,14 +51,27 @@ pub fn init_db(app_handle: &AppHandle) -> Connection {
     .expect("failed to create timeline_day_cache table");
 
     conn.execute(
-        "CREATE TABLE IF NOT EXISTS calendar_ical_cache (
-            url TEXT PRIMARY KEY,
-            content TEXT NOT NULL,
-            fetched_at INTEGER NOT NULL
+        "CREATE TABLE IF NOT EXISTS ical_events (
+            url TEXT NOT NULL,
+            uid TEXT NOT NULL,
+            dtstart INTEGER NOT NULL,
+            summary TEXT NOT NULL,
+            event_url TEXT,
+            PRIMARY KEY (url, uid, dtstart)
         )",
         [],
     )
-    .expect("failed to create calendar_ical_cache table");
+    .expect("failed to create ical_events table");
 
-    conn
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS ical_sync_meta (
+            id INTEGER PRIMARY KEY,
+            last_synced_at INTEGER,
+            last_error TEXT
+        )",
+        [],
+    )
+    .expect("failed to create ical_sync_meta table");
+
+    (conn, db_path)
 }

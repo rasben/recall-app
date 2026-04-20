@@ -1,12 +1,24 @@
 <script lang="ts">
   import { fade } from "svelte/transition";
+  import { onMount } from "svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import SettingsIcon from "@lucide/svelte/icons/settings";
   import CloseIcon from "@lucide/svelte/icons/x";
   import Settings from "../components/settings/Settings.svelte";
   import Main from "../components/Main.svelte";
+  import { commands } from "../bindings";
 
   let settingsOpen = $state(false);
+
+  onMount(async () => {
+    // Trigger a background iCal sync on startup, but only if the data is stale
+    // (more than 1 hour old) to avoid re-syncing on every app restart.
+    const status = await commands.getIcalSyncStatus();
+    const oneHourAgo = Date.now() - 60 * 60 * 1000;
+    if (!status.syncing && (!status.last_synced_at || status.last_synced_at < oneHourAgo)) {
+      commands.triggerIcalSync();
+    }
+  });
 </script>
 
 <Button

@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import { toast } from "svelte-sonner";
   import { Label } from "$lib/components/ui/label/index.js";
   import { Checkbox } from "$lib/components/ui/checkbox/index.js";
-  import { commands, type SettingsIcal, type IcalDebugInfo } from "../../bindings";
+  import { commands, type SettingsIcal, type IcalSyncStatus } from "../../bindings";
   import PasswordInput from "../ui/PasswordInput.svelte";
 
   const defaultSettings: SettingsIcal = {
@@ -13,12 +13,34 @@
 
   let settings = $state<SettingsIcal>(defaultSettings);
   let icalUrls = $state<string[]>([""]);
+  let syncStatus = $state<IcalSyncStatus | null>(null);
+  let pollTimer: ReturnType<typeof setInterval> | null = null;
 
   onMount(async () => {
     settings = (await commands.getSettingsIcal()) ?? defaultSettings;
     const saved = settings.urls ?? [];
     icalUrls = saved.length > 0 ? [...saved] : [""];
+    if (settings.enabled) refreshSyncStatus();
   });
+
+  onDestroy(() => {
+    if (pollTimer) clearInterval(pollTimer);
+  });
+
+  async function refreshSyncStatus() {
+    syncStatus = await commands.getIcalSyncStatus();
+    if (syncStatus?.syncing) {
+      if (!pollTimer) {
+        pollTimer = setInterval(async () => {
+          syncStatus = await commands.getIcalSyncStatus();
+          if (!syncStatus?.syncing && pollTimer) {
+            clearInterval(pollTimer);
+            pollTimer = null;
+          }
+        }, 1500);
+      }
+    }
+  }
 
   async function persist(partial: Partial<SettingsIcal>) {
     const next: SettingsIcal = { ...settings, ...partial };
@@ -28,6 +50,7 @@
       return false;
     }
     settings = next;
+    if (next.enabled) refreshSyncStatus();
     return true;
   }
 
@@ -52,17 +75,9 @@
     saveUrls();
   }
 
-  let debugResults = $state<IcalDebugInfo[] | null>(null);
-  let debugging = $state(false);
-
-  async function runDebug() {
-    debugging = true;
-    debugResults = null;
-    try {
-      debugResults = await commands.debugIcal();
-    } finally {
-      debugging = false;
-    }
+  function formatSyncTime(ts: number | null | undefined): string {
+    if (!ts) return "Never";
+    return new Date(ts).toLocaleTimeString();
   }
 </script>
 
@@ -109,51 +124,22 @@
       Keep it private — anyone with this URL can read your calendar.
     </p>
 
-    <div class="flex gap-2 flex-wrap">
+    <div class="flex items-center gap-4 flex-wrap">
       <button type="button" class="border-2 px-3 py-1 text-sm" onclick={addUrl}>
         Add another iCal
       </button>
-      <button
-        type="button"
-        class="border-2 px-3 py-1 text-sm disabled:opacity-50"
-        disabled={debugging}
-        onclick={runDebug}
-      >
-        {debugging ? "Testing…" : "Test"}
-      </button>
-    </div>
 
-    {#if debugResults}
-      <div class="mt-4 border-2 p-3 text-xs font-mono space-y-3">
-        {#each debugResults as r}
-          <div>
-            <p class="font-bold break-all">{r.url}</p>
-            {#if r.error}
-              <p class="text-red-500">{r.error}</p>
-            {:else}
-              <p>
-                Total: {r.total_events} events —
-                All-day skipped: {r.all_day_skipped} —
-                Recurring (RRULE): {r.recurring_rrule}
-              </p>
-              <p class="mt-1 font-semibold">Today's events ({r.today_events.length}):</p>
-              {#if r.today_events.length === 0}
-                <p class="text-muted-foreground">None found for today.</p>
-              {:else}
-                {#each r.today_events as line}
-                  <p class="text-muted-foreground">{line}</p>
-                {/each}
-              {/if}
-              {#if r.dtstart_samples.length > 0}
-                <p class="mt-1 font-semibold">Raw DTSTART samples:</p>
-                {#each r.dtstart_samples as s}
-                  <p class="text-muted-foreground">{s}</p>
-                {/each}
-              {/if}
-            {/if}
-          </div>
-        {/each}
-      </div>
-    {/if}
+      {#if syncStatus}
+        <span class="text-xs text-muted-foreground">
+          {#if syncStatus.syncing}
+            <span class="animate-pulse">Syncing…</span>
+          {:else if syncStatus.last_error}
+            <span class="text-red-500">Sync error: {syncStatus.last_error}</span>
+          {:else}
+            Last synced: {formatSyncTime(syncStatus.last_synced_at)}
+          {/if}
+        </span>
+      {/if}
+    </div>
   {/if}
 </fieldset>

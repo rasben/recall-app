@@ -72,10 +72,13 @@ async getSettingsIcal() : Promise<SettingsIcal | null> {
     return await TAURI_INVOKE("get_settings_ical");
 },
 /**
- * Fetches each saved iCal URL and returns a diagnostic report focused on today's events.
+ * Kicks off a background iCal sync. Returns immediately; poll `get_ical_sync_status` for progress.
  */
-async debugIcal() : Promise<IcalDebugInfo[]> {
-    return await TAURI_INVOKE("debug_ical");
+async triggerIcalSync() : Promise<void> {
+    await TAURI_INVOKE("trigger_ical_sync");
+},
+async getIcalSyncStatus() : Promise<IcalSyncStatus> {
+    return await TAURI_INVOKE("get_ical_sync_status");
 },
 async getTimelineForDay(day: string) : Promise<Result<TimelineEvent[], string>> {
     try {
@@ -114,15 +117,7 @@ async setTimelineHarvestDone(eventId: string, done: boolean) : Promise<Result<nu
 /** user-defined types **/
 
 export type GitHubEvent = "PullRequestEvent" | "PullRequestReviewEvent" | "PullRequestReviewCommentEvent" | "IssuesEvent" | "IssueCommentEvent"
-export type IcalDebugInfo = { url: string; error: string | null; total_events: number; all_day_skipped: number; recurring_rrule: number; 
-/**
- * Events on today's date, formatted as "HH:MM — Title".
- */
-today_events: string[]; 
-/**
- * First few raw DTSTART values from the feed, for diagnosing parse failures.
- */
-dtstart_samples: string[] }
+export type IcalSyncStatus = { syncing: boolean; last_synced_at: number | null; last_error: string | null }
 /**
  * Timeline categories for Jira activity (mapped to REST/changelog rules in the Jira timeline source).
  */

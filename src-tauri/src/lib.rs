@@ -4,7 +4,7 @@ mod state;
 mod timeline;
 
 use state::AppState;
-use std::sync::Mutex;
+use std::sync::{atomic::AtomicBool, Arc, Mutex};
 use tauri::Manager;
 use tauri_specta::Builder;
 
@@ -23,7 +23,8 @@ pub fn run() {
         commands::settings_zulip::get_settings_zulip,
         commands::settings_ical::set_settings_ical,
         commands::settings_ical::get_settings_ical,
-        commands::settings_ical::debug_ical,
+        commands::settings_ical::trigger_ical_sync,
+        commands::settings_ical::get_ical_sync_status,
         commands::timeline::get_timeline_for_day,
         commands::harvest_done::get_timeline_harvest_done_for_event_ids,
         commands::harvest_done::set_timeline_harvest_done,
@@ -42,10 +43,12 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
-            let conn = db::init_db(app.handle());
+            let (conn, db_path) = db::init_db(app.handle());
 
             app.manage(AppState {
-                db: Mutex::new(conn),
+                db: Arc::new(Mutex::new(conn)),
+                db_path,
+                ical_syncing: Arc::new(AtomicBool::new(false)),
             });
 
             builder.mount_events(app);

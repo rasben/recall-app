@@ -1,6 +1,8 @@
 <script lang="ts">
   import { fade, fly } from "svelte/transition";
   import { cubicOut, quintOut } from "svelte/easing";
+  import { onMount, onDestroy } from "svelte";
+  import { listen } from "@tauri-apps/api/event";
   import { commands } from "../bindings";
   import { addDaysIso, groupEventsByHour, todayIso, type TimelineEvent } from "$lib/timeline";
   import TimelineDateNav from "./TimelineDateNav.svelte";
@@ -8,6 +10,8 @@
   import Loading from "./ui/Loading.svelte";
 
   const LOAD_DEBOUNCE_MS = 500;
+  const PREFETCH_DAYS = 6;
+  const PREFETCH_STAGGER_MS = 300;
   /** Stagger starts after loading so the first row does not land the same instant as the spinner handoff. */
   const ROW_INTRO_BASE_DELAY_MS = 80;
   const ROW_FLY_MS = 520;
@@ -19,8 +23,25 @@
   let loadError = $state<string | null>(null);
   let doneIds = $state<Set<string>>(new Set());
   let isLoading = $state(true);
+  let loadingSource = $state<string | null>(null);
+  let doneSources = $state(new Set<string>());
+  let enabledSources = $state<string[]>([]);
   /** After first fetch, debounce so rapid day clicks only load the final day. */
   let pastInitialDay = $state(false);
+
+  let unlistenSource: (() => void) | null = null;
+  listen<{ source: string; done: boolean }>("timeline:source", ({ payload }) => {
+    if (payload.done) {
+      doneSources = new Set([...doneSources, payload.source]);
+      loadingSource = null;
+    } else {
+      loadingSource = payload.source;
+    }
+  }).then((unlisten) => {
+    unlistenSource = unlisten;
+  });
+
+  onDestroy(() => unlistenSource?.());
 
   function shiftDate(days: number) {
     selectedDate = addDaysIso(selectedDate, days);
@@ -60,6 +81,8 @@
     pastInitialDay = true;
 
     doneIds = new Set();
+    doneSources = new Set();
+    loadingSource = null;
     loadError = null;
     events = [];
     isLoading = true;
@@ -95,6 +118,29 @@
   });
 
   let groupedByHour = $derived(groupEventsByHour(events));
+
+  onMount(async () => {
+    const today = todayIso();
+    for (let i = 1; i <= PREFETCH_DAYS; i++) {
+      const day = addDaysIso(today, -i);
+      window.setTimeout(() => commands.getTimelineForDay(day), i * PREFETCH_STAGGER_MS);
+    }
+
+    const [git, github, ical, jira, zulip] = await Promise.all([
+      commands.getSettingsGit(),
+      commands.getSettingsGithub(),
+      commands.getSettingsIcal(),
+      commands.getSettingsJira(),
+      commands.getSettingsZulip(),
+    ]);
+    const enabled: string[] = [];
+    if (git?.enabled) enabled.push("Git");
+    if (github?.enabled) enabled.push("GitHub");
+    if (ical?.enabled) enabled.push("Calendar");
+    if (jira?.enabled) enabled.push("Jira");
+    if (zulip?.enabled) enabled.push("Zulip");
+    enabledSources = enabled;
+  });
 </script>
 
 <div class="space-y-6 relative">
@@ -110,8 +156,8 @@
   {/if}
 
   {#if isLoading}
-    <div class="absolute" in:fade={{ duration: 180, easing: cubicOut }} out:fade={{ duration: 240, easing: cubicOut }}>
-      <Loading />
+    <div class="absolute inset-x-0" in:fade={{ duration: 180, easing: cubicOut }} out:fade={{ duration: 240, easing: cubicOut }}>
+      <Loading currentSource={loadingSource} {doneSources} {enabledSources} />
     </div>
   {:else if events.length === 0 && !loadError}
     <p class=" text-muted-foreground" in:fade|global={{ duration: 240, easing: cubicOut }}>
