@@ -57,6 +57,7 @@ Planned expansions (see `README.md` "To-Do's" for the full list and priorities):
 - `src/components/settings/Settings.svelte` — Settings tab shell; composes domain panels (`UI.svelte`, `Git.svelte`, …)
 - `src/components/settings/*.svelte` — One panel per settings domain (theme, git, GitHub, Jira, …)
 - `src/lib/components/ui/` — shadcn-svelte UI primitives (button, card, tabs, select, toggle, sonner, popover, calendar, etc.)
+- `src/components/ui/` — app-specific UI components: `Loading.svelte` (loading overlay with per-source progress), `MissingSettings.svelte` (shown when no data sources are configured), `PasswordInput.svelte`
 - `src/lib/utils.ts` — `cn()` helper and utility types
 - `src/routes/` — SvelteKit routes: `+layout.svelte` (e.g. theme from saved UI settings), `+page.svelte` (tab shell), `layout.css` (retro theme)
 
@@ -64,14 +65,14 @@ Planned expansions (see `README.md` "To-Do's" for the full list and priorities):
 
 - `src-tauri/src/lib.rs` — Tauri entry, command registration, tauri-specta export
 - `src-tauri/src/commands/settings.rs` — **Only** shared SQLite helpers: `get_val`, `save_val`, `now`. No feature-specific commands or per-field keys.
-- `src-tauri/src/commands/settings_{domain}.rs` — One file per settings domain (e.g. `settings_ui`, `settings_git`, `settings_jira`, `settings_github`, `settings_zulip`, `settings_ical`): a single JSON document per domain in the `settings` table, `get_*` / `set_*` commands, specta types for the frontend. `settings_ical` also exposes `debug_ical` for diagnosing feed issues, and clears `timeline_day_cache` on every save so past days are re-fetched with calendar events.
-- `src-tauri/src/commands/timeline/mod.rs` — Timeline Tauri command(s); merges or delegates to per-source modules, and reads/writes the per-day cache for elapsed days.
-- `src-tauri/src/commands/timeline/{source}.rs` — One module per timeline provider (`git.rs`, `github.rs`, `ical.rs`, `jira.rs`, `zulip.rs`). `ical.rs` fetches iCal feeds with a 10-minute SQLite cache (`calendar_ical_cache`), parses VEVENTs, and expands RRULE recurring events using the `rrule` crate; it handles EXDATE exclusions and RECURRENCE-ID overrides.
+- `src-tauri/src/commands/settings_{domain}.rs` — One file per settings domain (e.g. `settings_ui`, `settings_git`, `settings_jira`, `settings_github`, `settings_zulip`, `settings_ical`): a single JSON document per domain in the `settings` table, `get_*` / `set_*` commands, specta types for the frontend. `settings_ical` additionally exposes `get_ical_sync_status` (returns `{ syncing, last_synced_at, last_error }`) and `trigger_ical_sync` (kicks off a background sync, returns immediately). The background sync runs via `tauri::async_runtime::spawn_blocking`, opens its **own** SQLite connection (via `db_path`) to avoid contending with the main mutex, writes parsed events into `ical_events` and updates `ical_sync_meta`, then invalidates `timeline_day_cache`. Calling `set_settings_ical` auto-triggers a sync if URLs changed or the source was just enabled.
+- `src-tauri/src/commands/timeline/mod.rs` — `get_timeline_for_day` is an `async` Tauri command that uses `tokio::task::block_in_place` to run blocking source fetches without freezing the UI. It emits `timeline:source` Tauri events (`{ source, done: bool }`) before and after each source so the frontend can show per-source loading progress. Merges results and reads/writes the per-day cache for elapsed days.
+- `src-tauri/src/commands/timeline/{source}.rs` — One module per timeline provider (`git.rs`, `github.rs`, `ical.rs`, `jira.rs`, `zulip.rs`). `ical.rs` reads pre-parsed events from the `ical_events` SQLite table (populated by the background sync in `settings_ical.rs`) rather than fetching feeds at query time.
 - `src-tauri/src/commands/timeline/cache.rs` — Private helpers for the `timeline_day_cache` SQLite table (`get_cached_day`, `save_cached_day`); not a Tauri command.
 - `src-tauri/src/timeline.rs` — Shared Rust types for timeline rows (`TimelineEvent`, `TimelineEventSource`), not Tauri commands.
 - `src-tauri/src/commands/harvest_done.rs` — Load/save timeline Harvest checkmarks (SQLite rows keyed by UUID v5 of `TimelineEvent.id`)
-- `src-tauri/src/db.rs` — SQLite init (`settings` key-value table; `timeline_harvest_done` for per-event Harvest checkmarks; `timeline_day_cache` for previously loaded day timelines; `calendar_ical_cache` for raw iCal feed bodies with a 10-minute TTL)
-- `src-tauri/src/state.rs` — AppState with DB mutex
+- `src-tauri/src/db.rs` — SQLite init (WAL mode enabled for concurrent access); tables: `settings` key-value; `timeline_harvest_done` for per-event Harvest checkmarks; `timeline_day_cache` for previously loaded day timelines; `ical_events` (url, uid, dtstart, summary, event_url) for parsed iCal events; `ical_sync_meta` (last_synced_at, last_error) for sync state. Returns `(Connection, PathBuf)`.
+- `src-tauri/src/state.rs` — `AppState` with `db: Arc<Mutex<Connection>>`, `db_path: PathBuf` (used by background iCal sync to open its own connection), and `ical_syncing: Arc<AtomicBool>`
 - `src-tauri/capabilities/` — Tauri permissions
 - `src-tauri/icons/` — App icons
 
