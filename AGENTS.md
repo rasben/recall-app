@@ -18,16 +18,23 @@ Roadmap / to-do list lives in `README.md` under "To-Do's" — check it before pi
 
 Each source provides timestamped activity events that are merged into a day timeline.
 
-| Source | What it captures | Auth / access |
-|--------|-----------------|---------------|
-| **GitHub** | PRs, reviews, and issue/PR comments (public events performed by you via the REST Events API); excludes pushes so it does not overlap local **Git** commits. GitHub only returns the most recent events (API cap), so older days may be empty. | GitHub CLI (`gh auth login`); PAT support may be added later |
-| **Google Calendar** | Meetings and events you attended | Google OAuth (Calendar API) |
-| **Gmail** | Emails you **sent** or **replied to** (not all received mail) | Google OAuth (Gmail API) |
-| **Google Drive** | Docs/Sheets/Slides you **edited** | Google OAuth (Drive Activity API) |
-| **Local git** | Commits across all local repos, by your git author name | Shell: `git log --all --since=... --author=...` |
-| **JIRA** | Tickets you commented on, transitioned, or were assigned to | JIRA API token |
-| **Zulip** | Messages you **sent** (stream and DMs) | Zulip API key + email |
-| **Google Calendar** | Meetings and events you attended | Google OAuth (Desktop app credentials) |
+| Source | What it captures | Auth / access | Status |
+|--------|-----------------|---------------|--------|
+| **Calendar (iCal)** | Meetings and events | Secret iCal URL (e.g. Google Calendar's "Secret address in iCal format") | ✅ Done |
+| **GitHub** | PRs, reviews, and issue/PR comments (public events via the REST Events API); excludes pushes so it does not overlap local **Git** commits. GitHub only returns the most recent events (API cap), so older days may be empty. | GitHub CLI (`gh auth login`) | ✅ Done |
+| **Local git** | Commits across all local repos, by your git author name | Shell: `git log --all --since=... --author=...` | ✅ Done |
+| **JIRA** | Tickets you commented on, transitioned, or were assigned to | JIRA API token | ✅ Done |
+| **Zulip** | Messages you **sent** (stream and DMs) | Zulip API key + email | ✅ Done |
+| **Gmail** | Emails you **sent** or **replied to** | Google OAuth (Gmail API) | ⬜ Planned |
+| **Google Drive** | Docs/Sheets/Slides you **edited** | Google OAuth (Drive Activity API) | ⬜ Planned |
+
+### Why iCal instead of Google OAuth for Calendar
+
+Google Calendar, Gmail, and Drive all require OAuth. OAuth for a desktop app requires the user to create a Google Cloud project, configure a consent screen, and manage client credentials — a significant setup burden that's unreasonable to impose on end users.
+
+For **Calendar** specifically, Google exposes a "Secret address in iCal format" per calendar (a secret URL that acts as the auth token). This gives full read access to the calendar feed with zero Google Cloud setup. We chose this approach for Calendar and accepted its limitations (read-only, one URL per calendar, URL is the secret).
+
+**Gmail and Drive do not have an equivalent iCal-style escape hatch**, so they will require OAuth when implemented. That auth complexity is the reason they are deferred.
 
 Planned expansions (see `README.md` "To-Do's" for the full list and priorities): Gmail (sent emails), Google Drive (edited files); read/inbound signals for Gmail, Google Drive, and Zulip (currently outbound-only); Zulip message grouping so a burst of messages does not spam the feed.
 
@@ -57,13 +64,13 @@ Planned expansions (see `README.md` "To-Do's" for the full list and priorities):
 
 - `src-tauri/src/lib.rs` — Tauri entry, command registration, tauri-specta export
 - `src-tauri/src/commands/settings.rs` — **Only** shared SQLite helpers: `get_val`, `save_val`, `now`. No feature-specific commands or per-field keys.
-- `src-tauri/src/commands/settings_{domain}.rs` — One file per settings domain (e.g. `settings_ui`, `settings_git`, `settings_jira`, `settings_github`, `settings_zulip`, `settings_google`): a single JSON document per domain in the `settings` table, `get_*` / `set_*` commands, specta types for the frontend. `settings_google` also exposes `google_oauth_connect` / `google_oauth_disconnect` Tauri commands that run the browser OAuth flow.
+- `src-tauri/src/commands/settings_{domain}.rs` — One file per settings domain (e.g. `settings_ui`, `settings_git`, `settings_jira`, `settings_github`, `settings_zulip`, `settings_ical`): a single JSON document per domain in the `settings` table, `get_*` / `set_*` commands, specta types for the frontend. `settings_ical` also exposes `debug_ical` for diagnosing feed issues, and clears `timeline_day_cache` on every save so past days are re-fetched with calendar events.
 - `src-tauri/src/commands/timeline/mod.rs` — Timeline Tauri command(s); merges or delegates to per-source modules, and reads/writes the per-day cache for elapsed days.
-- `src-tauri/src/commands/timeline/{source}.rs` — One module per timeline provider (e.g. `git.rs`, `github.rs`, `jira.rs`, `zulip.rs`); implements fetching for that source only. Google sources are grouped under `timeline/google/` (a Rust module directory): `mod.rs` aggregates all Google sub-sources and holds the shared `get_valid_access_token` + token-refresh helper; `calendar.rs` implements the Calendar API fetch. Future Gmail and Drive modules go here too.
+- `src-tauri/src/commands/timeline/{source}.rs` — One module per timeline provider (`git.rs`, `github.rs`, `ical.rs`, `jira.rs`, `zulip.rs`). `ical.rs` fetches iCal feeds with a 10-minute SQLite cache (`calendar_ical_cache`), parses VEVENTs, and expands RRULE recurring events using the `rrule` crate; it handles EXDATE exclusions and RECURRENCE-ID overrides.
 - `src-tauri/src/commands/timeline/cache.rs` — Private helpers for the `timeline_day_cache` SQLite table (`get_cached_day`, `save_cached_day`); not a Tauri command.
 - `src-tauri/src/timeline.rs` — Shared Rust types for timeline rows (`TimelineEvent`, `TimelineEventSource`), not Tauri commands.
 - `src-tauri/src/commands/harvest_done.rs` — Load/save timeline Harvest checkmarks (SQLite rows keyed by UUID v5 of `TimelineEvent.id`)
-- `src-tauri/src/db.rs` — SQLite init (`settings` key-value table; `timeline_harvest_done` for per-event Harvest checkmarks; `timeline_day_cache` for previously loaded day timelines)
+- `src-tauri/src/db.rs` — SQLite init (`settings` key-value table; `timeline_harvest_done` for per-event Harvest checkmarks; `timeline_day_cache` for previously loaded day timelines; `calendar_ical_cache` for raw iCal feed bodies with a 10-minute TTL)
 - `src-tauri/src/state.rs` — AppState with DB mutex
 - `src-tauri/capabilities/` — Tauri permissions
 - `src-tauri/icons/` — App icons
@@ -101,7 +108,7 @@ These patterns are intentional; follow them when adding settings areas or data s
 | Styling | Tailwind CSS 4 (`@tailwindcss/vite`), tw-animate-css, @tailwindcss/forms, @tailwindcss/typography |
 | UI | bits-ui (shadcn-svelte), svelte-sonner, @lucide/svelte |
 | Desktop | Tauri 2 |
-| Backend | Rust (edition 2021), tauri-specta, rusqlite, once_cell, uuid (v5 for Harvest-done row ids) |
+| Backend | Rust (edition 2021), tauri-specta, rusqlite, once_cell, uuid (v5 for Harvest-done row ids), ical (iCal feed parsing), rrule (RRULE recurrence expansion) |
 | Package manager | npm (lockfile: `package-lock.json`) |
 
 ---
