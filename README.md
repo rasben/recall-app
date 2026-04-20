@@ -35,7 +35,6 @@ Svelte 5 + SvelteKit 2 frontend, Tauri 2 + Rust backend, SQLite for settings/cre
 - Zulip - expanded data
   - Messages you've read
 - UI
-  - Navigate to the same day that was open, when closing settings tab
   - In the calendar view, use colour backgrounds to show how busy a day has been
     - Grey = Not loaded yet/no data
     - Make some kind of button where the user can choose to load a whole months of data, to see this.
