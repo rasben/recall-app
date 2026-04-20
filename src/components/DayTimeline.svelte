@@ -5,11 +5,12 @@
   import { listen } from "@tauri-apps/api/event";
   import { commands } from "../bindings";
   import { addDaysIso, groupEventsByHour, todayIso, type TimelineEvent } from "$lib/timeline";
+  import { navState } from "$lib/nav-state.svelte";
   import TimelineDateNav from "./TimelineDateNav.svelte";
   import TimelineEventRow from "./TimelineEvent.svelte";
   import Loading from "./ui/Loading.svelte";
   import MissingSettings from "./ui/MissingSettings.svelte";
-    import { message } from "@tauri-apps/plugin-dialog";
+  import { message } from "@tauri-apps/plugin-dialog";
 
   const LOAD_DEBOUNCE_MS = 500;
   const PREFETCH_DAYS = 6;
@@ -20,7 +21,7 @@
   const ROW_STAGGER_MS = 58;
   const ROW_STAGGER_CAP_MS = 1600;
 
-  let selectedDate = $state(todayIso());
+  let selectedDate = $derived(navState.selectedDate);
   let events = $state<TimelineEvent[]>([]);
   let loadError = $state<string | null>(null);
   let doneIds = $state<Set<string>>(new Set());
@@ -47,15 +48,15 @@
   onDestroy(() => unlistenSource?.());
 
   function shiftDate(days: number) {
-    selectedDate = addDaysIso(selectedDate, days);
+    navState.selectedDate = addDaysIso(navState.selectedDate, days);
   }
 
   function goToday() {
-    selectedDate = todayIso();
+    navState.selectedDate = todayIso();
   }
 
   function pickDate(iso: string) {
-    selectedDate = iso;
+    navState.selectedDate = iso;
   }
 
   async function toggleDone(id: string) {
