@@ -110,8 +110,8 @@
 </script>
 
 
-<fieldset class="border-2 p-4 mt-4">
-    <legend class="mb-2">GitHub</legend>
+<fieldset class="border-2 p-4 mt-6">
+    <legend>GitHub</legend>
 
     <div class="flex items-center gap-2 mb-4">
         <Checkbox
@@ -137,9 +137,9 @@
             <div class="-mt-2 mb-4 text-red-600 font-bold">
                 For now, only GH CLI is supported. In the future, we will support GH PAT tokens.
             </div>
+            <!--
             <PasswordInput bind:password={token} saveAction={setToken} label="GitHub PAT" placeholder="Add token.." inputId="github-pat" />
-
-
+            -->
         {/if}
 
 

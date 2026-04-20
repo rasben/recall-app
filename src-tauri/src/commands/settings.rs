@@ -1,5 +1,7 @@
 use crate::state::AppState;
 use rusqlite::params;
+use serde::Serialize;
+use specta::Type;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::State;
 
@@ -30,4 +32,23 @@ pub(crate) fn get_val(state: &State<'_, AppState>, key: &str) -> Option<String> 
         .ok()?;
 
     stmt.query_row(params![key], |row| row.get(0)).ok()
+}
+
+#[derive(Serialize, Type)]
+pub struct ClearCachesResult {
+    pub rows_deleted: u32,
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn clear_all_caches(state: State<'_, AppState>) -> Result<ClearCachesResult, String> {
+    let conn = state.db.lock().map_err(|_| "DB lock failed".to_string())?;
+    let mut rows_deleted = 0u32;
+    rows_deleted += conn
+        .execute("DELETE FROM timeline_day_cache", [])
+        .map_err(|e| e.to_string())? as u32;
+    rows_deleted += conn
+        .execute("DELETE FROM ical_events", [])
+        .map_err(|e| e.to_string())? as u32;
+    Ok(ClearCachesResult { rows_deleted })
 }

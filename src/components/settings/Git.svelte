@@ -66,8 +66,8 @@
 </script>
 
 
-<fieldset class="border-2 p-4 mt-4">
-    <legend class="mb-2">Local Git commits</legend>
+<fieldset class="border-2 p-4 mt-6">
+    <legend>Local Git commits</legend>
 
     <div class="flex items-center gap-2 mb-4">
         <Checkbox
@@ -93,7 +93,7 @@
             </Button>
         </div>
         {#if path}
-            <p class="text-muted-foreground text-sm mt-2">Will scan <strong>{path}</strong> for git repositories.</p>
+            <p class="text-muted-foreground text-sm mt-2 px-4">Will scan <strong>{path}</strong> for git repositories.</p>
         {/if}
     {/if}
 </fieldset>

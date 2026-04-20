@@ -8,12 +8,13 @@ let {
     password = $bindable(),
     saveAction,
     label,
+    description = null,
     placeholder,
     inputId = "password-input",
 } = $props();
 </script>
 
-<fieldset class="mb-8">
+<fieldset class="mb-4">
     <Label for={inputId} class="mb-2">{label}</Label>
     <div class="relative">
         <Input type={showPassword ? 'text' : 'password'} id={inputId} placeholder={placeholder} bind:value={password} onblur={async () => await saveAction()} />
@@ -25,4 +26,9 @@ let {
             {/if}
         </button>
     </div>
+    {#if description}
+        <p class="text-muted-foreground text-sm mt-2 px-4">
+            {@html description}
+        </p>
+    {/if}
 </fieldset>

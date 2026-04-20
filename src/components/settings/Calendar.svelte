@@ -15,6 +15,17 @@
   let icalUrls = $state<string[]>([""]);
   let syncStatus = $state<IcalSyncStatus | null>(null);
   let pollTimer: ReturnType<typeof setInterval> | null = null;
+  let description = `Find this in <a
+        href="https://calendar.google.com/calendar/r/settings"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="underline">Google Calendar Settings</a
+      >.<br />
+      Click on a calendar → scroll to <strong>"Secret address in iCal format"</strong>.<br />
+      Keep it private — anyone with this URL can read your calendar.
+      `;
+
+
 
   onMount(async () => {
     settings = (await commands.getSettingsIcal()) ?? defaultSettings;
@@ -81,8 +92,8 @@
   }
 </script>
 
-<fieldset class="border-2 p-4 mt-4">
-  <legend class="mb-2">Calendar</legend>
+<fieldset class="border-2 p-4 mt-6">
+  <legend>Calendar</legend>
 
   <div class="flex items-center gap-2 mb-4">
     <Checkbox
@@ -101,11 +112,12 @@
         label="iCal URL"
         placeholder="https://calendar.google.com/calendar/ical/…"
         inputId="ical-url-{i}"
+        description={icalUrls.length > 1 ? '' : description}
       />
       {#if icalUrls.length > 1}
         <button
           type="button"
-          class="border-2 px-3 py-1 text-sm -mt-6 mb-8"
+          class="border-2 px-3 py-1 text-sm -mt-6 mb-2"
           onclick={() => removeUrl(i)}
         >
           Remove
@@ -113,18 +125,8 @@
       {/if}
     {/each}
 
-    <p class="text-muted-foreground text-sm mb-4">
-      Find this in <a
-        href="https://calendar.google.com/calendar/r/settings"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="underline">Google Calendar Settings</a
-      >.<br />
-      Click on a calendar → scroll to <strong>"Secret address in iCal format"</strong>.<br />
-      Keep it private — anyone with this URL can read your calendar.
-    </p>
-
-    <div class="flex items-center gap-4 flex-wrap">
+    {#if icalUrls.length > 0}
+    <div class="flex items-center gap-4 flex-wrap mt-4">
       <button type="button" class="border-2 px-3 py-1 text-sm" onclick={addUrl}>
         Add another iCal
       </button>
@@ -141,5 +143,6 @@
         </span>
       {/if}
     </div>
+    {/if}
   {/if}
 </fieldset>

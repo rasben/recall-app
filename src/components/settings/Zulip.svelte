@@ -8,6 +8,8 @@
   import PasswordInput from "../ui/PasswordInput.svelte";
 
   const DEFAULT_REALM = "https://reload.zulipchat.com";
+  const descriptionToken = `Find your API key in Zulip under
+      <strong>Settings → Account &amp; privacy → API key</strong>.`
 
   const defaultSettings: SettingsZulip = {
     enabled: false,
@@ -86,8 +88,8 @@
   }
 </script>
 
-<fieldset class="border-2 p-4 mt-4">
-  <legend class="mb-2">Zulip</legend>
+<fieldset class="border-2 p-4 mt-6">
+  <legend>Zulip</legend>
 
   <div class="flex items-center gap-2 mb-4">
     <Checkbox
@@ -126,11 +128,8 @@
       label="API key"
       placeholder="Your Zulip API key…"
       inputId="zulip-api-key"
+      description={descriptionToken}
     />
 
-    <p class="text-muted-foreground text-sm px-4 -mt-6 mb-2">
-      Find your API key in Zulip under
-      <strong>Settings → Account &amp; privacy → API key</strong>.
-    </p>
   {/if}
 </fieldset>

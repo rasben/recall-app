@@ -11,6 +11,14 @@
   import * as Select from "$lib/components/ui/select/index.js";
 
   const DEFAULT_SITE = "https://reload.atlassian.net";
+  const tokenDescription = `Use an
+      <a
+              class="underline font-medium text-foreground"
+              href="https://id.atlassian.com/manage-profile/security/api-tokens"
+              target="_blank"
+              rel="noreferrer">Atlassian API token</a
+      >
+      with your Atlassian account email (Jira Cloud).`;
 
   const eventTypeMap: Record<string, { type: JiraEvent; label: string }> = {
     commentWritten: { type: "CommentWritten", label: "Comments I posted" },
@@ -127,8 +135,8 @@
   }
 </script>
 
-<fieldset class="border-2 p-4 mt-4">
-  <legend class="mb-2">Jira</legend>
+<fieldset class="border-2 p-4 mt-6">
+  <legend>Jira</legend>
 
   <div class="flex items-center gap-2 mb-4">
     <Checkbox
@@ -167,18 +175,8 @@
       label="Atlassian API token"
       placeholder="Create a token…"
       inputId="jira-api-token"
+      description={tokenDescription}
     />
-
-    <p class="text-muted-foreground text-sm px-4 -mt-6 mb-4">
-      Use an
-      <a
-              class="underline font-medium text-foreground"
-              href="https://id.atlassian.com/manage-profile/security/api-tokens"
-              target="_blank"
-              rel="noreferrer">Atlassian API token</a
-      >
-      with your Atlassian account email (Jira Cloud).
-    </p>
 
     {#if apiToken}
 

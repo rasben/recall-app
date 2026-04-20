@@ -34,8 +34,6 @@ Svelte 5 + SvelteKit 2 frontend, Tauri 2 + Rust backend, SQLite for settings/cre
   - Read files
 - Zulip - expanded data
   - Messages you've read
-- Performance
-  - Add "clear caches" in settings
 - UI
   - In the calendar view, use colour backgrounds to show how busy a day has been
     - Grey = Not loaded yet/no data

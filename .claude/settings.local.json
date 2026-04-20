@@ -8,7 +8,8 @@
       "Bash(timeout 5 ./target/debug/recall-app)",
       "Bash(cargo search *)",
       "Bash(cargo info *)",
-      "Bash(cargo doc *)"
+      "Bash(cargo doc *)",
+      "Bash(grep -E \"^d|\\\\.json$|\\\\.config\")"
     ]
   }
 }

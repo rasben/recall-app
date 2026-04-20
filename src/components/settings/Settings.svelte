@@ -5,6 +5,7 @@
   import SettingsCalendar from "./Calendar.svelte";
   import SettingsJira from "./Jira.svelte";
   import SettingsZulip from "./Zulip.svelte";
+  import SettingsCache from "./Cache.svelte";
 </script>
 
 <h2 class="font-head mb-4 text-xl">
@@ -17,3 +18,4 @@
 <SettingsCalendar />
 <SettingsJira />
 <SettingsZulip />
+<SettingsCache />

@@ -41,7 +41,7 @@
 </script>
 
 <fieldset class="border-2 p-4">
-    <legend class="mb-2">Theme</legend>
+    <legend>Theme</legend>
     <ToggleGroup.Root
             variant="outlined"
             type="single"

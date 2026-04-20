@@ -28,6 +28,7 @@ pub fn run() {
         commands::timeline::get_timeline_for_day,
         commands::harvest_done::get_timeline_harvest_done_for_event_ids,
         commands::harvest_done::set_timeline_harvest_done,
+        commands::settings::clear_all_caches,
     ]);
 
     #[cfg(debug_assertions)]
