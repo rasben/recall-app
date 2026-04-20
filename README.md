@@ -26,14 +26,14 @@ Svelte 5 + SvelteKit 2 frontend, Tauri 2 + Rust backend, SQLite for settings/cre
 
 ## To-Do's
 
-- Gmail data-source (nice-to-have)
+- Gmail data-source
   - Sent emails
   - Read emails
-- Google Drive (nice-to-have)
+- Google Drive
   - Edited/Creates files
   - Read files
 - Zulip - expanded data
-  - Messages you've read (nice-to-have)
+  - Messages you've read
 - Performance
   - When opening app, load the last 7 days automatically
   - Add "clear caches" in settings
@@ -58,7 +58,7 @@ Svelte 5 + SvelteKit 2 frontend, Tauri 2 + Rust backend, SQLite for settings/cre
 - Privacy/Ease-of-mind
   - Add a screen, that shows the last 50 commands that has been run
     - E.g., the terminal commands that has been run by git data sources, or the APIs called by Jira datasources
-- Fun (nice-to-have)
+- Fun
   - Add more transitions and animations
   - Add a TUI
     - Either a real TUI, or a fake one, making the app easily navigated with keyboard
