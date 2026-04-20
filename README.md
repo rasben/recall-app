@@ -38,9 +38,6 @@ Svelte 5 + SvelteKit 2 frontend, Tauri 2 + Rust backend, SQLite for settings/cre
   - When opening app, load the last 7 days automatically
   - Add "clear caches" in settings
 - UI
-  - Fix "flashbang" effect when opening app at night
-    - The app flashes white when opening. 
-    - Can we make the default color black? or transparent? or respect system already at that point?
   - Allow timeline items to have links
     - Right now, links conflict with the "cross out" effect. 
       - We need some solution that works, both accessibility- and UX wise.

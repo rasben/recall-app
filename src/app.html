@@ -1,14 +1,16 @@
 <script lang="ts">
-  const theme = localStorage.getItem("theme");
   const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
 
   function updateTheme() {
     const savedTheme = localStorage.getItem("theme");
+    const isDark = savedTheme === "dark" || (!savedTheme && darkQuery.matches);
 
-    if (savedTheme === "dark" || (!savedTheme && darkQuery.matches)) {
+    if (isDark) {
       document.documentElement.classList.add("dark");
+      document.documentElement.style.backgroundColor = "#1a1a1a";
     } else {
       document.documentElement.classList.remove("dark");
+      document.documentElement.style.backgroundColor = "#fff";
     }
   }
 
