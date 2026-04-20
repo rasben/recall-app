@@ -6,6 +6,8 @@
   import FileText from "@lucide/svelte/icons/file-text";
   import MessageSquare from "@lucide/svelte/icons/message-square";
   import TicketCheck from "@lucide/svelte/icons/ticket-check";
+  import ExternalLink from "@lucide/svelte/icons/external-link";
+  import { openUrl } from "@tauri-apps/plugin-opener";
   import type { TimelineEvent, TimelineEventSource } from "../bindings";
   import type { Component } from "svelte";
 
@@ -27,14 +29,26 @@
   let config = $derived(sourceConfig[event.source]);
 </script>
 
-<button
-  type="button"
+<div
+  role="button"
+  tabindex="0"
   onclick={onToggle}
+  onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle?.(); } }}
   class="timeline-event-btn relative flex w-full min-w-0 max-w-full cursor-pointer items-start gap-3 border-2 bg-card py-2 pl-3 pr-2 text-left shadow-sm transition-all hover:shadow-none
     {done ? 'opacity-50' : ''}"
 >
   <span class="w-10 shrink-0 pt-0.5 font-mono text-xs text-muted-foreground">{event.time}</span>
-
+  {#if event.url}
+    <button
+            type="button"
+            class="timeline-link-btn absolute bottom-1.5 left-3 w-10 text-center inline-flex items-center gap-1 text-[10px] text-muted-foreground opacity-0 transition-opacity hover:text-foreground"
+            onclick={(e) => { e.stopPropagation(); openUrl(event.url!); }}
+            aria-label="Open link"
+    >
+      <span>Open</span>
+      <ExternalLink class="size-3" />
+    </button>
+  {/if}
   {#if config}
     {@const Icon = config.icon}
     <div class="mt-0.5 shrink-0">
@@ -51,7 +65,6 @@
         {event.detail}
       </p>
     {/if}
-
   </div>
 
   <div class="relative mt-0.5 shrink-0 self-end">
@@ -72,7 +85,7 @@
   >
     {config.label}
   </span>
-</button>
+</div>
 
 <style>
   /* One-line ellipsis; unwrap on hover/focus-within. Title used to use Tailwind truncate (no hover reset). */
@@ -90,5 +103,8 @@
   .timeline-event-btn:is(:hover, :focus-within) .timeline-event-body {
     position: relative;
     z-index: 1;
+  }
+  .timeline-event-btn:is(:hover, :focus-within) .timeline-link-btn {
+    opacity: 1;
   }
 </style>

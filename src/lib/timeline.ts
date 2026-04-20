@@ -15,7 +15,10 @@ export function addDaysIso(iso: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function formatDayHeadingParts(iso: string): { weekday: string; monthDay: string } {
+export function formatDayHeadingParts(iso: string): {
+  weekday: string;
+  monthDay: string;
+} {
   const d = new Date(iso + "T12:00:00");
   return {
     weekday: d.toLocaleDateString("en-US", { weekday: "long" }),

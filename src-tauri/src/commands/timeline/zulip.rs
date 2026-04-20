@@ -132,7 +132,19 @@ pub(super) fn events_for_day(
 
 
         let first_id = msgs[0].id;
-        let msg_url = format!("{realm}/#narrow/id/{first_id}");
+        let first_topic = msgs[0].subject.as_deref().unwrap_or("");
+        let msg_url = if is_dm {
+            format!("{realm}/#narrow/near/{first_id}")
+        } else {
+            let stream_segment = match msgs[0].stream_id {
+                Some(sid) => format!("{}-{}", sid, zulip_encode(&stream_key)),
+                None => zulip_encode(&stream_key),
+            };
+            format!(
+                "{realm}/#narrow/stream/{stream_segment}/topic/{}/near/{first_id}",
+                zulip_encode(first_topic)
+            )
+        };
 
         let id = if is_dm {
             format!("zulip:dm:{day}")
@@ -163,6 +175,12 @@ struct MessagesResponse {
     messages: Vec<ZulipMessage>,
 }
 
+/// Zulip's narrow-component encoding: encodeURIComponent but with '%' replaced by '.', lowercased.
+fn zulip_encode(s: &str) -> String {
+    let encoded = urlencoding::encode(s);
+    encoded.replace('%', ".").to_lowercase()
+}
+
 #[derive(Deserialize)]
 struct ZulipMessage {
     id: u64,
@@ -172,4 +190,6 @@ struct ZulipMessage {
     #[serde(default)]
     subject: Option<String>,
     display_recipient: serde_json::Value,
+    #[serde(default)]
+    stream_id: Option<u64>,
 }
