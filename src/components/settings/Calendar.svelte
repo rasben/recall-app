@@ -9,10 +9,12 @@
   const defaultSettings: SettingsIcal = {
     enabled: false,
     urls: [],
+    email: null,
   };
 
   let settings = $state<SettingsIcal>(defaultSettings);
   let icalUrls = $state<string[]>([""]);
+  let emailInput = $state<string>("");
   let syncStatus = $state<IcalSyncStatus | null>(null);
   let pollTimer: ReturnType<typeof setInterval> | null = null;
   let description = `Find this in <a
@@ -31,6 +33,7 @@
     settings = (await commands.getSettingsIcal()) ?? defaultSettings;
     const saved = settings.urls ?? [];
     icalUrls = saved.length > 0 ? [...saved] : [""];
+    emailInput = settings.email ?? "";
     if (settings.enabled) refreshSyncStatus();
   });
 
@@ -75,6 +78,12 @@
     const cleaned = icalUrls.map((u) => u.trim()).filter((u) => u.length > 0);
     const ok = await persist({ urls: cleaned });
     if (ok) toast.success("Calendar URL saved");
+  }
+
+  async function saveEmail() {
+    const trimmed = emailInput.trim();
+    const ok = await persist({ email: trimmed.length > 0 ? trimmed : null });
+    if (ok) toast.success("Email saved");
   }
 
   function addUrl() {
@@ -126,6 +135,21 @@
     {/each}
 
     {#if icalUrls.length > 0}
+    <div class="mt-4">
+      <Label for="calendar-email" class="text-sm">Your email address</Label>
+      <p class="text-xs text-muted-foreground mb-1">Used to hide meetings you've declined. Leave blank to show all meetings.</p>
+      <div class="flex gap-2">
+        <input
+          id="calendar-email"
+          type="email"
+          class="border-2 px-2 py-1 text-sm bg-background flex-1"
+          placeholder="you@example.com"
+          bind:value={emailInput}
+          onblur={saveEmail}
+          onkeydown={(e) => { if (e.key === 'Enter') saveEmail(); }}
+        />
+      </div>
+    </div>
     <div class="flex items-center gap-4 flex-wrap mt-4">
       <button type="button" class="border-2 px-3 py-1 text-sm" onclick={addUrl}>
         Add another iCal

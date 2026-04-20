@@ -149,7 +149,11 @@ export type JiraEvent =
 "Mentioned"
 export type SettingsGit = { enabled: boolean; path: string }
 export type SettingsGitHub = { enabled: boolean; use_cli: boolean; token: string; enabled_events: GitHubEvent[] }
-export type SettingsIcal = { enabled?: boolean; urls?: string[] }
+export type SettingsIcal = { enabled?: boolean; urls?: string[]; 
+/**
+ * User's email address used to identify their ATTENDEE entry and filter declined events.
+ */
+email?: string | null }
 export type SettingsJira = { enabled: boolean; site_url?: string; email?: string; api_token?: string; enabled_events?: JiraEvent[] }
 export type SettingsUi = { theme: string }
 export type SettingsZulip = { enabled: boolean; realm_url?: string; email?: string; api_key?: string }

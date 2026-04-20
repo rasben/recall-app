@@ -73,5 +73,12 @@ pub fn init_db(app_handle: &AppHandle) -> (Connection, PathBuf) {
     )
     .expect("failed to create ical_sync_meta table");
 
+    // Migrations: ignore errors when columns already exist.
+    let _ = conn.execute("ALTER TABLE ical_events ADD COLUMN dtend INTEGER", []);
+    let _ = conn.execute(
+        "ALTER TABLE ical_events ADD COLUMN declined INTEGER NOT NULL DEFAULT 0",
+        [],
+    );
+
     (conn, db_path)
 }

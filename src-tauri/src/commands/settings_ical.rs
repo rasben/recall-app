@@ -22,6 +22,9 @@ pub struct SettingsIcal {
     pub enabled: bool,
     #[serde(default)]
     pub urls: Vec<String>,
+    /// User's email address used to identify their ATTENDEE entry and filter declined events.
+    #[serde(default)]
+    pub email: Option<String>,
 }
 
 pub(crate) fn load_settings_ical(state: &State<'_, AppState>) -> SettingsIcal {
@@ -129,9 +132,10 @@ pub(crate) fn start_sync(state: &State<'_, AppState>) {
     // The sync opens its own connection so it never contends with the main DB mutex.
     let db_path = state.db_path.clone();
     let syncing = Arc::clone(&state.ical_syncing);
+    let email = settings.email.clone();
 
     tauri::async_runtime::spawn_blocking(move || {
-        run_sync(db_path, syncing, urls);
+        run_sync(db_path, syncing, urls, email);
     });
 }
 
@@ -139,6 +143,7 @@ fn run_sync(
     db_path: std::path::PathBuf,
     syncing: Arc<AtomicBool>,
     urls: Vec<String>,
+    user_email: Option<String>,
 ) {
     let mut conn = match rusqlite::Connection::open(&db_path) {
         Ok(c) => c,
@@ -156,8 +161,13 @@ fn run_sync(
 
     let mut last_error: Option<String> = None;
 
+    let email_lower = user_email
+        .as_deref()
+        .map(|e| e.trim().to_lowercase())
+        .filter(|e| !e.is_empty());
+
     for url in &urls {
-        if let Err(e) = sync_one_url(&mut conn, url.trim(), window_start, window_end) {
+        if let Err(e) = sync_one_url(&mut conn, url.trim(), window_start, window_end, &email_lower) {
             last_error = Some(e);
         }
     }
@@ -178,6 +188,7 @@ fn sync_one_url(
     url: &str,
     window_start: NaiveDate,
     window_end: NaiveDate,
+    user_email: &Option<String>,
 ) -> Result<(), String> {
     let content = ureq::get(url)
         .set("Accept", "text/calendar")
@@ -186,7 +197,7 @@ fn sync_one_url(
         .into_string()
         .map_err(|e| format!("iCal read: {e}"))?;
 
-    let events = parse_and_expand(&content, window_start, window_end);
+    let events = parse_and_expand(&content, window_start, window_end, user_email);
 
     // A single transaction makes thousands of inserts orders of magnitude faster.
     let tx = conn.transaction().map_err(|e| e.to_string())?;
@@ -194,9 +205,9 @@ fn sync_one_url(
         .map_err(|e| e.to_string())?;
     for ev in &events {
         tx.execute(
-            "INSERT OR REPLACE INTO ical_events (url, uid, dtstart, summary, event_url)
-             VALUES (?1, ?2, ?3, ?4, ?5)",
-            params![url, ev.uid, ev.dtstart, ev.summary, ev.event_url],
+            "INSERT OR REPLACE INTO ical_events (url, uid, dtstart, summary, event_url, dtend, declined)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![url, ev.uid, ev.dtstart, ev.summary, ev.event_url, ev.dtend, ev.declined as i64],
         )
         .map_err(|e| e.to_string())?;
     }
@@ -212,20 +223,24 @@ struct ParsedEvent {
     event_url: Option<String>,
     dtstart_val: String,
     dtstart_tzid: Option<String>,
+    dtend_val: Option<String>,
     is_all_day: bool,
     rrule: Option<String>,
     exdates: Vec<String>,
     recurrence_id_ts: Option<i64>,
+    declined: bool,
 }
 
 struct ExpandedEvent {
     uid: String,
     dtstart: i64,
+    dtend: Option<i64>,
     summary: String,
     event_url: Option<String>,
+    declined: bool,
 }
 
-fn parse_events_from_ics(body: &str) -> Vec<ParsedEvent> {
+fn parse_events_from_ics(body: &str, user_email: &Option<String>) -> Vec<ParsedEvent> {
     let reader = BufReader::new(body.as_bytes());
     let parser = IcalParser::new(reader);
     let mut events = Vec::new();
@@ -258,6 +273,8 @@ fn parse_events_from_ics(body: &str) -> Vec<ParsedEvent> {
                 .unwrap_or(false)
                 || !dtstart_val.contains('T');
 
+            let dtend_val = get("DTEND");
+
             let exdates: Vec<String> = event
                 .properties
                 .iter()
@@ -272,16 +289,41 @@ fn parse_events_from_ics(body: &str) -> Vec<ParsedEvent> {
 
             let uid = get("UID").unwrap_or_else(|| format!("no-uid:{dtstart_val}"));
 
+            // Declined: true if the user's ATTENDEE entry has PARTSTAT=DECLINED.
+            let declined = match user_email {
+                Some(email) => event
+                    .properties
+                    .iter()
+                    .filter(|p| p.name == "ATTENDEE")
+                    .any(|p| {
+                        let value_matches = p
+                            .value
+                            .as_deref()
+                            .map(|v| v.to_lowercase().contains(email.as_str()))
+                            .unwrap_or(false);
+                        let partstat_declined = p
+                            .params
+                            .as_ref()
+                            .and_then(|ps| ps.iter().find(|(k, _)| k == "PARTSTAT"))
+                            .map(|(_, v)| v.iter().any(|s| s == "DECLINED"))
+                            .unwrap_or(false);
+                        value_matches && partstat_declined
+                    }),
+                None => false,
+            };
+
             events.push(ParsedEvent {
                 uid,
                 summary: get("SUMMARY").unwrap_or_else(|| "(No title)".into()),
                 event_url: get("URL"),
                 dtstart_val,
                 dtstart_tzid,
+                dtend_val,
                 is_all_day,
                 rrule: get("RRULE"),
                 exdates,
                 recurrence_id_ts,
+                declined,
             });
         }
     }
@@ -293,8 +335,9 @@ fn parse_and_expand(
     body: &str,
     window_start: NaiveDate,
     window_end: NaiveDate,
+    user_email: &Option<String>,
 ) -> Vec<ExpandedEvent> {
-    let parsed = parse_events_from_ics(body);
+    let parsed = parse_events_from_ics(body, user_email);
 
     // Collect RECURRENCE-ID overrides per uid so we can skip those master occurrences.
     let mut overridden_ts: HashMap<String, HashSet<i64>> = HashMap::new();
@@ -311,6 +354,8 @@ fn parse_and_expand(
             continue;
         }
 
+        let dtend_ts = ev.dtend_val.as_deref().and_then(parse_ics_datetime).map(|d| d.timestamp());
+
         if let Some(rrule_val) = &ev.rrule {
             let overrides = overridden_ts.get(&ev.uid);
             let occurrences = expand_rrule_for_range(
@@ -326,11 +371,18 @@ fn parse_and_expand(
                 if overrides.map(|s| s.contains(&ts)).unwrap_or(false) {
                     continue;
                 }
+                // For recurring events, shift dtend by the same offset as dtstart.
+                let occurrence_dtend = dtend_ts.and_then(|end| {
+                    let dtstart_ts = parse_ics_datetime(&ev.dtstart_val)?.timestamp();
+                    Some(end - dtstart_ts + ts)
+                });
                 results.push(ExpandedEvent {
                     uid: format!("{}:{}", ev.uid, ts),
                     dtstart: ts,
+                    dtend: occurrence_dtend,
                     summary: ev.summary.clone(),
                     event_url: ev.event_url.clone(),
+                    declined: ev.declined,
                 });
             }
         } else {
@@ -345,8 +397,10 @@ fn parse_and_expand(
             results.push(ExpandedEvent {
                 uid: ev.uid.clone(),
                 dtstart: dt.timestamp(),
+                dtend: dtend_ts,
                 summary: ev.summary.clone(),
                 event_url: ev.event_url.clone(),
+                declined: ev.declined,
             });
         }
     }

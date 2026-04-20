@@ -32,9 +32,9 @@ pub(super) fn events_for_day(
     let conn = state.db.lock().map_err(|_| "DB lock failed".to_string())?;
     let mut stmt = conn
         .prepare(
-            "SELECT uid, dtstart, summary, event_url
+            "SELECT uid, dtstart, dtend, summary, event_url
              FROM ical_events
-             WHERE dtstart >= ?1 AND dtstart <= ?2",
+             WHERE dtstart >= ?1 AND dtstart <= ?2 AND (declined IS NULL OR declined = 0)",
         )
         .map_err(|e| e.to_string())?;
 
@@ -50,15 +50,16 @@ pub(super) fn events_for_day(
             Ok((
                 row.get::<_, String>(0)?,
                 row.get::<_, i64>(1)?,
-                row.get::<_, String>(2)?,
-                row.get::<_, Option<String>>(3)?,
+                row.get::<_, Option<i64>>(2)?,
+                row.get::<_, String>(3)?,
+                row.get::<_, Option<String>>(4)?,
             ))
         })
         .map_err(|e| e.to_string())?;
 
     let mut results: Vec<(i64, TimelineEvent)> = rows
         .filter_map(|r| r.ok())
-        .map(|(uid, dtstart, summary, event_url)| {
+        .map(|(uid, dtstart, dtend, summary, event_url)| {
             let time = {
                 use chrono::DateTime;
                 let dt = DateTime::from_timestamp(dtstart, 0)
@@ -66,6 +67,19 @@ pub(super) fn events_for_day(
                     .unwrap_or_else(chrono::Local::now);
                 dt.format("%H:%M").to_string()
             };
+            let detail = dtend.and_then(|end| {
+                let mins = (end - dtstart) / 60;
+                if mins <= 0 {
+                    return None;
+                }
+                let h = mins / 60;
+                let m = mins % 60;
+                Some(match (h, m) {
+                    (0, m) => format!("{m}m"),
+                    (h, 0) => format!("{h}h"),
+                    (h, m) => format!("{h}h {m}m"),
+                })
+            });
             (
                 dtstart,
                 TimelineEvent {
@@ -73,7 +87,7 @@ pub(super) fn events_for_day(
                     time,
                     source: TimelineEventSource::Calendar,
                     title: summary,
-                    detail: None,
+                    detail,
                     url: event_url,
                 },
             )

@@ -34,9 +34,6 @@ Svelte 5 + SvelteKit 2 frontend, Tauri 2 + Rust backend, SQLite for settings/cre
   - Read files
 - Zulip - expanded data
   - Messages you've read
-- Calendar
-  - Show how long a meeting has been
-  - Do not show meetings that has been declined
 - UI
   - Navigate to the same day that was open, when closing settings tab
   - In the calendar view, use colour backgrounds to show how busy a day has been
