@@ -104,6 +104,14 @@ async setTimelineHarvestDone(eventId: string, done: boolean) : Promise<Result<nu
     else return { status: "error", error: e  as any };
 }
 },
+async getCacheSize() : Promise<Result<CacheSizeResult, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_cache_size") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async clearAllCaches() : Promise<Result<ClearCachesResult, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("clear_all_caches") };
@@ -124,6 +132,7 @@ async clearAllCaches() : Promise<Result<ClearCachesResult, string>> {
 
 /** user-defined types **/
 
+export type CacheSizeResult = { bytes: number; cached_days: number }
 export type ClearCachesResult = { rows_deleted: number }
 export type GitHubEvent = "PullRequestEvent" | "PullRequestReviewEvent" | "PullRequestReviewCommentEvent" | "IssuesEvent" | "IssueCommentEvent"
 export type IcalSyncStatus = { syncing: boolean; last_synced_at: number | null; last_error: string | null }

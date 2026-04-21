@@ -4,6 +4,7 @@ use serde::Serialize;
 use specta::Type;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::State;
+use std::fs;
 
 pub(crate) fn now() -> i64 {
     SystemTime::now()
@@ -37,6 +38,24 @@ pub(crate) fn get_val(state: &State<'_, AppState>, key: &str) -> Option<String> 
 #[derive(Serialize, Type)]
 pub struct ClearCachesResult {
     pub rows_deleted: u32,
+}
+
+#[derive(Serialize, Type)]
+pub struct CacheSizeResult {
+    pub bytes: u64,
+    pub cached_days: u32,
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_cache_size(state: State<'_, AppState>) -> Result<CacheSizeResult, String> {
+    let cached_days: u32 = {
+        let conn = state.db.lock().map_err(|_| "DB lock failed".to_string())?;
+        conn.query_row("SELECT COUNT(*) FROM timeline_day_cache", [], |r| r.get(0))
+            .map_err(|e| e.to_string())?
+    };
+    let bytes = fs::metadata(&state.db_path).map(|m| m.len()).unwrap_or(0);
+    Ok(CacheSizeResult { bytes, cached_days })
 }
 
 #[tauri::command]
