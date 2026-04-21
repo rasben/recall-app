@@ -10,18 +10,21 @@ Pick a date, and Recall pulls your activity from multiple sources into one view:
 - **JIRA** — tickets you interacted with
 - **Zulip** — messages you sent
 
-<div style="display: flex;">
-  <div><img src="static/app-example-intro.png"/></div>
-  <div><img src="static/app-example.png"/></div>
-  <div><img src="static/app-example-dark.png"/></div>
-</div>
+<table>
+  <tr>
+    <td width="36%"><img src="static/app-example-intro.png"/></td>
+    <td width="36%"><img src="static/app-example.png"/></td>
+    <td width="30%"><img src="static/app-example-calendar.gif"/></td>
+  </tr>
+</table>
 
 ## Development
 
 This app has built almost entirely with AI.
 First with `cursor`, then with `Claude Code`.
 
-I have also experimented with AI-design for the logo. See the process in [design/logo/preview](design/logo/preview/index.html)
+I have also experimented with AI-design for the logo. 
+[See the process here](https://rasben.github.io/recall-app/design/logo/preview/)
 
 ```
 nvm use

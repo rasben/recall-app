@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Recall</title>
+<style>
+  :root {
+    --bg: #F5F2EC;
+    --fg: #0B0B0F;
+    --muted: #6b6b6b;
+    --accent: #E85A2A;
+    --yellow: #ffdb33;
+    --panel-dark: #0B0B0F;
+    --panel-light: #F5F2EC;
+    --border: rgba(11,11,15,0.10);
+    --radius: 16px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0B0B0F; --fg: #F5F2EC; --muted: #9b9b9b; --border: rgba(245,242,236,0.12); }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font: 15px/1.6 ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif;
+    padding: 48px 32px 96px;
+  }
+  main { max-width: 1040px; margin: 0 auto; }
+
+  header { margin-bottom: 48px; display: flex; align-items: flex-start; gap: 28px; }
+  .logo-wrap img { width: 80px; height: 80px; border-radius: 20px; display: block; }
+  .header-text h1 { font-size: 44px; letter-spacing: -0.02em; margin: 0 0 10px; font-weight: 700; line-height: 1; }
+  .header-text p { color: var(--muted); margin: 0; max-width: 60ch; font-size: 16px; }
+  .accent { color: var(--accent); }
+
+  .sources {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px;
+  }
+  .source-tag {
+    font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 4px 12px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted);
+  }
+
+  .screenshots {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin: 40px 0;
+  }
+  .screenshots img {
+    width: 100%;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    display: block;
+  }
+
+  .links-section { margin-top: 56px; border-top: 1px solid var(--border); padding-top: 40px; }
+  .links-section h2 { font-size: 22px; font-weight: 650; letter-spacing: -0.01em; margin: 0 0 24px; }
+
+  .link-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+  .link-card {
+    display: block; padding: 24px 28px; border: 1px solid var(--border);
+    border-radius: var(--radius); text-decoration: none; color: var(--fg);
+    transition: border-color 0.15s;
+  }
+  .link-card:hover { border-color: var(--accent); }
+  .link-card .card-label {
+    font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 8px;
+  }
+  .link-card .card-title { font-size: 18px; font-weight: 650; margin: 0 0 8px; }
+  .link-card .card-desc { font-size: 13px; color: var(--muted); margin: 0; }
+
+  .stack {
+    margin-top: 56px; border-top: 1px solid var(--border); padding-top: 40px;
+  }
+  .stack h2 { font-size: 22px; font-weight: 650; letter-spacing: -0.01em; margin: 0 0 20px; }
+  .stack-items { display: flex; flex-wrap: wrap; gap: 8px; }
+  .stack-item {
+    font-size: 13px; padding: 5px 14px; border: 1px solid var(--border);
+    border-radius: 999px; color: var(--muted);
+  }
+
+  @media (max-width: 640px) {
+    header { flex-direction: column; gap: 16px; }
+    .header-text h1 { font-size: 32px; }
+    .screenshots { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <header>
+    <div class="logo-wrap">
+      <img src="static/logo.png" alt="Recall logo" />
+    </div>
+    <div class="header-text">
+      <h1>Recall <span class="accent">—</span></h1>
+      <p>
+        A desktop app that builds a timeline of your prior workdays so you can fill in Harvest
+        without losing your mind. Pick a date, Recall pulls your activity from multiple sources
+        into one view.
+      </p>
+      <div class="sources">
+        <span class="source-tag">Calendar (iCal)</span>
+        <span class="source-tag">GitHub</span>
+        <span class="source-tag">Local git</span>
+        <span class="source-tag">JIRA</span>
+        <span class="source-tag">Zulip</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="screenshots">
+    <img src="static/app-example-intro.png" alt="Recall welcome screen" />
+    <img src="static/app-example.png" alt="Recall timeline view" />
+    <img src="static/app-example-dark.png" alt="Recall dark mode" />
+  </div>
+
+  <section class="links-section">
+    <h2>Links</h2>
+    <div class="link-cards">
+      <a class="link-card" href="https://github.com/rasben/recall-app">
+        <div class="card-label">Source</div>
+        <div class="card-title">GitHub Repository</div>
+        <p class="card-desc">Source code, releases, and issue tracker.</p>
+      </a>
+      <a class="link-card" href="design/logo/preview/">
+        <div class="card-label">Design</div>
+        <div class="card-title">Logo Design Process</div>
+        <p class="card-desc">Three rounds of AI-assisted logo exploration — concepts, iterations, and the final pick.</p>
+      </a>
+    </div>
+  </section>
+
+  <section class="stack">
+    <h2>Stack</h2>
+    <div class="stack-items">
+      <span class="stack-item">Svelte 5</span>
+      <span class="stack-item">SvelteKit 2</span>
+      <span class="stack-item">Tauri 2</span>
+      <span class="stack-item">Rust</span>
+      <span class="stack-item">SQLite</span>
+      <span class="stack-item">TypeScript</span>
+      <span class="stack-item">Tailwind CSS 4</span>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>
