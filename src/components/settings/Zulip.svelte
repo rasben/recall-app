@@ -7,20 +7,20 @@
   import { commands, type SettingsZulip } from "../../bindings";
   import PasswordInput from "../ui/PasswordInput.svelte";
 
-  const DEFAULT_REALM = "https://reload.zulipchat.com";
+  const defaultRealmUrl = "https://reload.zulipchat.com";
   const descriptionToken = `Find your API key in Zulip under
       <strong>Settings → Account &amp; privacy → API key</strong>.`
 
   const defaultSettings: SettingsZulip = {
     enabled: false,
-    realm_url: DEFAULT_REALM,
+    realm_url: defaultRealmUrl,
     email: "",
     api_key: "",
   };
 
   let settings = $state<SettingsZulip>(defaultSettings);
   let enabled = $state(false);
-  let realmUrl = $state(DEFAULT_REALM);
+  let realmUrl = $state(defaultRealmUrl);
   let email = $state("");
   let apiKey = $state("");
 
@@ -31,7 +31,7 @@
   async function getSettings() {
     settings = (await commands.getSettingsZulip()) ?? defaultSettings;
     enabled = settings.enabled;
-    realmUrl = settings.realm_url || DEFAULT_REALM;
+    realmUrl = settings.realm_url || defaultRealmUrl;
     email = settings.email ?? "";
     apiKey = settings.api_key ?? "";
   }
@@ -101,16 +101,6 @@
   </div>
 
   {#if enabled}
-    <Label for="zulip-realm-url" class="mb-2">Realm URL</Label>
-    <Input
-      id="zulip-realm-url"
-      type="url"
-      class="mb-4"
-      placeholder={DEFAULT_REALM}
-      bind:value={realmUrl}
-      onblur={saveRealmUrl}
-    />
-
     <Label for="zulip-email" class="mb-2">Zulip account email</Label>
     <Input
       id="zulip-email"
@@ -131,5 +121,13 @@
       description={descriptionToken}
     />
 
+    <Label for="zulip-realm-url" class="mb-2">Realm URL</Label>
+    <Input
+            id="zulip-realm-url"
+            type="url"
+            placeholder={defaultRealmUrl}
+            bind:value={realmUrl}
+            onblur={saveRealmUrl}
+    />
   {/if}
 </fieldset>

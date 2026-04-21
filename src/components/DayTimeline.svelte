@@ -10,7 +10,6 @@
   import TimelineEventRow from "./TimelineEvent.svelte";
   import Loading from "./ui/Loading.svelte";
   import MissingSettings from "./ui/MissingSettings.svelte";
-  import { message } from "@tauri-apps/plugin-dialog";
 
   const LOAD_DEBOUNCE_MS = 500;
   const PREFETCH_DAYS = 6;

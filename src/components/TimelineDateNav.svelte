@@ -62,7 +62,7 @@
       <ChevronRight />
     </Button>
 
-    <Button variant="outline" class="max-h-[32px] text-sm" onclick={onGoToday}>
+    <Button variant="outline" class="text-sm" onclick={onGoToday}>
       Today
     </Button>
   {/if}

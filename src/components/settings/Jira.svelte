@@ -1,6 +1,4 @@
 <script lang="ts">
-  /// To-Do - this file is completely AI-coded, and not well-reviewed.
-  /// We need to review it, and optimize it.
   import { Label } from "$lib/components/ui/label/index.js";
   import { Checkbox } from "$lib/components/ui/checkbox/index.js";
   import { Input } from "$lib/components/ui/input/index.js";
@@ -10,7 +8,7 @@
   import PasswordInput from "../ui/PasswordInput.svelte";
   import * as Select from "$lib/components/ui/select/index.js";
 
-  const DEFAULT_SITE = "https://reload.atlassian.net";
+  const defaultSiteUrl = "https://reload.atlassian.net";
   const tokenDescription = `Use an
       <a
               class="underline font-medium text-foreground"
@@ -33,7 +31,7 @@
 
   let defaultSettings: SettingsJira = {
     enabled: false,
-    site_url: DEFAULT_SITE,
+    site_url: defaultSiteUrl,
     email: "",
     api_token: "",
     enabled_events: [
@@ -47,7 +45,7 @@
   let settings = $state<SettingsJira>(defaultSettings);
 
   let enabled = $state(false);
-  let siteUrl = $state(DEFAULT_SITE);
+  let siteUrl = $state(defaultSiteUrl);
   let email = $state("");
   let apiToken = $state("");
   let enabledEvents = $state<JiraEvent[]>([]);
@@ -59,7 +57,7 @@
   async function getSettings() {
     settings = (await commands.getSettingsJira()) ?? defaultSettings;
     enabled = settings.enabled;
-    siteUrl = settings.site_url?.trim() || DEFAULT_SITE;
+    siteUrl = settings.site_url?.trim() || defaultSiteUrl;
     email = settings.email ?? "";
     apiToken = settings.api_token ?? "";
     enabledEvents = settings.enabled_events ?? [];
@@ -86,9 +84,9 @@
   }
 
   async function saveSiteUrl() {
-    const original = settings.site_url ?? DEFAULT_SITE;
+    const original = settings.site_url ?? defaultSiteUrl;
 
-    const trimmed = siteUrl.trim() || DEFAULT_SITE;
+    const trimmed = siteUrl.trim() || defaultSiteUrl;
     siteUrl = trimmed.replace(/\/+$/, "");
     const ok = await persist({ site_url: siteUrl });
     if (!ok) {
@@ -153,7 +151,7 @@
       id="jira-site-url"
       type="url"
       class="mb-4"
-      placeholder={DEFAULT_SITE}
+      placeholder={defaultSiteUrl}
       bind:value={siteUrl}
       onblur={saveSiteUrl}
     />

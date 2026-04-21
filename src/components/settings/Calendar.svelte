@@ -27,8 +27,6 @@
       Keep it private — anyone with this URL can read your calendar.
       `;
 
-
-
   onMount(async () => {
     settings = (await commands.getSettingsIcal()) ?? defaultSettings;
     const saved = settings.urls ?? [];

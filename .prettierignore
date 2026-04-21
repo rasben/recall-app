@@ -1,0 +1,6 @@
+.claude
+.svelte-kit
+.cursor
+build
+node_modules
+src/bindings.ts

@@ -39,19 +39,19 @@
 
 <fieldset class="border-2 p-4 mt-6">
     <legend>Cache</legend>
-    <p class="text-muted-foreground mb-3 text-sm">
-        Clear all cached timeline data. Loading will be slower until caches are rebuilt.
-    </p>
-    {#if cachedDays !== null && bytes !== null}
-        <p class="text-muted-foreground mb-3 text-sm">
-            {cachedDays} cached {cachedDays === 1 ? "day" : "days"} &middot; {formatBytes(Number(bytes))} on disk
-        </p>
-    {/if}
-    <button
-        class="border-2 px-3 py-1 text-sm hover:bg-muted disabled:opacity-50"
-        disabled={clearing}
-        onclick={clearCaches}
-    >
-        {clearing ? "Clearing…" : "Clear all caches"}
-    </button>
+    <div class="flex items-center gap-4 flex-wrap">
+        <button
+                class="border-2 px-3 py-1 text-sm hover:bg-muted disabled:opacity-50"
+                disabled={clearing}
+                onclick={clearCaches}
+        >
+            {clearing ? "Clearing…" : "Clear all caches"}
+        </button>
+        {#if cachedDays !== null && bytes !== null}
+            <span class="text-xs text-muted-foreground">
+                {cachedDays} cached {cachedDays === 1 ? "day" : "days"} &middot; {formatBytes(Number(bytes))} on disk
+            </span>
+        {/if}
+    </div>
+
 </fieldset>

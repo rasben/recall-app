@@ -104,11 +104,7 @@
             toast.error("Could not set chosen events");
         }
     }
-
-
-
 </script>
-
 
 <fieldset class="border-2 p-4 mt-6">
     <legend>GitHub</legend>
@@ -142,10 +138,6 @@
             -->
         {/if}
 
-
-
-
-
         <label for="github-enabled-events-trigger" class="mb-2">
             Events to show
         </label>
@@ -169,9 +161,5 @@
                 {/each}
             </Select.Content>
         </Select.Root>
-
-
-
     {/if}
-
 </fieldset>

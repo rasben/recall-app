@@ -104,17 +104,17 @@ async setTimelineHarvestDone(eventId: string, done: boolean) : Promise<Result<nu
     else return { status: "error", error: e  as any };
 }
 },
-async getCacheSize() : Promise<Result<CacheSizeResult, string>> {
+async clearAllCaches() : Promise<Result<ClearCachesResult, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("get_cache_size") };
+    return { status: "ok", data: await TAURI_INVOKE("clear_all_caches") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
 },
-async clearAllCaches() : Promise<Result<ClearCachesResult, string>> {
+async getCacheSize() : Promise<Result<CacheSizeResult, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("clear_all_caches") };
+    return { status: "ok", data: await TAURI_INVOKE("get_cache_size") };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
