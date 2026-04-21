@@ -57,7 +57,7 @@
           <span
             class="inline-flex items-center gap-1.5 border-2 px-2 py-0.5 text-xs font-head
               {source.done
-                ? 'border-border bg-primary text-primary-foreground'
+                ? 'border-border bg-accent text-primary-foreground'
                 : 'border-border/40 text-muted-foreground'}"
           >
             {source.name}
@@ -74,7 +74,7 @@
       in:fly={{ y: 24, duration: 480, delay: 300, easing: quintOut }}
     >
       <Button
-        class="w-full shadow-sm"
+        class="w-full max-h-none h-[70px] shadow-sm"
         onclick={onGetStarted}
       >
         {t("welcome.cta_setup")}
