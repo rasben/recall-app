@@ -106,7 +106,7 @@
         dayCounts={navState.dayCounts}
         bind:placeholder={calendarMonth}
       />
-      <div class="px-1 pb-1">
+      <div class="px-1 pb-1 space-y-2">
         <Button
           variant="outline"
           size="sm"
@@ -116,6 +116,14 @@
         >
           {loadingMonth ? "Loading…" : `Load ${visibleMonthLabel}`}
         </Button>
+        <div class="flex items-center gap-1.5 px-0.5">
+          <div class="size-3 bg-muted/50 border border-border/40"></div>
+          <div class="size-3 bg-primary/15 border border-border/40"></div>
+          <div class="size-3 bg-primary/30 border border-border/40"></div>
+          <div class="size-3 bg-primary/50 border border-border/40"></div>
+          <div class="size-3 bg-primary/70 border border-border/40"></div>
+          <span class="text-[0.6rem] text-muted-foreground ml-0.5">less → more activity</span>
+        </div>
       </div>
     </Popover.Content>
   </Popover.Root>
