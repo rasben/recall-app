@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Recall — Day Arc tile, dark">
+  <rect width="512" height="512" rx="112" ry="112" fill="#0B0B0F" />
+  <g fill="none" stroke="#F5F2EC" stroke-width="32" stroke-linecap="round">
+    <line x1="96" y1="360" x2="416" y2="360" />
+    <path d="M 144 360 A 112 112 0 0 1 368 360" />
+  </g>
+  <circle cx="256" cy="248" r="28" fill="#E85A2A" />
+</svg>

@@ -1,28 +1,40 @@
 # Recall
 
-A desktop app that builds a timeline of your workday so you can fill in Harvest without guessing.
+A desktop app that builds a timeline of your prior workdays so you can fill in Harvest losing your mind.
 
 Pick a date, and Recall pulls your activity from multiple sources into one view:
 
-- **Calendar (iCal)** — meetings and events (Google Calendar, or any iCal feed)
+- **Calendar (`iCal`)** — meetings and events
 - **GitHub** — PRs, commits, reviews, issue comments
 - **Local git repos** — commits by your author name
 - **JIRA** — tickets you interacted with
 - **Zulip** — messages you sent
-- **Gmail** — emails you sent or replied to *(planned)*
-- **Google Drive** — docs you edited *(planned)*
 
-## Setup
+<div style="display: flex;">
+  <div><img src="static/app-example-intro.png"/></div>
+  <div><img src="static/app-example.png"/></div>
+  <div><img src="static/app-example-dark.png"/></div>
+</div>
+
+## Development
+
+This app has built almost entirely with AI.
+First with `cursor`, then with `Claude Code`.
+
+I have also experimented with AI-design for the logo. See the process in [design/logo/preview](design/logo/preview/index.html)
 
 ```
+nvm use
 npm install
 npm run tauri dev
 ```
 
-## Stack
+### Tech-Stack:
 
-Svelte 5 + SvelteKit 2 frontend, Tauri 2 + Rust backend, SQLite for settings/credentials.
-
+- Svelte 5 + SvelteKit 2
+- Tauri 2
+- Rust backend
+- SQLite for settings/credentials.
 
 ## To-Do's
 

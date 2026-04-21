@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Recall — Merge mark">
+  <!-- Concept E: Merge. Three thin streams converge at a terracotta node, continuing as one thick stroke. -->
+  <g stroke="#F5F2EC" stroke-linecap="round" fill="none">
+    <line x1="80"  y1="160" x2="232" y2="256" stroke-width="22" />
+    <line x1="80"  y1="256" x2="232" y2="256" stroke-width="22" />
+    <line x1="80"  y1="352" x2="232" y2="256" stroke-width="22" />
+    <line x1="232" y1="256" x2="416" y2="256" stroke-width="44" />
+  </g>
+  <!-- merge node -->
+  <circle cx="232" cy="256" r="32" fill="#E85A2A" />
+</svg>

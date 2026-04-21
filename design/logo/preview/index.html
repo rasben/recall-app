@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Recall — logo concepts</title>
+<style>
+  :root {
+    --bg: #F5F2EC;
+    --fg: #0B0B0F;
+    --muted: #6b6b6b;
+    --accent: #E85A2A;
+    --yellow: #ffdb33;
+    --panel-dark: #0B0B0F;
+    --panel-light: #F5F2EC;
+    --border: rgba(11,11,15,0.10);
+    --radius: 16px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0B0B0F; --fg: #F5F2EC; --muted: #9b9b9b; --border: rgba(245,242,236,0.12); }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font: 15px/1.55 ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif;
+    padding: 48px 32px 96px;
+  }
+  main { max-width: 1040px; margin: 0 auto; }
+  header { margin-bottom: 24px; }
+  h1 { font-size: 40px; letter-spacing: -0.02em; margin: 0 0 12px; font-weight: 700; }
+  .sub { color: var(--muted); max-width: 62ch; }
+  .accent { color: var(--accent); }
+  .yellow { color: var(--yellow); }
+
+  .round-banner {
+    margin: 40px 0 28px; padding: 14px 18px;
+    border: 1px solid var(--border); border-radius: 12px;
+    display: flex; justify-content: space-between; align-items: center; gap: 20px;
+    background: rgba(255,219,51,0.10);
+  }
+  .round-banner .label { font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase; font-size: 12px; color: #b8921d; }
+  .round-banner .note { color: var(--muted); font-size: 13px; }
+
+  .round-divider {
+    margin: 80px 0 0; padding-top: 40px; border-top: 2px solid var(--border);
+  }
+  .round-divider h2 { font-size: 20px; color: var(--muted); font-weight: 600; margin: 0 0 8px; }
+  .round-divider p { color: var(--muted); max-width: 62ch; margin: 0; }
+
+  .concept { margin: 56px 0; border-top: 1px solid var(--border); padding-top: 40px; }
+  .concept.muted { opacity: 0.82; }
+  .concept-head { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  h2 { font-size: 26px; letter-spacing: -0.01em; margin: 0; font-weight: 650; }
+  h2 .pref { color: var(--accent); font-size: 14px; margin-left: 8px; letter-spacing: 0.04em; text-transform: uppercase; }
+  .tag {
+    display: inline-block; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase;
+    padding: 3px 10px; border: 1px solid var(--border); border-radius: 999px; color: var(--muted);
+  }
+  .rationale { color: var(--muted); max-width: 68ch; margin: 0 0 24px; }
+
+  .showcase { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+  .panel {
+    border-radius: var(--radius); padding: 28px; display: flex; align-items: center; justify-content: center;
+    min-height: 320px; border: 1px solid var(--border);
+  }
+  .panel.dark { background: var(--panel-dark); }
+  .panel.light { background: var(--panel-light); }
+  .panel img { width: 240px; height: 240px; display: block; }
+
+  .sizes { display: flex; gap: 24px; align-items: flex-end; flex-wrap: wrap; margin: 6px 0 20px; }
+  .size { display: flex; flex-direction: column; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+  .size img { border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+
+  .downloads { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .downloads a {
+    font-size: 13px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 999px;
+    text-decoration: none; color: var(--fg);
+  }
+  .downloads a:hover { border-color: var(--accent); color: var(--accent); }
+  .downloads strong { font-weight: 600; }
+
+  .how { margin-top: 72px; padding: 24px 28px; border-radius: var(--radius); border: 1px solid var(--border); }
+  .how h3 { margin-top: 0; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;
+         background: rgba(232,90,42,0.08); padding: 2px 6px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>Recall <span class="accent">—</span> logo concepts</h1>
+  <p class="sub">
+    Round 3 explores four prompts: the app primary <span class="yellow">#ffdb33</span>,
+    a punch-clock from the factory era, the calendar aspect, and a progress-as-the-day-fills
+    metaphor. Everything has a light and dark mark plus a rounded-square app tile, rasterized
+    through the Tauri ladder (32&nbsp;→&nbsp;1024&nbsp;px).
+  </p>
+</header>
+
+<div class="round-banner">
+  <div>
+    <div class="label">Round 3 — themed prompts</div>
+    <div class="note">G = Day Ring in app-primary yellow. H = Punch clock. I = Calendar. J = Progress bar.</div>
+  </div>
+</div>
+
+<!-- CONCEPT G — DAY RING (YELLOW RECOLOR) -->
+<section class="concept">
+  <div class="concept-head">
+    <h2>G. Day Ring in app yellow</h2>
+    <span class="tag">Palette · continuity with the app</span>
+  </div>
+  <p class="rationale">
+    Same geometry as Day Ring, but the accent dot switches from terracotta to the app's
+    actual primary (<code>#ffdb33</code>). On the light tile the yellow gets a thin dark
+    stroke so it doesn't melt into the cream. This is the most literal tie-in to what users
+    already see in-app.
+  </p>
+
+  <div class="showcase">
+    <div class="panel dark"><img src="../png/g-dayring-yellow-tile-dark-512.png" alt="Day Ring yellow, dark" /></div>
+    <div class="panel light"><img src="../png/g-dayring-yellow-tile-light-512.png" alt="Day Ring yellow, light" /></div>
+  </div>
+  <div class="sizes">
+    <div class="size"><img src="../png/g-dayring-yellow-tile-dark-32.png"  width="32"  height="32"  alt="32"  /><span>32</span></div>
+    <div class="size"><img src="../png/g-dayring-yellow-tile-dark-64.png"  width="64"  height="64"  alt="64"  /><span>64</span></div>
+    <div class="size"><img src="../png/g-dayring-yellow-tile-dark-128.png" width="128" height="128" alt="128" /><span>128</span></div>
+    <div class="size"><img src="../png/g-dayring-yellow-tile-dark-256.png" width="256" height="256" alt="256" /><span>256</span></div>
+  </div>
+  <div class="downloads">
+    <strong style="align-self:center;margin-right:8px;">Downloads</strong>
+    <a href="../svg/g-dayring-yellow-mark-dark.svg">SVG mark (dark)</a>
+    <a href="../svg/g-dayring-yellow-mark-light.svg">SVG mark (light)</a>
+    <a href="../svg/g-dayring-yellow-tile-dark.svg">SVG tile (dark)</a>
+    <a href="../svg/g-dayring-yellow-tile-light.svg">SVG tile (light)</a>
+    <a href="../png/g-dayring-yellow-tile-dark-1024.png">1024 PNG (dark)</a>
+    <a href="../png/g-dayring-yellow-tile-light-1024.png">1024 PNG (light)</a>
+  </div>
+</section>
+
+<!-- CONCEPT H — PUNCH CLOCK -->
+<section class="concept">
+  <div class="concept-head">
+    <h2>H. Punch clock</h2>
+    <span class="tag">Era · literal to time-tracking</span>
+  </div>
+  <p class="rationale">
+    Factory-floor punch clock with a card slot. Hour hand in dark, minute hand in the app
+    yellow — the yellow is doing the work of "this is the hour being recalled". The card
+    slot at the bottom anchors the metaphor: you're filling in the timesheet, not just
+    watching a clock. A bit more illustrative than the others; best at 128&nbsp;px and up.
+  </p>
+
+  <div class="showcase">
+    <div class="panel dark"><img src="../png/h-punchclock-tile-dark-512.png" alt="Punch clock, dark" /></div>
+    <div class="panel light"><img src="../png/h-punchclock-tile-light-512.png" alt="Punch clock, light" /></div>
+  </div>
+  <div class="sizes">
+    <div class="size"><img src="../png/h-punchclock-tile-dark-32.png"  width="32"  height="32"  alt="32"  /><span>32</span></div>
+    <div class="size"><img src="../png/h-punchclock-tile-dark-64.png"  width="64"  height="64"  alt="64"  /><span>64</span></div>
+    <div class="size"><img src="../png/h-punchclock-tile-dark-128.png" width="128" height="128" alt="128" /><span>128</span></div>
+    <div class="size"><img src="../png/h-punchclock-tile-dark-256.png" width="256" height="256" alt="256" /><span>256</span></div>
+  </div>
+  <div class="downloads">
+    <strong style="align-self:center;margin-right:8px;">Downloads</strong>
+    <a href="../svg/h-punchclock-mark-dark.svg">SVG mark (dark)</a>
+    <a href="../svg/h-punchclock-mark-light.svg">SVG mark (light)</a>
+    <a href="../svg/h-punchclock-tile-dark.svg">SVG tile (dark)</a>
+    <a href="../svg/h-punchclock-tile-light.svg">SVG tile (light)</a>
+    <a href="../png/h-punchclock-tile-dark-1024.png">1024 PNG (dark)</a>
+    <a href="../png/h-punchclock-tile-light-1024.png">1024 PNG (light)</a>
+  </div>
+</section>
+
+<!-- CONCEPT I — CALENDAR -->
+<section class="concept">
+  <div class="concept-head">
+    <h2>I. Calendar</h2>
+    <span class="tag">Familiar · day-scoped</span>
+  </div>
+  <p class="rationale">
+    Outlined desk calendar with binder tabs, header bar, and a 4&times;3 grid of date dots —
+    one day "today" bumped up and filled in yellow. Most immediately legible of the four;
+    the yellow dot gives it the same palette tie-in as G without the calendar reading like
+    a generic iOS app icon.
+  </p>
+
+  <div class="showcase">
+    <div class="panel dark"><img src="../png/i-calendar-tile-dark-512.png" alt="Calendar, dark" /></div>
+    <div class="panel light"><img src="../png/i-calendar-tile-light-512.png" alt="Calendar, light" /></div>
+  </div>
+  <div class="sizes">
+    <div class="size"><img src="../png/i-calendar-tile-dark-32.png"  width="32"  height="32"  alt="32"  /><span>32</span></div>
+    <div class="size"><img src="../png/i-calendar-tile-dark-64.png"  width="64"  height="64"  alt="64"  /><span>64</span></div>
+    <div class="size"><img src="../png/i-calendar-tile-dark-128.png" width="128" height="128" alt="128" /><span>128</span></div>
+    <div class="size"><img src="../png/i-calendar-tile-dark-256.png" width="256" height="256" alt="256" /><span>256</span></div>
+  </div>
+  <div class="downloads">
+    <strong style="align-self:center;margin-right:8px;">Downloads</strong>
+    <a href="../svg/i-calendar-mark-dark.svg">SVG mark (dark)</a>
+    <a href="../svg/i-calendar-mark-light.svg">SVG mark (light)</a>
+    <a href="../svg/i-calendar-tile-dark.svg">SVG tile (dark)</a>
+    <a href="../svg/i-calendar-tile-light.svg">SVG tile (light)</a>
+    <a href="../png/i-calendar-tile-dark-1024.png">1024 PNG (dark)</a>
+    <a href="../png/i-calendar-tile-light-1024.png">1024 PNG (light)</a>
+  </div>
+</section>
+
+<!-- CONCEPT J — PROGRESS -->
+<section class="concept">
+  <div class="concept-head">
+    <h2>J. Progress</h2>
+    <span class="tag">Metaphor · filling out the day</span>
+  </div>
+  <p class="rationale">
+    Outlined pill track with a yellow fill that's grown to about 55%. Below, three quarter-point
+    ticks. Reads as "the day is being filled in" — which is quite literally what Recall is
+    helping you do each evening in Harvest. Simplest geometry of the four; reads cleanly even
+    at 32&nbsp;px, and the yellow gets to be the hero element.
+  </p>
+
+  <div class="showcase">
+    <div class="panel dark"><img src="../png/j-progress-tile-dark-512.png" alt="Progress, dark" /></div>
+    <div class="panel light"><img src="../png/j-progress-tile-light-512.png" alt="Progress, light" /></div>
+  </div>
+  <div class="sizes">
+    <div class="size"><img src="../png/j-progress-tile-dark-32.png"  width="32"  height="32"  alt="32"  /><span>32</span></div>
+    <div class="size"><img src="../png/j-progress-tile-dark-64.png"  width="64"  height="64"  alt="64"  /><span>64</span></div>
+    <div class="size"><img src="../png/j-progress-tile-dark-128.png" width="128" height="128" alt="128" /><span>128</span></div>
+    <div class="size"><img src="../png/j-progress-tile-dark-256.png" width="256" height="256" alt="256" /><span>256</span></div>
+  </div>
+  <div class="downloads">
+    <strong style="align-self:center;margin-right:8px;">Downloads</strong>
+    <a href="../svg/j-progress-mark-dark.svg">SVG mark (dark)</a>
+    <a href="../svg/j-progress-mark-light.svg">SVG mark (light)</a>
+    <a href="../svg/j-progress-tile-dark.svg">SVG tile (dark)</a>
+    <a href="../svg/j-progress-tile-light.svg">SVG tile (light)</a>
+    <a href="../png/j-progress-tile-dark-1024.png">1024 PNG (dark)</a>
+    <a href="../png/j-progress-tile-light-1024.png">1024 PNG (light)</a>
+  </div>
+</section>
+
+<!-- ROUND 2 (kept for reference) -->
+<div class="round-divider">
+  <h2>Round 2 — horizon, convergence, motion</h2>
+  <p>Three fresh directions that deliberately stepped away from the Day Ring.</p>
+</div>
+
+<!-- CONCEPT D — DAY ARC -->
+<section class="concept muted">
+  <div class="concept-head">
+    <h2>D. Day Arc</h2>
+    <span class="tag">Evocative · horizon</span>
+  </div>
+  <div class="showcase">
+    <div class="panel dark"><img src="../png/d-dayarc-tile-dark-512.png" alt="Day Arc, dark" /></div>
+    <div class="panel light"><img src="../png/d-dayarc-tile-light-512.png" alt="Day Arc, light" /></div>
+  </div>
+  <div class="downloads">
+    <strong style="align-self:center;margin-right:8px;">Downloads</strong>
+    <a href="../svg/d-dayarc-tile-dark.svg">SVG tile (dark)</a>
+    <a href="../svg/d-dayarc-tile-light.svg">SVG tile (light)</a>
+  </div>
+</section>
+
+<!-- CONCEPT E — MERGE -->
+<section class="concept muted">
+  <div class="concept-head">
+    <h2>E. Merge</h2>
+    <span class="tag">Conceptual · data flow</span>
+  </div>
+  <div class="showcase">
+    <div class="panel dark"><img src="../png/e-merge-tile-dark-512.png" alt="Merge, dark" /></div>
+    <div class="panel light"><img src="../png/e-merge-tile-light-512.png" alt="Merge, light" /></div>
+  </div>
+  <div class="downloads">
+    <strong style="align-self:center;margin-right:8px;">Downloads</strong>
+    <a href="../svg/e-merge-tile-dark.svg">SVG tile (dark)</a>
+    <a href="../svg/e-merge-tile-light.svg">SVG tile (light)</a>
+  </div>
+</section>
+
+<!-- CONCEPT F — COMET -->
+<section class="concept muted">
+  <div class="concept-head">
+    <h2>F. Comet</h2>
+    <span class="tag">Dynamic · motion</span>
+  </div>
+  <div class="showcase">
+    <div class="panel dark"><img src="../png/f-comet-tile-dark-512.png" alt="Comet, dark" /></div>
+    <div class="panel light"><img src="../png/f-comet-tile-light-512.png" alt="Comet, light" /></div>
+  </div>
+  <div class="downloads">
+    <strong style="align-self:center;margin-right:8px;">Downloads</strong>
+    <a href="../svg/f-comet-tile-dark.svg">SVG tile (dark)</a>
+    <a href="../svg/f-comet-tile-light.svg">SVG tile (light)</a>
+  </div>
+</section>
+
+<!-- ROUND 1 reference -->
+<div class="round-divider">
+  <h2>Round 1 — original three</h2>
+  <p>Day Ring is your standing favorite; A and B are kept for reference.</p>
+</div>
+
+<!-- CONCEPT C — DAY RING (current favorite) -->
+<section class="concept">
+  <div class="concept-head">
+    <h2>C. Day Ring <span class="pref">★ Current favorite</span></h2>
+    <span class="tag">Abstract · subtle Reload nod</span>
+  </div>
+  <p class="rationale">
+    Near-closed ring with a notch at the top, three event ticks, central accent dot.
+  </p>
+
+  <div class="showcase">
+    <div class="panel dark"><img src="../png/c-dayring-tile-dark-512.png" alt="Day Ring, dark" /></div>
+    <div class="panel light"><img src="../png/c-dayring-tile-light-512.png" alt="Day Ring, light" /></div>
+  </div>
+  <div class="downloads">
+    <strong style="align-self:center;margin-right:8px;">Downloads</strong>
+    <a href="../svg/c-dayring-tile-dark.svg">SVG tile (dark)</a>
+    <a href="../svg/c-dayring-tile-light.svg">SVG tile (light)</a>
+    <a href="../png/c-dayring-tile-dark-1024.png">1024 PNG (dark)</a>
+    <a href="../png/c-dayring-tile-light-1024.png">1024 PNG (light)</a>
+    <a href="../icons/c-dayring-dark.ico">.ico (dark)</a>
+    <a href="../icons/c-dayring-light.ico">.ico (light)</a>
+    <a href="../icons/c-dayring-dark.icns">.icns (dark)</a>
+    <a href="../icons/c-dayring-light.icns">.icns (light)</a>
+  </div>
+</section>
+
+<!-- CONCEPT A — TIME STACK -->
+<section class="concept muted">
+  <div class="concept-head">
+    <h2>A. Time Stack</h2>
+    <span class="tag">Informational · literal</span>
+  </div>
+  <div class="showcase">
+    <div class="panel dark"><img src="../png/a-stack-tile-dark-512.png" alt="Time Stack, dark" /></div>
+    <div class="panel light"><img src="../png/a-stack-tile-light-512.png" alt="Time Stack, light" /></div>
+  </div>
+  <div class="downloads">
+    <strong style="align-self:center;margin-right:8px;">Downloads</strong>
+    <a href="../svg/a-stack-tile-dark.svg">SVG tile (dark)</a>
+    <a href="../svg/a-stack-tile-light.svg">SVG tile (light)</a>
+  </div>
+</section>
+
+<!-- CONCEPT B — R MONOGRAM -->
+<section class="concept muted">
+  <div class="concept-head">
+    <h2>B. R monogram</h2>
+    <span class="tag">Letterform · ownable</span>
+  </div>
+  <div class="showcase">
+    <div class="panel dark"><img src="../png/b-rmark-tile-dark-512.png" alt="R monogram, dark" /></div>
+    <div class="panel light"><img src="../png/b-rmark-tile-light-512.png" alt="R monogram, light" /></div>
+  </div>
+  <div class="downloads">
+    <strong style="align-self:center;margin-right:8px;">Downloads</strong>
+    <a href="../svg/b-rmark-tile-dark.svg">SVG tile (dark)</a>
+    <a href="../svg/b-rmark-tile-light.svg">SVG tile (light)</a>
+  </div>
+</section>
+
+<section class="how">
+  <h3>What to do next</h3>
+  <p style="margin: 0 0 12px;">
+    Call a favorite (any letter, any round) and a theme, and I'll generate the full Tauri
+    icon bundle and wire it into <code>src-tauri/icons/</code>,
+    <code>static/favicon.png</code>, and <code>static/logo.png</code>.
+  </p>
+  <p style="margin: 12px 0 0; color: var(--muted);">
+    Or tell me what's off in any of the round-3 directions and I'll iterate again.
+  </p>
+</section>
+
+</main>
+</body>
+</html>

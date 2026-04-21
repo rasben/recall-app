@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Recall — Day Ring">
+  <!-- Concept C: Day Ring. A near-closed ring with a small notch at top (the refresh nod)
+       plus three event ticks around the face and a central accent dot (today). -->
+  <!-- The ring: 340 degrees, gap at top -->
+  <path d="M 285.2 90.6 A 168 168 0 1 1 226.8 90.6"
+        fill="none" stroke="#F5F2EC" stroke-width="36"
+        stroke-linecap="round" />
+  <!-- Event ticks inside the ring at 3, 7, 10 o'clock (approx) -->
+  <g stroke="#F5F2EC" stroke-width="18" stroke-linecap="round">
+    <line x1="386" y1="256" x2="418" y2="256" />
+    <line x1="191" y1="369" x2="167" y2="397" />
+    <line x1="143" y1="191" x2="115" y2="167" />
+  </g>
+  <!-- Center dot: today / the recalled focus -->
+  <circle cx="256" cy="256" r="34" fill="#E85A2A" />
+</svg>

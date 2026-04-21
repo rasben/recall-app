@@ -17,7 +17,6 @@
   onMount(async () => {
     welcomed = !!localStorage.getItem("recall:welcomed");
     welcomeChecked = true;
-    welcomed = false;
 
     const status = await commands.getIcalSyncStatus();
     const oneHourAgo = Date.now() - 60 * 60 * 1000;

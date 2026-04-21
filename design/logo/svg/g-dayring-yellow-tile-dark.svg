@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Recall — Day Ring (yellow) tile, dark">
+  <rect width="512" height="512" rx="112" ry="112" fill="#0B0B0F" />
+  <path d="M 285.2 90.6 A 168 168 0 1 1 226.8 90.6"
+        fill="none" stroke="#F5F2EC" stroke-width="36"
+        stroke-linecap="round" />
+  <g stroke="#F5F2EC" stroke-width="18" stroke-linecap="round">
+    <line x1="386" y1="256" x2="418" y2="256" />
+    <line x1="191" y1="369" x2="167" y2="397" />
+    <line x1="143" y1="191" x2="115" y2="167" />
+  </g>
+  <circle cx="256" cy="256" r="34" fill="#ffdb33" />
+</svg>

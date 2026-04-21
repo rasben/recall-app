@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Recall — Time Stack tile, light">
+  <rect width="512" height="512" rx="112" ry="112" fill="#F5F2EC" />
+  <g fill="#0B0B0F">
+    <rect x="96"  y="136" width="300" height="40" rx="20" />
+    <rect x="96"  y="212" width="232" height="40" rx="20" />
+    <rect x="96"  y="288" width="340" height="40" rx="20" />
+  </g>
+  <rect x="96"  y="364" width="120" height="40" rx="20" fill="#E85A2A" />
+</svg>

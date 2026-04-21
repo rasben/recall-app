@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Recall — Punch Clock tile, dark">
+  <rect width="512" height="512" rx="112" ry="112" fill="#0B0B0F" />
+  <circle cx="256" cy="216" r="152" fill="none" stroke="#F5F2EC" stroke-width="24" />
+  <g stroke="#F5F2EC" stroke-width="12" stroke-linecap="round">
+    <line x1="256" y1="76"  x2="256" y2="96"  />
+    <line x1="396" y1="216" x2="376" y2="216" />
+    <line x1="256" y1="356" x2="256" y2="336" />
+    <line x1="116" y1="216" x2="136" y2="216" />
+  </g>
+  <line x1="256" y1="216" x2="194" y2="180"
+        stroke="#F5F2EC" stroke-width="18" stroke-linecap="round" />
+  <line x1="256" y1="216" x2="351" y2="161"
+        stroke="#ffdb33" stroke-width="14" stroke-linecap="round" />
+  <circle cx="256" cy="216" r="10" fill="#F5F2EC" />
+  <rect x="156" y="400" width="200" height="40" rx="12"
+        fill="none" stroke="#F5F2EC" stroke-width="10" />
+  <line x1="184" y1="420" x2="328" y2="420"
+        stroke="#F5F2EC" stroke-width="8" stroke-linecap="round" />
+</svg>

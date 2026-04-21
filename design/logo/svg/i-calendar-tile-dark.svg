@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Recall — Calendar tile, dark">
+  <rect width="512" height="512" rx="112" ry="112" fill="#0B0B0F" />
+  <rect x="152" y="104" width="20" height="52" rx="6" fill="#F5F2EC" />
+  <rect x="340" y="104" width="20" height="52" rx="6" fill="#F5F2EC" />
+  <rect x="80" y="144" width="352" height="288" rx="24"
+        fill="none" stroke="#F5F2EC" stroke-width="20" />
+  <line x1="96" y1="214" x2="416" y2="214"
+        stroke="#F5F2EC" stroke-width="14" stroke-linecap="round" />
+  <g fill="#F5F2EC">
+    <circle cx="152" cy="270" r="16" />
+    <circle cx="224" cy="270" r="16" />
+    <circle cx="296" cy="270" r="16" />
+    <circle cx="368" cy="270" r="16" />
+
+    <circle cx="152" cy="330" r="16" />
+    <circle cx="296" cy="330" r="16" />
+    <circle cx="368" cy="330" r="16" />
+
+    <circle cx="152" cy="390" r="16" />
+    <circle cx="224" cy="390" r="16" />
+    <circle cx="296" cy="390" r="16" />
+    <circle cx="368" cy="390" r="16" />
+  </g>
+  <circle cx="224" cy="330" r="22" fill="#ffdb33" />
+</svg>

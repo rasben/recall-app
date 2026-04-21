@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Recall — Progress">
+  <!-- Iteration J: Progress. Outlined pill track with a yellow fill growing left-to-right,
+       suggesting the day being filled in. -->
+  <!-- Track outline -->
+  <rect x="80" y="216" width="352" height="80" rx="40"
+        fill="none" stroke="#F5F2EC" stroke-width="20" />
+  <!-- Fill (about 55% of the day) -->
+  <rect x="96" y="232" width="200" height="48" rx="24" fill="#ffdb33" />
+  <!-- Quarter-point tick marks below the track -->
+  <g stroke="#F5F2EC" stroke-width="10" stroke-linecap="round">
+    <line x1="168" y1="332" x2="168" y2="352" />
+    <line x1="256" y1="332" x2="256" y2="352" />
+    <line x1="344" y1="332" x2="344" y2="352" />
+  </g>
+</svg>

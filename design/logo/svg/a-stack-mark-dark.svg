@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Recall — Time Stack mark">
+  <!-- Concept A (revised): Time Stack. Four stacked activity bars of varied width
+       depicting a day's events; the final (shortest) bar is the accent-colored
+       "now" marker — the event being recalled. -->
+  <g fill="#F5F2EC">
+    <rect x="96"  y="136" width="300" height="40" rx="20" />
+    <rect x="96"  y="212" width="232" height="40" rx="20" />
+    <rect x="96"  y="288" width="340" height="40" rx="20" />
+  </g>
+  <rect x="96"  y="364" width="120" height="40" rx="20" fill="#E85A2A" />
+</svg>

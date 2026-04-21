@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Recall — Day Arc mark">
+  <!-- Concept D: Day Arc. A horizon line with a sun-arc above; accent dot sits at noon. -->
+  <g fill="none" stroke="#F5F2EC" stroke-width="32" stroke-linecap="round">
+    <!-- horizon -->
+    <line x1="96" y1="360" x2="416" y2="360" />
+    <!-- sun arc (upper semicircle), endpoints on the horizon -->
+    <path d="M 144 360 A 112 112 0 0 1 368 360" />
+  </g>
+  <!-- sun at noon -->
+  <circle cx="256" cy="248" r="28" fill="#E85A2A" />
+</svg>

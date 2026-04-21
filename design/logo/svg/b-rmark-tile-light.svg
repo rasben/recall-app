@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Recall — R monogram tile, light">
+  <rect width="512" height="512" rx="112" ry="112" fill="#F5F2EC" />
+  <path d="M 140 432 L 140 100 L 248 100 A 90 90 0 0 1 248 280 L 140 280 L 392 432"
+        fill="none" stroke="#0B0B0F" stroke-width="50"
+        stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="215" cy="190" r="20" fill="#E85A2A" />
+</svg>
