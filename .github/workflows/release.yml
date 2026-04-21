@@ -1,0 +1,86 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            args: --target aarch64-apple-darwin
+            label: macos-arm64
+          - platform: macos-latest
+            args: --target x86_64-apple-darwin
+            label: macos-x86_64
+          - platform: ubuntu-22.04
+            args: ''
+            label: linux
+          - platform: windows-latest
+            args: ''
+            label: windows
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ startsWith(matrix.platform, 'macos') && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - run: npm install
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # macOS code signing (optional — omit secrets to skip signing)
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Recall ${{ github.ref_name }}
+          releaseBody: |
+            ## Installation
+
+            Download the file for your platform:
+
+            | Platform | File |
+            |----------|------|
+            | macOS (Apple Silicon) | `recall-app_*_aarch64.dmg` |
+            | macOS (Intel) | `recall-app_*_x64.dmg` |
+            | Windows | `recall-app_*_x64-setup.exe` |
+            | Linux | `recall-app_*_amd64.AppImage` or `recall-app_*_amd64.deb` |
+
+            **macOS note:** If the app is unsigned, right-click → Open on first launch to bypass Gatekeeper.
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}
