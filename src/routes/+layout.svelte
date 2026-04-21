@@ -1,5 +1,6 @@
 <script lang="ts">
-	import './layout.css';
+	import './tailwind-base.css';
+	import './layout.scss';
     import { Toaster } from "$lib/components/ui/sonner/index.js";
     import { commands } from "../bindings";
     import { applyTheme } from "$lib/theme";

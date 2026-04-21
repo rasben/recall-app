@@ -34,8 +34,6 @@ Svelte 5 + SvelteKit 2 frontend, Tauri 2 + Rust backend, SQLite for settings/cre
   - Read files
 - Zulip - expanded data
   - Messages you've read
-- UI
-  - Welcome screen, the first time the app is opened, explaining the purpose and basics
 - Privacy/Ease-of-mind
   - Add a screen, that shows the last 50 commands that has been run
     - E.g., the terminal commands that has been run by git data sources, or the APIs called by Jira datasources

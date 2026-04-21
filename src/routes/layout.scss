@@ -1,11 +1,6 @@
 /* src/app.css */
 @import url("https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@300;400;500;600;700&display=swap");
 
-@import "tailwindcss";
-@import "tw-animate-css";
-
-@custom-variant dark (&:is(.dark *));
-
 button {
   cursor: pointer;
 }
@@ -13,6 +8,28 @@ button {
 @layer base {
   .font-outline {
     -webkit-text-stroke: 2px black;
+  }
+
+  /* Filled text with a thick stroke painted behind the fill */
+  .text-outlined {
+    $_color: var(--primary);
+    $_color-dark: var(--muted-foreground);
+
+    letter-spacing: 2px;
+
+    text-shadow:
+      0 0 0 $_color,
+      0 0 0 $_color,
+      4px 4px 0 $_color,
+      4px 4px 0 $_color;
+
+    .dark & {
+      text-shadow:
+        0 0 0 $_color-dark,
+        0 0 0 $_color-dark,
+        4px 4px 0 $_color-dark,
+        4px 4px 0 $_color-dark;
+    }
   }
 }
 
