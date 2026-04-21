@@ -6,6 +6,7 @@
   import TicketCheck from "@lucide/svelte/icons/ticket-check";
   import Check from "@lucide/svelte/icons/check";
   import type { Component } from "svelte";
+  import { t } from "$lib/i18n.svelte";
 
   let {
     currentSource = null,
@@ -39,7 +40,7 @@
   <!-- Progress bar -->
   <div class="flex items-center gap-3">
     <span class="font-head text-[10px] uppercase tracking-[0.3em] text-muted-foreground shrink-0">
-      Loading
+      {t("timeline.loading")}
     </span>
     <div class="flex-1 h-2 bg-border overflow-hidden">
       <div

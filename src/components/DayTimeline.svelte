@@ -10,6 +10,7 @@
   import TimelineEventRow from "./TimelineEvent.svelte";
   import Loading from "./ui/Loading.svelte";
   import MissingSettings from "./ui/MissingSettings.svelte";
+  import { t } from "$lib/i18n.svelte";
 
   const LOAD_DEBOUNCE_MS = 500;
   const PREFETCH_DAYS = 6;
@@ -167,14 +168,14 @@
 
   <div class="relative">
   {#if settingsLoaded && enabledSources.length === 0}
-    <MissingSettings message="No data sources enabled. Enable atleast one in the settings." />
+    <MissingSettings message={t("timeline.no_sources")} />
   {:else if isLoading}
     <div class="absolute inset-x-0" in:fade={{ duration: 180, easing: cubicOut }} out:fade={{ duration: 240, easing: cubicOut }}>
       <Loading currentSource={loadingSource} {doneSources} {enabledSources} />
     </div>
   {:else if events.length === 0 && !loadError}
     <p class="text-muted-foreground" in:fade|global={{ duration: 240, easing: cubicOut }}>
-      No activity found for this day.
+      {t("timeline.no_activity")}
     </p>
   {:else}
     <div class="space-y-6">

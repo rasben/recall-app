@@ -3,6 +3,7 @@
     import { toast } from "svelte-sonner";
     import { commands } from "../../bindings";
     import { Button } from "$lib/components/ui/button/index.js";
+    import { t } from "$lib/i18n.svelte";
 
     let clearing = $state(false);
     let cachedDays = $state<number | null>(null);
@@ -28,9 +29,9 @@
         clearing = false;
 
         if (result.status === "error") {
-            toast.error("Failed to clear caches");
+            toast.error(t("settings.cache.error"));
         } else {
-            toast.success("Caches cleared");
+            toast.success(t("settings.cache.cleared"));
             await loadSize();
         }
     }
@@ -39,14 +40,14 @@
 </script>
 
 <fieldset class="border-2 p-4 mt-6">
-    <legend>Cache</legend>
+    <legend>{t("settings.cache.legend")}</legend>
     <div class="flex items-center gap-4 flex-wrap">
         <Button variant="outline" disabled={clearing} onclick={clearCaches}>
-            {clearing ? "Clearing…" : "Clear all caches"}
+            {clearing ? t("settings.cache.clearing") : t("settings.cache.clear")}
         </Button>
         {#if cachedDays !== null && bytes !== null}
             <span class="text-xs text-muted-foreground">
-                {cachedDays} cached {cachedDays === 1 ? "day" : "days"} &middot; {formatBytes(Number(bytes))} on disk
+                {cachedDays} {cachedDays === 1 ? t("settings.cache.day") : t("settings.cache.days")} &middot; {formatBytes(Number(bytes))} {t("settings.cache.on_disk")}
             </span>
         {/if}
     </div>

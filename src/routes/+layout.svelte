@@ -5,6 +5,8 @@
     import { commands } from "../bindings";
     import { applyTheme } from "$lib/theme";
     import { onMount } from "svelte";
+    // Import i18n so the reactive lang state is initialized at app boot
+    import "$lib/i18n.svelte";
 
     const { children } = $props();
 

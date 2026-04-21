@@ -15,19 +15,22 @@ export function addDaysIso(iso: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function formatDayHeadingParts(iso: string): {
+export function formatDayHeadingParts(
+  iso: string,
+  locale = "en-US",
+): {
   weekday: string;
   monthDay: string;
 } {
   const d = new Date(iso + "T12:00:00");
   return {
-    weekday: d.toLocaleDateString("en-US", { weekday: "long" }),
-    monthDay: d.toLocaleDateString("en-US", { month: "long", day: "numeric" }),
+    weekday: d.toLocaleDateString(locale, { weekday: "long" }),
+    monthDay: d.toLocaleDateString(locale, { month: "long", day: "numeric" }),
   };
 }
 
-export function formatDayHeading(iso: string): string {
-  const { weekday, monthDay } = formatDayHeadingParts(iso);
+export function formatDayHeading(iso: string, locale = "en-US"): string {
+  const { weekday, monthDay } = formatDayHeadingParts(iso, locale);
   return `${weekday}, ${monthDay}`;
 }
 

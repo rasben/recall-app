@@ -8,6 +8,7 @@
   import { formatDayHeadingParts, todayIso } from "$lib/timeline";
   import { navState } from "$lib/nav-state.svelte";
   import { commands } from "../bindings";
+  import { t, langLocale } from "$lib/i18n.svelte";
 
   let {
     selectedDate,
@@ -21,7 +22,7 @@
     onPick: (iso: string) => void;
   } = $props();
 
-  let headingParts = $derived(formatDayHeadingParts(selectedDate));
+  let headingParts = $derived(formatDayHeadingParts(selectedDate, langLocale()));
   let atToday = $derived(selectedDate === todayIso());
 
   let pickerOpen = $state(false);
@@ -77,7 +78,7 @@
 
   let visibleMonthLabel = $derived.by(() => {
     const m = calendarMonth ?? pickerValue;
-    return new Date(m.year, m.month - 1, 1).toLocaleString("default", {
+    return new Date(m.year, m.month - 1, 1).toLocaleString(langLocale(), {
       month: "long",
       year: "numeric",
     });
@@ -92,7 +93,7 @@
   <Popover.Root bind:open={pickerOpen}>
     <Popover.Trigger
       class="font-head min-w-0 text-xl cursor-pointer border-2 border-transparent px-2 py-0.5 transition hover:border-border hover:bg-accent hover:text-accent-foreground outline-hidden focus-visible:border-border"
-      aria-label="Pick a date"
+      aria-label={t("timeline.pick_date")}
     >
       <span class="block text-muted-foreground xs:inline">{headingParts.weekday}</span>
       <span class="block xs:inline">{headingParts.monthDay}</span>
@@ -113,7 +114,7 @@
           <div class="size-2.5 bg-primary/30 border border-border/40"></div>
           <div class="size-2.5 bg-primary/50 border border-border/40"></div>
           <div class="size-2.5 bg-primary/70 border border-border/40"></div>
-          <span class="text-[0.6rem] text-muted-foreground">less → more activity</span>
+          <span class="text-[0.6rem] text-muted-foreground">{t("timeline.less_more_activity")}</span>
         </div>
 
         <Button
@@ -123,7 +124,7 @@
                 disabled={loadingMonth}
                 onclick={loadMonth}
         >
-          {loadingMonth ? "Loading…" : `Load all of ${visibleMonthLabel}`}
+          {loadingMonth ? t("timeline.loading_month") : t("timeline.load_month", { month: visibleMonthLabel })}
         </Button>
       </div>
     </Popover.Content>
@@ -135,7 +136,7 @@
     </Button>
 
     <Button variant="outline" class="text-sm" onclick={onGoToday}>
-      Today
+      {t("timeline.today")}
     </Button>
   {/if}
 </div>

@@ -6,10 +6,9 @@
   import { onMount } from "svelte";
   import { commands, type SettingsZulip } from "../../bindings";
   import PasswordInput from "../ui/PasswordInput.svelte";
+  import { t } from "$lib/i18n.svelte";
 
   const defaultRealmUrl = "https://reload.zulipchat.com";
-  const descriptionToken = `Find your API key in Zulip under
-      <strong>Settings → Account &amp; privacy → API key</strong>.`
 
   const defaultSettings: SettingsZulip = {
     enabled: false,
@@ -40,7 +39,7 @@
     const next: SettingsZulip = { ...settings, ...partial };
     const result = await commands.setSettingsZulip(next);
     if (result.status === "error") {
-      toast.error("Could not save Zulip settings");
+      toast.error(t("settings.zulip.error_save"));
       return false;
     }
     settings = next;
@@ -61,7 +60,7 @@
     if (!ok) {
       realmUrl = original;
     } else {
-      toast.success("Zulip realm URL saved");
+      toast.success(t("settings.zulip.saved_url"));
     }
   }
 
@@ -72,7 +71,7 @@
     if (!ok) {
       email = original;
     } else {
-      toast.success("Email saved");
+      toast.success(t("settings.zulip.saved_email"));
     }
   }
 
@@ -81,15 +80,15 @@
     const ok = await persist({ api_key: apiKey });
     if (!ok) {
       apiKey = original;
-      toast.error("Could not save API key");
+      toast.error(t("settings.zulip.error_api_key"));
     } else {
-      toast.success("API key saved");
+      toast.success(t("settings.zulip.saved_api_key"));
     }
   }
 </script>
 
 <fieldset class="border-2 p-4 mt-6">
-  <legend>Zulip</legend>
+  <legend>{t("settings.zulip.legend")}</legend>
 
   <div class="flex items-center gap-2 mb-4">
     <Checkbox
@@ -97,11 +96,11 @@
       checked={enabled}
       onCheckedChange={(v) => toggleEnabled(v === true)}
     />
-    <Label for="zulip-enabled">Enable Zulip source</Label>
+    <Label for="zulip-enabled">{t("settings.zulip.enable")}</Label>
   </div>
 
   {#if enabled}
-    <Label for="zulip-email" class="mb-2">Zulip account email</Label>
+    <Label for="zulip-email" class="mb-2">{t("settings.zulip.email")}</Label>
     <Input
       id="zulip-email"
       type="email"
@@ -115,13 +114,13 @@
     <PasswordInput
       bind:password={apiKey}
       saveAction={saveApiKey}
-      label="API key"
-      placeholder="Your Zulip API key…"
+      label={t("settings.zulip.api_key")}
+      placeholder={t("settings.zulip.api_key_placeholder")}
       inputId="zulip-api-key"
-      description={descriptionToken}
+      description={t("settings.zulip.token_description")}
     />
 
-    <Label for="zulip-realm-url" class="mb-2">Realm URL</Label>
+    <Label for="zulip-realm-url" class="mb-2">{t("settings.zulip.realm_url")}</Label>
     <Input
             id="zulip-realm-url"
             type="url"

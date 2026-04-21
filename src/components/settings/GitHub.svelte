@@ -5,17 +5,19 @@
     import { onMount } from "svelte";
     import { commands, type SettingsGitHub, type GitHubEvent } from "../../bindings";
     import * as Select from "$lib/components/ui/select/index.js";
+    import { t } from "$lib/i18n.svelte";
 
-    const eventTypeMap: Record<string, { type: GitHubEvent; label: string }> = {
-        pullRequestEvent: { type: "PullRequestEvent", label: "Pull Request (PR)" },
-        pullRequestReviewEvent: { type: "PullRequestReviewEvent", label: "PR: Review" },
-        pullRequestReviewCommentEvent: { type: "PullRequestReviewCommentEvent", label: "PR: Review Comment" },
-        issuesEvent: { type: "IssuesEvent", label: "Issue" },
-        issueCommentEvent: { type: "IssueCommentEvent", label: "Issue: Comment" },
+    const eventTypeMap: Record<string, { type: GitHubEvent; labelKey: string }> = {
+        pullRequestEvent: { type: "PullRequestEvent", labelKey: "settings.github.event.pull_request" },
+        pullRequestReviewEvent: { type: "PullRequestReviewEvent", labelKey: "settings.github.event.pr_review" },
+        pullRequestReviewCommentEvent: { type: "PullRequestReviewCommentEvent", labelKey: "settings.github.event.pr_review_comment" },
+        issuesEvent: { type: "IssuesEvent", labelKey: "settings.github.event.issue" },
+        issueCommentEvent: { type: "IssueCommentEvent", labelKey: "settings.github.event.issue_comment" },
     };
 
     function eventTypeLabel(event: GitHubEvent): string {
-        return Object.values(eventTypeMap).find((e) => e.type === event)?.label ?? event;
+        const entry = Object.values(eventTypeMap).find((e) => e.type === event);
+        return entry ? t(entry.labelKey as Parameters<typeof t>[0]) : event;
     }
 
     const defaultSettings: SettingsGitHub = {
@@ -41,22 +43,22 @@
 
     async function toggleEnabled(checked: boolean) {
         const ok = await persist({ enabled: checked });
-        if (!ok) toast.error("Could not enable GitHub source");
+        if (!ok) toast.error(t("settings.github.error_enable"));
     }
 
     async function toggleCli(checked: boolean) {
         const ok = await persist({ use_cli: checked });
-        if (!ok) toast.error("Cannot use GH CLI. Is it installed?");
+        if (!ok) toast.error(t("settings.github.error_cli"));
     }
 
     async function setEnabledEvents(value: string[] | undefined) {
         const ok = await persist({ enabled_events: (value ?? []) as GitHubEvent[] });
-        if (!ok) toast.error("Could not set chosen events");
+        if (!ok) toast.error(t("settings.github.error_events"));
     }
 </script>
 
 <fieldset class="border-2 p-4 mt-6">
-    <legend>GitHub</legend>
+    <legend>{t("settings.github.legend")}</legend>
 
     <div class="flex items-center gap-2 mb-4">
         <Checkbox
@@ -64,7 +66,7 @@
             checked={settings.enabled}
             onCheckedChange={(v) => toggleEnabled(v === true)}
         />
-        <Label for="github-enabled">Enable GitHub source</Label>
+        <Label for="github-enabled">{t("settings.github.enable")}</Label>
     </div>
 
     {#if settings.enabled}
@@ -74,16 +76,16 @@
                 checked={settings.use_cli}
                 onCheckedChange={(v) => toggleCli(v === true)}
             />
-            <Label for="github-use-cli">Use GH CLI</Label>
+            <Label for="github-use-cli">{t("settings.github.use_cli")}</Label>
         </div>
 
         {#if !settings.use_cli}
             <div class="-mt-2 mb-4 font-bold text-red-600">
-                For now, only GH CLI is supported. In the future, we will support GH PAT tokens.
+                {t("settings.github.cli_only_warning")}
             </div>
         {/if}
 
-        <Label for="github-enabled-events-trigger" class="mb-2">Events to show</Label>
+        <Label for="github-enabled-events-trigger" class="mb-2">{t("settings.github.events_label")}</Label>
         <Select.Root
             type="multiple"
             bind:value={settings.enabled_events}
@@ -91,15 +93,15 @@
         >
             <Select.Trigger id="github-enabled-events-trigger" class="w-full">
                 {settings.enabled_events.length === 0
-                    ? "No events chosen"
+                    ? t("settings.github.no_events")
                     : [...settings.enabled_events]
                         .sort((a, b) => eventTypeLabel(a).localeCompare(eventTypeLabel(b)))
                         .map(eventTypeLabel)
                         .join(", ")}
             </Select.Trigger>
             <Select.Content class="max-h-[300px]">
-                {#each Object.entries(eventTypeMap) as [, { type, label }]}
-                    <Select.Item value={type} {label} />
+                {#each Object.entries(eventTypeMap) as [, { type, labelKey }]}
+                    <Select.Item value={type} label={t(labelKey as Parameters<typeof t>[0])} />
                 {/each}
             </Select.Content>
         </Select.Root>

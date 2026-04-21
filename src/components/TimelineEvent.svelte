@@ -10,6 +10,7 @@
   import { openUrl } from "@tauri-apps/plugin-opener";
   import type { TimelineEvent, TimelineEventSource } from "../bindings";
   import type { Component } from "svelte";
+  import { t } from "$lib/i18n.svelte";
 
   let { event, done = false, onToggle }: { event: TimelineEvent; done?: boolean; onToggle?: () => void } = $props();
 
@@ -43,9 +44,9 @@
             type="button"
             class="timeline-link-btn absolute bottom-1.5 left-3 w-10 text-center inline-flex items-center gap-1 text-[10px] text-muted-foreground opacity-0 transition-opacity hover:text-foreground"
             onclick={(e) => { e.stopPropagation(); openUrl(event.url!); }}
-            aria-label="Open link"
+            aria-label={t("timeline.open_link")}
     >
-      <span>Open</span>
+      <span>{t("timeline.open_link")}</span>
       <ExternalLink class="size-3" />
     </button>
   {/if}
@@ -70,7 +71,7 @@
   <div class="relative mt-0.5 shrink-0 self-end">
     <img
       src="/harvest.svg"
-      alt={done ? "Logged in Harvest" : "Not logged in Harvest"}
+      alt={done ? t("timeline.logged_in_harvest") : t("timeline.not_logged_in_harvest")}
       class="block size-3 transition-all {done ? '' : 'opacity-25 grayscale'}"
     />
     {#if done}

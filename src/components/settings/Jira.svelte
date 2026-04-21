@@ -7,26 +7,20 @@
   import { commands, type SettingsJira, type JiraEvent } from "../../bindings";
   import PasswordInput from "../ui/PasswordInput.svelte";
   import * as Select from "$lib/components/ui/select/index.js";
+  import { t } from "$lib/i18n.svelte";
 
   const defaultSiteUrl = "https://reload.atlassian.net";
-  const tokenDescription = `Use an
-      <a
-              class="underline font-medium text-foreground"
-              href="https://id.atlassian.com/manage-profile/security/api-tokens"
-              target="_blank"
-              rel="noreferrer">Atlassian API token</a
-      >
-      with your Atlassian account email (Jira Cloud).`;
 
-  const eventTypeMap: Record<string, { type: JiraEvent; label: string }> = {
-    commentWritten: { type: "CommentWritten", label: "Comments I posted" },
-    issueCreated: { type: "IssueCreated", label: "Tickets I created" },
-    issueCompleted: { type: "IssueCompleted", label: "Tickets moved to Done" },
-    mentioned: { type: "Mentioned", label: "I was @mentioned" },
+  const eventTypeMap: Record<string, { type: JiraEvent; labelKey: string }> = {
+    commentWritten: { type: "CommentWritten", labelKey: "settings.jira.event.comment_written" },
+    issueCreated: { type: "IssueCreated", labelKey: "settings.jira.event.issue_created" },
+    issueCompleted: { type: "IssueCompleted", labelKey: "settings.jira.event.issue_completed" },
+    mentioned: { type: "Mentioned", labelKey: "settings.jira.event.mentioned" },
   };
 
   function eventTypeLabel(event: JiraEvent): string {
-    return Object.values(eventTypeMap).find((e) => e.type === event)?.label ?? event;
+    const entry = Object.values(eventTypeMap).find((e) => e.type === event);
+    return entry ? t(entry.labelKey as Parameters<typeof t>[0]) : event;
   }
 
   let defaultSettings: SettingsJira = {
@@ -67,7 +61,7 @@
     const next: SettingsJira = { ...settings, ...partial };
     const result = await commands.setSettingsJira(next);
     if (result.status === "error") {
-      toast.error("Could not save Jira settings");
+      toast.error(t("settings.jira.error_save"));
       return false;
     }
     settings = next;
@@ -92,7 +86,7 @@
     if (!ok) {
       siteUrl = original;
     } else {
-      toast.success("Jira site URL saved");
+      toast.success(t("settings.jira.saved_url"));
     }
   }
 
@@ -105,7 +99,7 @@
     if (!ok) {
       email = original;
     } else {
-      toast.success("Email saved");
+      toast.success(t("settings.jira.saved_email"));
     }
   }
 
@@ -114,9 +108,9 @@
     const ok = await persist({ api_token: apiToken });
     if (!ok) {
       apiToken = original;
-      toast.error("Could not save API token");
+      toast.error(t("settings.jira.error_token"));
     } else {
-      toast.success("API token saved");
+      toast.success(t("settings.jira.saved_token"));
     }
   }
 
@@ -128,13 +122,13 @@
     if (!ok) {
       enabledEvents = original;
       settings.enabled_events = original;
-      toast.error("Could not update event types");
+      toast.error(t("settings.jira.error_events"));
     }
   }
 </script>
 
 <fieldset class="border-2 p-4 mt-6">
-  <legend>Jira</legend>
+  <legend>{t("settings.jira.legend")}</legend>
 
   <div class="flex items-center gap-2 mb-4">
     <Checkbox
@@ -142,11 +136,11 @@
       checked={enabled}
       onCheckedChange={(v) => toggleEnabled(v === true)}
     />
-    <Label for="jira-enabled">Enable Jira source</Label>
+    <Label for="jira-enabled">{t("settings.jira.enable")}</Label>
   </div>
 
   {#if enabled}
-    <Label for="jira-site-url" class="mb-2">Jira site URL</Label>
+    <Label for="jira-site-url" class="mb-2">{t("settings.jira.site_url")}</Label>
     <Input
       id="jira-site-url"
       type="url"
@@ -156,7 +150,7 @@
       onblur={saveSiteUrl}
     />
 
-    <Label for="jira-email" class="mb-2">Atlassian account email</Label>
+    <Label for="jira-email" class="mb-2">{t("settings.jira.email")}</Label>
     <Input
       id="jira-email"
       type="email"
@@ -170,27 +164,27 @@
     <PasswordInput
       bind:password={apiToken}
       saveAction={saveApiToken}
-      label="Atlassian API token"
-      placeholder="Create a token…"
+      label={t("settings.jira.token")}
+      placeholder={t("settings.jira.token_placeholder")}
       inputId="jira-api-token"
-      description={tokenDescription}
+      description={t("settings.jira.token_description")}
     />
 
     {#if apiToken}
 
-    <Label for="jira-enabled-events-trigger" class="mb-2">Events to show</Label>
+    <Label for="jira-enabled-events-trigger" class="mb-2">{t("settings.jira.events_label")}</Label>
     <Select.Root type="multiple" bind:value={enabledEvents} onValueChange={setEnabledEvents}>
       <Select.Trigger id="jira-enabled-events-trigger" class="w-full">
         {enabledEvents.length === 0
-          ? "No events chosen"
+          ? t("settings.jira.no_events")
           : [...enabledEvents]
               .sort((a, b) => eventTypeLabel(a).localeCompare(eventTypeLabel(b)))
               .map(eventTypeLabel)
               .join(", ")}
       </Select.Trigger>
       <Select.Content class="max-h-[300px]">
-        {#each Object.entries(eventTypeMap) as [, { type, label }]}
-          <Select.Item value={type} {label} />
+        {#each Object.entries(eventTypeMap) as [, { type, labelKey }]}
+          <Select.Item value={type} label={t(labelKey as Parameters<typeof t>[0])} />
         {/each}
       </Select.Content>
     </Select.Root>

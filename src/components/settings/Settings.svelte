@@ -6,11 +6,12 @@
   import SettingsJira from "./Jira.svelte";
   import SettingsZulip from "./Zulip.svelte";
   import SettingsCache from "./Cache.svelte";
+  import { t } from "$lib/i18n.svelte";
 </script>
 
-<h2 class="font-head mb-4 text-xl">
-  Settings
-</h2>
+<div class="flex items-center justify-between mb-4">
+  <h2 class="font-head text-xl">{t("settings.title")}</h2>
+</div>
 
 <SettingsUI />
 <SettingsGit />

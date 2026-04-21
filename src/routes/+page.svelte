@@ -8,6 +8,7 @@
   import Main from "../components/Main.svelte";
   import Welcome from "../components/Welcome.svelte";
   import { commands } from "../bindings";
+  import { t } from "$lib/i18n.svelte";
 
   let settingsOpen = $state(false);
   let welcomed = $state(true); // optimistic: don't flash welcome on repeat visits
@@ -33,14 +34,14 @@
 </script>
 
 {#if welcomeChecked && !welcomed}
-  <Welcome onGetStarted={() => markWelcomed(true)} onSkip={() => markWelcomed(false)} />
+  <Welcome onGetStarted={() => markWelcomed(true)} />
 {:else}
   <Button
     variant={settingsOpen ? "secondary" : "outline"}
     size="icon"
     class="absolute top-8 right-8 z-50"
     aria-pressed={settingsOpen}
-    aria-label={settingsOpen ? "Close settings" : "Open settings"}
+    aria-label={settingsOpen ? t("page.close_settings") : t("page.open_settings")}
     onclick={() => (settingsOpen = !settingsOpen)}
   >
     {#if settingsOpen}
