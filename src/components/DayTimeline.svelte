@@ -97,6 +97,7 @@
         if (result.status === "ok") {
           events = result.data;
           loadError = null;
+          navState.dayCounts[day] = result.data.length;
           const ids = result.data.map((e) => e.id);
           const harvest = await commands.getTimelineHarvestDoneForEventIds(ids);
           if (cancelled) return;
@@ -127,6 +128,11 @@
     for (let i = 1; i <= PREFETCH_DAYS; i++) {
       const day = addDaysIso(today, -i);
       window.setTimeout(() => commands.getTimelineForDay(day), i * PREFETCH_STAGGER_MS);
+    }
+
+    const countsResult = await commands.getCachedDayEventCounts();
+    if (countsResult.status === "ok") {
+      Object.assign(navState.dayCounts, countsResult.data);
     }
 
     const [git, github, ical, jira, zulip] = await Promise.all([

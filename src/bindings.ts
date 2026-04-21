@@ -119,6 +119,14 @@ async getCacheSize() : Promise<Result<CacheSizeResult, string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async getCachedDayEventCounts() : Promise<Result<Record<string, number>, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_cached_day_event_counts") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 

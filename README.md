@@ -36,9 +36,6 @@ Svelte 5 + SvelteKit 2 frontend, Tauri 2 + Rust backend, SQLite for settings/cre
   - Messages you've read
 - UI
   - Welcome screen, the first time the app is opened, explaining the purpose and basics
-  - In the calendar view, use colour backgrounds to show how busy a day has been
-    - Grey = Not loaded yet/no data
-    - Make some kind of button where the user can choose to load a whole months of data, to see this.
 - Privacy/Ease-of-mind
   - Add a screen, that shows the last 50 commands that has been run
     - E.g., the terminal commands that has been run by git data sources, or the APIs called by Jira datasources

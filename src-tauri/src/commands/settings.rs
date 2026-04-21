@@ -2,9 +2,10 @@ use crate::state::AppState;
 use rusqlite::params;
 use serde::Serialize;
 use specta::Type;
+use std::collections::HashMap;
+use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::State;
-use std::fs;
 
 pub(crate) fn now() -> i64 {
     SystemTime::now()
@@ -44,6 +45,24 @@ pub struct ClearCachesResult {
 pub struct CacheSizeResult {
     pub bytes: u32,
     pub cached_days: u32,
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_cached_day_event_counts(state: State<'_, AppState>) -> Result<HashMap<String, u32>, String> {
+    let conn = state.db.lock().map_err(|_| "DB lock failed".to_string())?;
+    let mut stmt = conn
+        .prepare("SELECT day, json_array_length(events_json) FROM timeline_day_cache")
+        .map_err(|e| e.to_string())?;
+    let rows = stmt
+        .query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, u32>(1)?)))
+        .map_err(|e| e.to_string())?;
+    let mut counts = HashMap::new();
+    for row in rows {
+        let (day, count) = row.map_err(|e| e.to_string())?;
+        counts.insert(day, count);
+    }
+    Ok(counts)
 }
 
 #[tauri::command]

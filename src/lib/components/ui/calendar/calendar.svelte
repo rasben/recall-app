@@ -6,6 +6,7 @@
 
   type Props = WithoutChildrenOrChild<CalendarPrimitive.RootProps> & {
     buttonVariant?: "default" | "outline" | "ghost";
+    dayCounts?: Record<string, number>;
   };
 
   let {
@@ -14,8 +15,19 @@
     placeholder = $bindable(),
     weekdayFormat = "short",
     class: className,
+    dayCounts = {},
     ...restProps
   }: Props = $props();
+
+  function cellBgClass(iso: string): string {
+    if (!(iso in dayCounts)) return "";
+    const count = dayCounts[iso];
+    if (count === 0) return "bg-muted/50";
+    if (count <= 2)  return "bg-primary/15";
+    if (count <= 5)  return "bg-primary/30";
+    if (count <= 9)  return "bg-primary/50";
+    return "bg-primary/70";
+  }
 </script>
 
 <CalendarPrimitive.Root
@@ -62,10 +74,11 @@
             {#each month.weeks as weekDates (weekDates[0].toString())}
               <CalendarPrimitive.GridRow class="mt-1 flex w-full">
                 {#each weekDates as date (date.toString())}
+                  {@const iso = date.toString()}
                   <CalendarPrimitive.Cell
                     {date}
                     month={month.value}
-                    class="relative size-8 p-0 text-center text-sm"
+                    class={cn("relative size-8 p-0 text-center text-sm", cellBgClass(iso))}
                   >
                     <CalendarPrimitive.Day
                       class={cn(

@@ -30,6 +30,7 @@ pub fn run() {
         commands::harvest_done::set_timeline_harvest_done,
         commands::settings::clear_all_caches,
         commands::settings::get_cache_size,
+        commands::settings::get_cached_day_event_counts,
     ]);
 
     #[cfg(debug_assertions)]
