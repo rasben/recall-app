@@ -42,7 +42,7 @@ pub struct ClearCachesResult {
 
 #[derive(Serialize, Type)]
 pub struct CacheSizeResult {
-    pub bytes: i64,
+    pub bytes: u32,
     pub cached_days: u32,
 }
 
@@ -54,7 +54,7 @@ pub fn get_cache_size(state: State<'_, AppState>) -> Result<CacheSizeResult, Str
         conn.query_row("SELECT COUNT(*) FROM timeline_day_cache", [], |r| r.get(0))
             .map_err(|e| e.to_string())?
     };
-    let bytes = fs::metadata(&state.db_path).map(|m| m.len() as i64).unwrap_or(0);
+    let bytes = fs::metadata(&state.db_path).map(|m| m.len() as u32).unwrap_or(0);
     Ok(CacheSizeResult { bytes, cached_days })
 }
 
