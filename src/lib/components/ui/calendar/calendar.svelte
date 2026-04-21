@@ -75,10 +75,11 @@
               <CalendarPrimitive.GridRow class="mt-1 flex w-full">
                 {#each weekDates as date (date.toString())}
                   {@const iso = date.toString()}
+                  {@const inMonth = date.month === month.value.month && date.year === month.value.year}
                   <CalendarPrimitive.Cell
                     {date}
                     month={month.value}
-                    class={cn("relative size-8 p-0 text-center text-sm", cellBgClass(iso))}
+                    class={cn("relative size-8 p-0 text-center text-sm", inMonth && cellBgClass(iso))}
                   >
                     <CalendarPrimitive.Day
                       class={cn(
