@@ -2,6 +2,7 @@
     import { onMount } from "svelte";
     import { toast } from "svelte-sonner";
     import { commands } from "../../bindings";
+    import { Button } from "$lib/components/ui/button/index.js";
 
     let clearing = $state(false);
     let cachedDays = $state<number | null>(null);
@@ -40,13 +41,9 @@
 <fieldset class="border-2 p-4 mt-6">
     <legend>Cache</legend>
     <div class="flex items-center gap-4 flex-wrap">
-        <button
-                class="border-2 px-3 py-1 text-sm hover:bg-muted disabled:opacity-50"
-                disabled={clearing}
-                onclick={clearCaches}
-        >
+        <Button variant="outline" disabled={clearing} onclick={clearCaches}>
             {clearing ? "Clearing…" : "Clear all caches"}
-        </button>
+        </Button>
         {#if cachedDays !== null && bytes !== null}
             <span class="text-xs text-muted-foreground">
                 {cachedDays} cached {cachedDays === 1 ? "day" : "days"} &middot; {formatBytes(Number(bytes))} on disk

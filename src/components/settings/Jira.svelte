@@ -178,7 +178,7 @@
 
     {#if apiToken}
 
-    <label for="jira-enabled-events-trigger" class="mb-2 block"> Events to show </label>
+    <Label for="jira-enabled-events-trigger" class="mb-2">Events to show</Label>
     <Select.Root type="multiple" bind:value={enabledEvents} onValueChange={setEnabledEvents}>
       <Select.Trigger id="jira-enabled-events-trigger" class="w-full">
         {enabledEvents.length === 0

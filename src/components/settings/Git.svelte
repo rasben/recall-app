@@ -10,59 +10,40 @@
   import type { SettingsGit } from "../../bindings"
   import FolderOpen from "@lucide/svelte/icons/folder-open";
 
-  let defaultSettings = {
-      enabled: false,
-      path: "~/code"
-  };
+  let settings = $state<SettingsGit>({ enabled: false, path: "~/code" });
 
-  let settings = $state<SettingsGit>(defaultSettings);
-
-  let enabled = $state(false);
-  let path = $state("");
-
-  onMount(() => {
-      getSettings();
+  onMount(async () => {
+      settings = await commands.getSettingsGit() ?? { enabled: false, path: "~/code" };
   });
 
-  async function getSettings() {
-      settings = await commands.getSettingsGit() ?? defaultSettings;
-      enabled = settings.enabled;
-      path = settings.path;
+  async function save() {
+      const result = await commands.setSettingsGit(settings);
+      if (result.status === "error") return false;
+      return true;
   }
 
   async function toggleEnabled(checked: boolean) {
-      enabled = checked;
       settings.enabled = checked;
-
-      const result = await commands.setSettingsGit(settings)
-
-      if (result.status === "error") {
+      const ok = await save();
+      if (!ok) {
+          settings.enabled = !checked;
           toast.error("Could not enable Git source");
       }
   }
 
   async function setPath() {
-      settings.path = path;
-
-      const result = await commands.setSettingsGit(settings)
-
-      if (result.status === "error") {
-          toast.error("Could not save Git path");
-      }
-      else {
-          toast.success("Git path saved!")
-      }
+      const ok = await save();
+      if (!ok) toast.error("Could not save Git path");
+      else toast.success("Git path saved!");
   }
 
   async function pickFolder() {
       const selected = await open({ directory: true, multiple: false, title: "Choose git scan directory" });
       if (selected) {
-          path = selected;
+          settings.path = selected;
           await setPath();
       }
   }
-
-
 </script>
 
 
@@ -71,29 +52,29 @@
 
     <div class="flex items-center gap-2 mb-4">
         <Checkbox
-                id="git-enabled"
-                checked={enabled}
-                onCheckedChange={(v) => toggleEnabled(v === true)}
+            id="git-enabled"
+            checked={settings.enabled}
+            onCheckedChange={(v) => toggleEnabled(v === true)}
         />
         <Label for="git-enabled">Enable local git source</Label>
     </div>
 
-    {#if enabled}
+    {#if settings.enabled}
         <Label for="git-scan-path" class="mb-2">Directory to scan for git repos</Label>
         <div class="flex gap-2">
             <Input
-                    id="git-scan-path"
-                    placeholder="~/code"
-                    bind:value={path}
-                    onblur={setPath}
-                    class="flex-1"
+                id="git-scan-path"
+                placeholder="~/code"
+                bind:value={settings.path}
+                onblur={setPath}
+                class="flex-1"
             />
             <Button variant="outline" size="icon" onclick={pickFolder} title="Browse…">
                 <FolderOpen />
             </Button>
         </div>
-        {#if path}
-            <p class="text-muted-foreground text-sm mt-2 px-4">Will scan <strong>{path}</strong> for git repositories.</p>
+        {#if settings.path}
+            <p class="text-muted-foreground text-sm mt-2 px-4">Will scan <strong>{settings.path}</strong> for git repositories.</p>
         {/if}
     {/if}
 </fieldset>

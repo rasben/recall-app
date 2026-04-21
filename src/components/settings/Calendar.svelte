@@ -3,6 +3,8 @@
   import { toast } from "svelte-sonner";
   import { Label } from "$lib/components/ui/label/index.js";
   import { Checkbox } from "$lib/components/ui/checkbox/index.js";
+  import { Input } from "$lib/components/ui/input/index.js";
+  import { Button } from "$lib/components/ui/button/index.js";
   import { commands, type SettingsIcal, type IcalSyncStatus } from "../../bindings";
   import PasswordInput from "../ui/PasswordInput.svelte";
 
@@ -122,13 +124,9 @@
         description={icalUrls.length > 1 ? '' : description}
       />
       {#if icalUrls.length > 1}
-        <button
-          type="button"
-          class="border-2 px-3 py-1 text-sm -mt-6 mb-2"
-          onclick={() => removeUrl(i)}
-        >
+        <Button variant="outline" class="-mt-6 mb-2" onclick={() => removeUrl(i)}>
           Remove
-        </button>
+        </Button>
       {/if}
     {/each}
 
@@ -137,10 +135,9 @@
       <Label for="calendar-email" class="text-sm">Your email address</Label>
       <p class="text-xs text-muted-foreground mb-1">Used to hide meetings you've declined. Leave blank to show all meetings.</p>
       <div class="flex gap-2">
-        <input
+        <Input
           id="calendar-email"
           type="email"
-          class="border-2 px-2 py-1 text-sm bg-background flex-1"
           placeholder="you@example.com"
           bind:value={emailInput}
           onblur={saveEmail}
@@ -149,9 +146,9 @@
       </div>
     </div>
     <div class="flex items-center gap-4 flex-wrap mt-4">
-      <button type="button" class="border-2 px-3 py-1 text-sm" onclick={addUrl}>
+      <Button variant="outline" onclick={addUrl}>
         Add another iCal
-      </button>
+      </Button>
 
       {#if syncStatus}
         <span class="text-xs text-muted-foreground">

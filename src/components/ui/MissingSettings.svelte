@@ -1,6 +1,6 @@
 <script lang="ts">
-    import {cubicOut} from "svelte/easing";
-    import { fade, fly } from "svelte/transition";
+    import { cubicOut } from "svelte/easing";
+    import { fade } from "svelte/transition";
 
     let {
         message,

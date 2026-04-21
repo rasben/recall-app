@@ -1,16 +1,24 @@
-<script>
-import {Input} from "$lib/components/ui/input/index";
-import {EyeClosedIcon, EyeIcon} from "@lucide/svelte";
-import {Label} from "$lib/components/ui/label/index";
+<script lang="ts">
+import { Input } from "$lib/components/ui/input/index";
+import { EyeClosedIcon, EyeIcon } from "@lucide/svelte";
+import { Label } from "$lib/components/ui/label/index";
+
 let showPassword = $state(false);
 
 let {
-    password = $bindable(),
+    password = $bindable<string>(),
     saveAction,
     label,
-    description = null,
+    description = null as string | null,
     placeholder,
     inputId = "password-input",
+}: {
+    password: string;
+    saveAction: () => Promise<void>;
+    label: string;
+    description?: string | null;
+    placeholder: string;
+    inputId?: string;
 } = $props();
 </script>
 
