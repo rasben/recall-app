@@ -57,14 +57,20 @@ pub(super) fn events_for_day(
     );
 
     let auth = format!("Basic {}", STANDARD.encode(format!("{email}:{api_key}")));
-    let mut r = ureq::get(&fetch_url)
+    let resp = ureq::get(&fetch_url)
         .header("Authorization", &auth)
         .header("Accept", "application/json")
-        .call()
-        .map_err(|e| format!("Zulip HTTP: {e}"))?;
+        .call();
 
-    let status = r.status().as_u16();
-    let body = r.body_mut().read_to_string().map_err(|e| format!("Zulip read body: {e}"))?;
+    let (status, body) = match resp {
+        Ok(mut r) => {
+            let status = r.status().as_u16();
+            let body = r.body_mut().read_to_string().map_err(|e| format!("Zulip read body: {e}"))?;
+            (status, body)
+        }
+        Err(ureq::Error::StatusCode(status)) => (status, String::new()),
+        Err(e) => return Err(format!("Zulip HTTP: {e}")),
+    };
 
     if status >= 400 {
         return Ok(Vec::new());

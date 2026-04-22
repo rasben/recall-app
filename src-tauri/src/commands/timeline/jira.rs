@@ -32,7 +32,7 @@ pub(crate) fn jira_request_json(
     json_body: Option<&str>,
 ) -> Result<(u16, String), String> {
     let auth = jira_basic_auth(email, api_token);
-    let mut r = match (method, json_body) {
+    let resp = match (method, json_body) {
         ("GET", None) => ureq::get(url)
             .header("Authorization", &auth)
             .header("Accept", "application/json")
@@ -49,8 +49,13 @@ pub(crate) fn jira_request_json(
             return Err("jira_request_json: POST requires a JSON body".into());
         }
         _ => return Err(format!("unsupported HTTP method {method}")),
-    }
-    .map_err(|e| format!("Jira HTTP ({label}): {e}"))?;
+    };
+
+    let mut r = match resp {
+        Ok(r) => r,
+        Err(ureq::Error::StatusCode(status)) => return Ok((status, String::new())),
+        Err(e) => return Err(format!("Jira HTTP ({label}): {e}")),
+    };
 
     let status = r.status().as_u16();
     let body = r.body_mut().read_to_string().map_err(|e| format!("read body ({label}): {e}"))?;

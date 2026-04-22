@@ -264,7 +264,7 @@ fn rest_api_user_events(username: &str, token: &str) -> Result<Vec<GhEvent>, Str
             urlencoding::encode(username),
             page
         );
-        let response = match ureq::get(&url)
+        let mut response = match ureq::get(&url)
             .header("Authorization", &auth)
             .header("Accept", "application/vnd.github+json")
             .header("X-GitHub-Api-Version", "2022-11-28")
@@ -272,14 +272,9 @@ fn rest_api_user_events(username: &str, token: &str) -> Result<Vec<GhEvent>, Str
             .call()
         {
             Ok(r) => r,
+            Err(ureq::Error::StatusCode(_)) => break,
             Err(e) => return Err(format!("GitHub API request failed: {e}")),
         };
-
-        if !response.status().is_success() {
-            break;
-        }
-
-        let mut response = response;
         let page_events: Vec<GhEvent> = response
             .body_mut()
             .read_json()
