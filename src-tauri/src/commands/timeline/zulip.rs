@@ -57,25 +57,14 @@ pub(super) fn events_for_day(
     );
 
     let auth = format!("Basic {}", STANDARD.encode(format!("{email}:{api_key}")));
-    let resp = ureq::get(&fetch_url)
-        .set("Authorization", &auth)
-        .set("Accept", "application/json")
-        .call();
+    let mut r = ureq::get(&fetch_url)
+        .header("Authorization", &auth)
+        .header("Accept", "application/json")
+        .call()
+        .map_err(|e| format!("Zulip HTTP: {e}"))?;
 
-    let (status, body) = match resp {
-        Ok(r) => {
-            let status = r.status();
-            let body = r
-                .into_string()
-                .map_err(|e| format!("Zulip read body: {e}"))?;
-            (status, body)
-        }
-        Err(ureq::Error::Status(status, r)) => {
-            let body = r.into_string().unwrap_or_default();
-            (status, body)
-        }
-        Err(e) => return Err(format!("Zulip HTTP: {e}")),
-    };
+    let status = r.status().as_u16();
+    let body = r.body_mut().read_to_string().map_err(|e| format!("Zulip read body: {e}"))?;
 
     if status >= 400 {
         return Ok(Vec::new());
@@ -254,14 +243,14 @@ mod tests {
         let url = format!("{realm}/api/v1/users/me");
         let auth = format!("Basic {}", STANDARD.encode(format!("{email}:{api_key}")));
 
-        let resp = ureq::get(&url)
-            .set("Authorization", &auth)
-            .set("Accept", "application/json")
+        let mut resp = ureq::get(&url)
+            .header("Authorization", &auth)
+            .header("Accept", "application/json")
             .call()
             .expect("Zulip API request failed");
 
-        assert_eq!(resp.status(), 200);
-        let body: serde_json::Value = resp.into_json().expect("Valid JSON from Zulip /users/me");
+        assert_eq!(resp.status().as_u16(), 200);
+        let body: serde_json::Value = resp.body_mut().read_json().expect("Valid JSON from Zulip /users/me");
         assert_eq!(
             body.get("result").and_then(|v| v.as_str()),
             Some("success"),
