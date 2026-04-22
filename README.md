@@ -1,20 +1,13 @@
-<center>
   <table width="100%">
     <tr>
-      <td align="top">
-        <h1>Recall</h1>
-        A desktop app that builds a timeline of your prior workdays so you can fill in Harvest losing your mind.
-        
-        Pick a date, and Recall pulls your activity from multiple sources into one view:
-        
-        - **Calendar (`iCal`)** — meetings and events
-          - **GitHub** — PRs, commits, reviews, issue comments
-          - **Local git repos** — commits by your author name
-          - **JIRA** — tickets you interacted with
-          - **Zulip** — messages you sent
-        
+      <td align="top" width="65%">
+  <h1>Recall App</h1>
+  A desktop app that builds a timeline of your prior workdays so you can fill in Harvest losing your mind.<br/><br/>
+  Pick a date, and Recall pulls your activity from multiple sources into one view.<br/><br/>
+
+  **Calendar**, **GitHub**, **Local git commits**, **JIRA**, **Zulip**, and more planned.
       </td>
-      <td align="top">
+      <td align="top" width="35%">
         <img src="static/poster.jpg" height="300px" width="auto"/>
       </td>
     </tr>
@@ -27,7 +20,6 @@
       <td width="30%"><img src="static/app-example-calendar.gif"/></td>
     </tr>
   </table>
-</center>
 
 ## Install
 
