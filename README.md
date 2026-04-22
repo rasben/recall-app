@@ -2,6 +2,17 @@
 
 A desktop app that builds a timeline of your prior workdays so you can fill in Harvest losing your mind.
 
+## Download
+
+| Platform | Link |
+|----------|------|
+| macOS (Apple Silicon) | [Recall-macOS-AppleSilicon.dmg](https://github.com/rasben/recall-app/releases/latest/download/Recall-macOS-AppleSilicon.dmg) |
+| macOS (Intel) | [Recall-macOS-Intel.dmg](https://github.com/rasben/recall-app/releases/latest/download/Recall-macOS-Intel.dmg) |
+| Windows | [Recall-Windows.exe](https://github.com/rasben/recall-app/releases/latest/download/Recall-Windows.exe) · [Recall-Windows.msi](https://github.com/rasben/recall-app/releases/latest/download/Recall-Windows.msi) |
+| Linux | [Recall-Linux.AppImage](https://github.com/rasben/recall-app/releases/latest/download/Recall-Linux.AppImage) · [Recall-Linux.deb](https://github.com/rasben/recall-app/releases/latest/download/Recall-Linux.deb) · [Recall-Linux.rpm](https://github.com/rasben/recall-app/releases/latest/download/Recall-Linux.rpm) |
+
+> **macOS:** If the app is unsigned, right-click → Open on first launch to bypass Gatekeeper.
+
 Pick a date, and Recall pulls your activity from multiple sources into one view:
 
 - **Calendar (`iCal`)** — meetings and events

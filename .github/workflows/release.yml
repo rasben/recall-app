@@ -74,18 +74,60 @@ jobs:
           tagName: ${{ github.ref_name }}
           releaseName: Recall ${{ github.ref_name }}
           releaseBody: |
-            ## Installation
-
-            Download the file for your platform:
+            ## Download
 
             | Platform | File |
             |----------|------|
-            | macOS (Apple Silicon) | `recall-app_*_aarch64.dmg` |
-            | macOS (Intel) | `recall-app_*_x64.dmg` |
-            | Windows | `recall-app_*_x64-setup.exe` |
-            | Linux | `recall-app_*_amd64.AppImage` or `recall-app_*_amd64.deb` |
+            | macOS (Apple Silicon) | `Recall-macOS-AppleSilicon.dmg` |
+            | macOS (Intel) | `Recall-macOS-Intel.dmg` |
+            | Windows (installer) | `Recall-Windows.exe` |
+            | Windows (MSI) | `Recall-Windows.msi` |
+            | Linux | `Recall-Linux.AppImage` · `Recall-Linux.deb` · `Recall-Linux.rpm` |
 
             **macOS note:** If the app is unsigned, right-click → Open on first launch to bypass Gatekeeper.
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+  rename-assets:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Rename release assets to friendly names
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.ref_name }}"
+          REPO="${{ github.repository }}"
+          RELEASE_ID=$(gh api "repos/${REPO}/releases/tags/${TAG}" --jq '.id')
+          ASSETS=$(gh api "repos/${REPO}/releases/${RELEASE_ID}/assets" --jq '.[] | "\(.id) \(.name)"')
+
+          mkdir -p /tmp/assets
+
+          while IFS= read -r line; do
+            ASSET_ID=$(echo "$line" | awk '{print $1}')
+            ASSET_NAME=$(echo "$line" | awk '{print $2}')
+
+            case "$ASSET_NAME" in
+              recall_*_aarch64.dmg)    FRIENDLY="Recall-macOS-AppleSilicon.dmg" ;;
+              recall_*_x64.dmg)        FRIENDLY="Recall-macOS-Intel.dmg" ;;
+              recall_*_x64-setup.exe)  FRIENDLY="Recall-Windows.exe" ;;
+              recall_*_en-US.msi)      FRIENDLY="Recall-Windows.msi" ;;
+              recall_*_amd64.AppImage) FRIENDLY="Recall-Linux.AppImage" ;;
+              recall_*_amd64.deb)      FRIENDLY="Recall-Linux.deb" ;;
+              recall-*.x86_64.rpm)     FRIENDLY="Recall-Linux.rpm" ;;
+              *)                        continue ;;
+            esac
+
+            # Download asset via API (works for draft releases)
+            curl -fsSL \
+              -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+              -H "Accept: application/octet-stream" \
+              "https://api.github.com/repos/${REPO}/releases/assets/${ASSET_ID}" \
+              -o "/tmp/assets/${FRIENDLY}"
+
+            gh release upload "$TAG" --repo "$REPO" --clobber "/tmp/assets/${FRIENDLY}"
+            gh api "repos/${REPO}/releases/assets/${ASSET_ID}" -X DELETE
+          done <<< "$ASSETS"
