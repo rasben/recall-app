@@ -461,9 +461,8 @@ fn expand_rrule_for_range(
 }
 
 pub(crate) fn parse_ics_datetime(value: &str) -> Option<DateTime<Local>> {
-    if value.ends_with('Z') {
-        let naive =
-            NaiveDateTime::parse_from_str(&value[..value.len() - 1], "%Y%m%dT%H%M%S").ok()?;
+    if let Some(without_z) = value.strip_suffix('Z') {
+        let naive = NaiveDateTime::parse_from_str(without_z, "%Y%m%dT%H%M%S").ok()?;
         Some(Utc.from_utc_datetime(&naive).with_timezone(&Local))
     } else {
         let naive = NaiveDateTime::parse_from_str(value, "%Y%m%dT%H%M%S").ok()?;

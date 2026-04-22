@@ -9,6 +9,7 @@ const KEY: &str = "settings_github";
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Type)]
 #[specta(export = false)]
 #[derive(PartialEq)]
+#[allow(clippy::enum_variant_names)] // names mirror GitHub API event type strings
 pub enum GitHubEvent {
     PullRequestEvent,
     PullRequestReviewEvent,
