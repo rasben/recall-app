@@ -55,6 +55,21 @@ jobs:
 
       - run: npm install
 
+      - name: Set version from tag
+        shell: node {0}
+        run: |
+          const fs = require('fs');
+          const tag = '${{ github.ref_name }}';
+          const version = tag.replace(/^v/, '').replace(/^(\d+\.\d+)$/, '$1.0');
+
+          const conf = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
+          conf.version = version;
+          fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(conf, null, 2) + '\n');
+
+          let cargo = fs.readFileSync('src-tauri/Cargo.toml', 'utf8');
+          cargo = cargo.replace(/^version = ".*"/m, `version = "${version}"`);
+          fs.writeFileSync('src-tauri/Cargo.toml', cargo);
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
