@@ -9,10 +9,47 @@
   import Welcome from "../components/Welcome.svelte";
   import { commands } from "../bindings";
   import { t } from "$lib/i18n.svelte";
+  import { getVersion } from "@tauri-apps/api/app";
+  import { openUrl } from "@tauri-apps/plugin-opener";
+  import { toast } from "svelte-sonner";
 
   let settingsOpen = $state(false);
   let welcomed = $state(true); // optimistic: don't flash welcome on repeat visits
   let welcomeChecked = $state(false);
+
+  function isNewerVersion(latest: string, current: string): boolean {
+    const parse = (v: string) => v.split(".").map(Number);
+    const [lMaj, lMin, lPatch] = parse(latest);
+    const [cMaj, cMin, cPatch] = parse(current);
+    if (lMaj !== cMaj) return lMaj > cMaj;
+    if (lMin !== cMin) return lMin > cMin;
+    return lPatch > cPatch;
+  }
+
+  async function checkForUpdate() {
+    try {
+      const [currentVersion, response] = await Promise.all([
+        getVersion(),
+        fetch("https://api.github.com/repos/rasben/recall-app/releases/latest"),
+      ]);
+      if (!response.ok) return;
+      const release = await response.json();
+      const latestTag = release.tag_name?.replace(/^v/, "");
+      if (latestTag && isNewerVersion(latestTag, currentVersion)) {
+        toast.message(`New version available: v${latestTag}`, {
+          closeButton: true,
+          description: `You're running v${currentVersion}`,
+          action: {
+            label: "Download",
+            onClick: () => openUrl(release.html_url),
+          },
+          duration: 20000,
+        });
+      }
+    } catch {
+      // Silently fail — update check is non-critical
+    }
+  }
 
   onMount(async () => {
     welcomed = !!localStorage.getItem("recall:welcomed");
@@ -23,6 +60,8 @@
     if (!status.syncing && (!status.last_synced_at || status.last_synced_at < oneHourAgo)) {
       commands.triggerIcalSync();
     }
+
+    if (!import.meta.env.DEV) checkForUpdate();
   });
 
   function markWelcomed(openSettings = false) {
