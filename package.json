@@ -11,7 +11,8 @@
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "format": "prettier --write src",
     "tauri": "tauri",
-    "test": "cargo test --lib --manifest-path src-tauri/Cargo.toml"
+    "test": "cargo test --lib --manifest-path src-tauri/Cargo.toml",
+    "lint": "npm run check && cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings"
   },
   "license": "MIT",
   "dependencies": {

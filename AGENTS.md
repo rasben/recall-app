@@ -148,6 +148,7 @@ These patterns are intentional; follow them when adding settings areas or data s
 
 - `npm run check` — SvelteKit sync + svelte-check
 - `npm run format` — Prettier on `src/` only
+- `npm run lint` — TypeScript/Svelte check + `cargo clippy -- -D warnings` (treats all Rust warnings as errors)
 
 ### Tests
 
