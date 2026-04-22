@@ -30,7 +30,7 @@ jobs:
           cp -r design _site/design
           cp -r static _site/static
 
-      - uses: actions/configure-pages@v4
+      - uses: actions/configure-pages@v6
 
       - uses: actions/upload-pages-artifact@v3
         with:
