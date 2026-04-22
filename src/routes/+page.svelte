@@ -52,7 +52,7 @@
 
   <main class="relative min-h-screen">
     {#if settingsOpen}
-      <div class="absolute inset-0 flex flex-col p-8" in:fade={{ duration: 220 }} out:fade={{ duration: 160 }}>
+      <div class="absolute inset-0 flex flex-col p-8 mb-8" in:fade={{ duration: 220 }} out:fade={{ duration: 160 }}>
         <Settings />
         <Button
             class="w-full max-h-none h-[50px] shadow-sm mt-8"
@@ -60,9 +60,10 @@
             onclick={() => (settingsOpen = false)}>
           {t("settings.go_to_data")}
         </Button>
+        <div class="pt-8"></div>
       </div>
     {:else}
-      <div class="absolute inset-0 flex flex-col p-8" in:fade={{ duration: 220 }} out:fade={{ duration: 160 }}>
+      <div class="absolute inset-0 flex flex-col p-8 mb-8" in:fade={{ duration: 220 }} out:fade={{ duration: 160 }}>
         <Main />
       </div>
     {/if}

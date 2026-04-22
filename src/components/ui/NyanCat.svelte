@@ -1,3 +1,6 @@
+<script>
+</script>
+
 <style lang="scss">
   @use "sass:math";
 
@@ -14,7 +17,7 @@
 
   .nyan-cat {
     position: fixed;
-    bottom: 0;
+    bottom: 20px;
     left: 0;
     animation: fly 6s linear infinite;
     width: $_width;
@@ -31,6 +34,16 @@
         }
       }
     }
+
+  #sparkle {
+    stroke: var(--foreground);
+  }
+
+  .dark {
+    #sparkle {
+      stroke: var(--primary);
+    }
+  }
 </style>
 
 <!-- Downloaded from https://github.com/Gowee/nyancat-svg -->
