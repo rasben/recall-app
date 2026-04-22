@@ -63,6 +63,11 @@ npm run tauri dev
 
 ## To-Do's
 
+- Performance
+  - Make data-fetching happen async
+  - Investigate why Zulip takes so long
+- Bug: Using `local git` source on Windows opens a bunch of terminal windows.
+  - Makes it look like a virus.
 - Gmail data-source (requires Google OAuth — see AGENTS.md for why this is deferred)
   - Sent emails
   - Read emails
