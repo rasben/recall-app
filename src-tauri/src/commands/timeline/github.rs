@@ -254,7 +254,7 @@ fn parse_github_datetime(s: &str) -> Result<DateTime<Utc>, String> {
         .map_err(|e| format!("Invalid GitHub timestamp {s:?}: {e}"))
 }
 
-pub(crate) fn rest_api_user_events(username: &str, token: &str) -> Result<Vec<GhEvent>, String> {
+fn rest_api_user_events(username: &str, token: &str) -> Result<Vec<GhEvent>, String> {
     let auth = format!("Bearer {token}");
     let mut all_events: Vec<GhEvent> = Vec::new();
 
