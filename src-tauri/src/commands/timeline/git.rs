@@ -100,16 +100,9 @@ pub(super) fn events_for_day(
         let stdout = output.stdout;
         for record in stdout.split(|&b| b == 0).filter(|chunk| !chunk.is_empty()) {
             let line = String::from_utf8_lossy(record);
-            let mut parts = line.splitn(3, '\t');
-            let hash = parts.next().unwrap_or("").trim();
-            let ts_str = parts.next().unwrap_or("").trim();
-            let subject = parts.next().unwrap_or("").trim();
-
-            if hash.len() < 7 || ts_str.is_empty() {
+            let Some((hash, ts, subject)) = parse_git_log_record(&line) else {
                 continue;
-            }
-
-            let ts: i64 = ts_str.parse().unwrap_or(0);
+            };
             let time = Local
                 .timestamp_opt(ts, 0)
                 .single()
@@ -125,9 +118,8 @@ pub(super) fn events_for_day(
                     id,
                     time,
                     source: TimelineEventSource::Git,
-                    title: subject.to_string(),
+                    title: subject,
                     detail: Some(format!("{repo_name} — {short}")),
-
                     url: None,
                 },
             ));
@@ -207,5 +199,210 @@ fn try_git_config_user_name(repo: &Path) -> Option<String> {
         None
     } else {
         Some(name)
+    }
+}
+
+/// Parse one null-delimited record from `git log -z --pretty=format:%H%x09%ct%x09%s`.
+/// Returns `(full_hash, unix_timestamp, subject)` or `None` if the record is malformed.
+fn parse_git_log_record(record: &str) -> Option<(String, i64, String)> {
+    let mut parts = record.splitn(3, '\t');
+    let hash = parts.next()?.trim().to_string();
+    let ts_str = parts.next()?.trim();
+    let subject = parts.next().unwrap_or("").trim().to_string();
+    if hash.len() < 7 || ts_str.is_empty() {
+        return None;
+    }
+    let ts: i64 = ts_str.parse().ok()?;
+    Some((hash, ts, subject))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    fn make_tmp(label: &str) -> PathBuf {
+        let dir = std::env::temp_dir()
+            .join(format!("recall-git-{label}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn git(repo: &Path, args: &[&str]) {
+        let status = Command::new("git")
+            .arg("-C")
+            .arg(repo)
+            .args(args)
+            .env("GIT_CONFIG_NOSYSTEM", "1")
+            .output()
+            .unwrap()
+            .status;
+        assert!(status.success(), "git {args:?} failed in {}", repo.display());
+    }
+
+    fn init_repo(dir: &Path, author: &str) {
+        git(dir, &["init"]);
+        git(dir, &["config", "user.name", author]);
+        git(dir, &["config", "user.email", "test@example.com"]);
+    }
+
+    // --- parse_git_log_record ---
+
+    #[test]
+    fn parse_record_valid() {
+        let line = "a1b2c3d4e5f6a1b2\t1705312800\tFix the bug";
+        let (hash, ts, subject) = parse_git_log_record(line).unwrap();
+        assert_eq!(hash, "a1b2c3d4e5f6a1b2");
+        assert_eq!(ts, 1705312800);
+        assert_eq!(subject, "Fix the bug");
+    }
+
+    #[test]
+    fn parse_record_empty_subject() {
+        let line = "a1b2c3d4e5f6a1b2\t1705312800\t";
+        let (_, _, subject) = parse_git_log_record(line).unwrap();
+        assert_eq!(subject, "");
+    }
+
+    #[test]
+    fn parse_record_short_hash_returns_none() {
+        assert!(parse_git_log_record("abc\t1705312800\tMsg").is_none());
+    }
+
+    #[test]
+    fn parse_record_missing_timestamp_returns_none() {
+        assert!(parse_git_log_record("a1b2c3d4e5f6\t\tMsg").is_none());
+    }
+
+    #[test]
+    fn parse_record_non_numeric_timestamp_returns_none() {
+        assert!(parse_git_log_record("a1b2c3d4e5f6\tnot-a-ts\tMsg").is_none());
+    }
+
+    // --- collect_git_repo_roots ---
+
+    #[test]
+    fn finds_direct_git_repo() {
+        let tmp = make_tmp("direct");
+        fs::create_dir_all(tmp.join(".git")).unwrap();
+        let mut repos = Vec::new();
+        collect_git_repo_roots(&tmp, &mut repos, 0).unwrap();
+        assert_eq!(repos, vec![tmp.clone()]);
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn finds_multiple_sibling_repos() {
+        let tmp = make_tmp("siblings");
+        fs::create_dir_all(tmp.join("alpha/.git")).unwrap();
+        fs::create_dir_all(tmp.join("beta/.git")).unwrap();
+        let mut repos = Vec::new();
+        collect_git_repo_roots(&tmp, &mut repos, 0).unwrap();
+        repos.sort();
+        assert_eq!(repos.len(), 2);
+        assert!(repos[0].ends_with("alpha"));
+        assert!(repos[1].ends_with("beta"));
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn skips_node_modules() {
+        let tmp = make_tmp("node-mod");
+        fs::create_dir_all(tmp.join("node_modules/hidden/.git")).unwrap();
+        let mut repos = Vec::new();
+        collect_git_repo_roots(&tmp, &mut repos, 0).unwrap();
+        assert!(repos.is_empty(), "node_modules must be skipped");
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn skips_target_and_build() {
+        let tmp = make_tmp("skip-dirs");
+        for skipped in &["target", "build", "dist", ".cargo"] {
+            fs::create_dir_all(tmp.join(skipped).join("nested/.git")).unwrap();
+        }
+        let mut repos = Vec::new();
+        collect_git_repo_roots(&tmp, &mut repos, 0).unwrap();
+        assert!(repos.is_empty(), "build/target/dist/.cargo must be skipped");
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn stops_recursing_into_sub_repos() {
+        let tmp = make_tmp("stop-at-repo");
+        // tmp itself is a repo — the nested repo must not be discovered
+        fs::create_dir_all(tmp.join(".git")).unwrap();
+        fs::create_dir_all(tmp.join("inner/.git")).unwrap();
+        let mut repos = Vec::new();
+        collect_git_repo_roots(&tmp, &mut repos, 0).unwrap();
+        assert_eq!(repos, vec![tmp.clone()]);
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn non_repo_dir_returns_empty() {
+        let tmp = make_tmp("no-repo");
+        fs::create_dir_all(tmp.join("src")).unwrap();
+        let mut repos = Vec::new();
+        collect_git_repo_roots(&tmp, &mut repos, 0).unwrap();
+        assert!(repos.is_empty());
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    // --- try_git_config_user_name ---
+
+    #[test]
+    fn reads_user_name_from_local_git_config() {
+        let tmp = make_tmp("user-name");
+        init_repo(&tmp, "Recall Tester");
+        let name = try_git_config_user_name(&tmp);
+        assert_eq!(name.as_deref(), Some("Recall Tester"));
+        let _ = fs::remove_dir_all(&tmp);
+    }
+
+    #[test]
+    fn returns_none_for_nonexistent_path() {
+        // git -C <missing> config user.name exits non-zero → None
+        let missing = Path::new("/nonexistent-recall-test-path-xyz");
+        assert!(try_git_config_user_name(missing).is_none());
+    }
+
+    // --- integration: real commit round-trip ---
+
+    #[test]
+    fn git_log_finds_commit_with_correct_metadata() {
+        let tmp = make_tmp("commit-roundtrip");
+        init_repo(&tmp, "Recall Tester");
+        fs::write(tmp.join("hello.txt"), "hi").unwrap();
+        git(&tmp, &["add", "hello.txt"]);
+        git(&tmp, &["commit", "-m", "Add hello"]);
+
+        let output = Command::new("git")
+            .arg("-C").arg(&tmp)
+            .args(["log", "--all",
+                "--since", "2020-01-01 00:00:00",
+                "--until", "2099-12-31 23:59:59",
+                "--author", "Recall Tester",
+                "-z", "--pretty=format:%H%x09%ct%x09%s"])
+            .env("GIT_CONFIG_NOSYSTEM", "1")
+            .output()
+            .unwrap();
+
+        assert!(output.status.success());
+
+        let parsed: Vec<_> = output.stdout
+            .split(|&b| b == 0)
+            .filter(|c| !c.is_empty())
+            .filter_map(|c| parse_git_log_record(&String::from_utf8_lossy(c)))
+            .collect();
+
+        assert_eq!(parsed.len(), 1);
+        let (hash, ts, subject) = &parsed[0];
+        assert!(hash.len() >= 7);
+        assert!(*ts > 0);
+        assert_eq!(subject, "Add hello");
+
+        let _ = fs::remove_dir_all(&tmp);
     }
 }

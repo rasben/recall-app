@@ -149,6 +149,25 @@ These patterns are intentional; follow them when adding settings areas or data s
 - `npm run check` — SvelteKit sync + svelte-check
 - `npm run format` — Prettier on `src/` only
 
+### Tests
+
+- `npm test` — runs all Rust unit + integration tests (wraps `cargo test --lib`).
+- Unit tests live as `#[cfg(test)] mod tests { … }` at the bottom of each source file.
+- Integration tests that hit real APIs are skipped automatically when the relevant env vars are absent (see secret names below). They run in CI when secrets are set via GitHub repo Settings → Secrets.
+
+**Secret names for integration tests:**
+
+| Secret | Used by |
+|--------|---------|
+| `RECALL_TEST_GITHUB_TOKEN` | GitHub API integration test |
+| `RECALL_TEST_GITHUB_USERNAME` | GitHub API integration test |
+| `RECALL_TEST_JIRA_SITE_URL` | Jira API integration test (e.g. `https://company.atlassian.net`) |
+| `RECALL_TEST_JIRA_EMAIL` | Jira API integration test |
+| `RECALL_TEST_JIRA_API_TOKEN` | Jira API integration test |
+| `RECALL_TEST_ZULIP_REALM_URL` | Zulip API integration test (e.g. `https://company.zulipchat.com`) |
+| `RECALL_TEST_ZULIP_EMAIL` | Zulip API integration test |
+| `RECALL_TEST_ZULIP_API_KEY` | Zulip API integration test |
+
 ---
 
 ## Conventions

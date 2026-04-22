@@ -25,7 +25,7 @@ fn jira_basic_auth(email: &str, api_token: &str) -> String {
     format!("Basic {}", STANDARD.encode(raw.as_bytes()))
 }
 
-fn jira_request_json(
+pub(crate) fn jira_request_json(
     label: &str,
     method: &str,
     url: &str,
@@ -277,4 +277,165 @@ fn parse_jira_updated(s: &str) -> Result<DateTime<Utc>, String> {
         .or_else(|_| DateTime::parse_from_rfc3339(&jira_timestamp_to_rfc3339(s)))
         .map(|dt| dt.with_timezone(&Utc))
         .map_err(|e| format!("unrecognized Jira datetime {s:?}: {e}"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::NaiveDate;
+
+    // --- pure helpers ---
+
+    #[test]
+    fn jira_timestamp_to_rfc3339_converts_offset() {
+        assert_eq!(
+            jira_timestamp_to_rfc3339("2024-01-15T10:30:00.000+0100"),
+            "2024-01-15T10:30:00.000+01:00"
+        );
+        assert_eq!(
+            jira_timestamp_to_rfc3339("2024-01-15T10:30:00.000-0530"),
+            "2024-01-15T10:30:00.000-05:30"
+        );
+    }
+
+    #[test]
+    fn jira_timestamp_to_rfc3339_leaves_rfc3339_alone() {
+        let s = "2024-01-15T10:30:00+01:00";
+        assert_eq!(jira_timestamp_to_rfc3339(s), s);
+    }
+
+    #[test]
+    fn parse_jira_updated_valid_rfc3339() {
+        assert!(parse_jira_updated("2024-01-15T10:30:00+00:00").is_ok());
+    }
+
+    #[test]
+    fn parse_jira_updated_jira_offset_format() {
+        assert!(parse_jira_updated("2024-01-15T10:30:00.000+0100").is_ok());
+    }
+
+    #[test]
+    fn parse_jira_updated_invalid() {
+        assert!(parse_jira_updated("not-a-date").is_err());
+    }
+
+    #[test]
+    fn jql_quoted_identifier_plain() {
+        assert_eq!(jql_quoted_identifier("abc123"), "\"abc123\"");
+    }
+
+    #[test]
+    fn jql_quoted_identifier_escapes_quotes() {
+        assert_eq!(jql_quoted_identifier("a\"b"), "\"a\\\"b\"");
+    }
+
+    #[test]
+    fn jql_quoted_identifier_escapes_backslash() {
+        assert_eq!(jql_quoted_identifier("a\\b"), "\"a\\\\b\"");
+    }
+
+    #[test]
+    fn normalize_site_url_strips_trailing_slash() {
+        assert_eq!(
+            normalize_site_url("https://example.atlassian.net/"),
+            "https://example.atlassian.net"
+        );
+    }
+
+    #[test]
+    fn normalize_site_url_unchanged_when_clean() {
+        assert_eq!(
+            normalize_site_url("https://example.atlassian.net"),
+            "https://example.atlassian.net"
+        );
+    }
+
+    #[test]
+    fn jira_basic_auth_correct_base64() {
+        use base64::{engine::general_purpose::STANDARD, Engine as _};
+        let result = jira_basic_auth("user@example.com", "mytoken");
+        let expected = format!("Basic {}", STANDARD.encode("user@example.com:mytoken"));
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn jira_action_label_commented() {
+        let day = NaiveDate::from_ymd_opt(2024, 1, 15).unwrap();
+        let fields = JiraFields {
+            summary: "Test issue".to_string(),
+            updated: "2024-01-15T10:00:00+00:00".to_string(),
+            created: None,
+            creator: None,
+            comment: Some(JiraCommentBlock {
+                comments: vec![JiraComment {
+                    author: Some(JiraAccountUser {
+                        account_id: Some("user123".to_string()),
+                    }),
+                    created: Some("2024-01-15T10:00:00+00:00".to_string()),
+                }],
+            }),
+        };
+        assert_eq!(jira_action_label("user123", day, &fields), "Commented");
+    }
+
+    #[test]
+    fn jira_action_label_created() {
+        let day = NaiveDate::from_ymd_opt(2024, 1, 15).unwrap();
+        let fields = JiraFields {
+            summary: "New issue".to_string(),
+            updated: "2024-01-15T09:00:00+00:00".to_string(),
+            created: Some("2024-01-15T09:00:00+00:00".to_string()),
+            creator: Some(JiraAccountUser {
+                account_id: Some("user123".to_string()),
+            }),
+            comment: None,
+        };
+        assert_eq!(jira_action_label("user123", day, &fields), "Created");
+    }
+
+    #[test]
+    fn jira_action_label_default_edited() {
+        let day = NaiveDate::from_ymd_opt(2024, 1, 15).unwrap();
+        let fields = JiraFields {
+            summary: "Some issue".to_string(),
+            updated: "2024-01-15T10:00:00+00:00".to_string(),
+            created: None,
+            creator: None,
+            comment: None,
+        };
+        assert_eq!(jira_action_label("user123", day, &fields), "Edited");
+    }
+
+    // --- integration (skipped when secrets absent) ---
+
+    #[test]
+    fn jira_myself_returns_account_id_with_valid_credentials() {
+        let site_url = match std::env::var("RECALL_TEST_JIRA_SITE_URL") {
+            Ok(u) => u,
+            Err(_) => return,
+        };
+        let email = match std::env::var("RECALL_TEST_JIRA_EMAIL") {
+            Ok(e) => e,
+            Err(_) => return,
+        };
+        let token = match std::env::var("RECALL_TEST_JIRA_API_TOKEN") {
+            Ok(t) => t,
+            Err(_) => return,
+        };
+
+        let base = normalize_site_url(&site_url);
+        let url = format!("{base}/rest/api/3/myself");
+        let result = jira_request_json("myself", "GET", &url, &email, &token, None);
+        assert!(result.is_ok(), "Jira request failed: {:?}", result.err());
+
+        let (status, body) = result.unwrap();
+        assert_eq!(status, 200, "Jira /myself returned non-200: {body}");
+
+        let v: serde_json::Value =
+            serde_json::from_str(&body).expect("Invalid JSON from Jira /myself");
+        assert!(
+            v.get("accountId").and_then(|id| id.as_str()).is_some(),
+            "No accountId in Jira /myself response: {body}"
+        );
+    }
 }

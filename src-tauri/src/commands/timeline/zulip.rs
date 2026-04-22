@@ -193,3 +193,79 @@ struct ZulipMessage {
     #[serde(default)]
     stream_id: Option<u64>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // --- pure helpers ---
+
+    #[test]
+    fn zulip_encode_plain_text() {
+        assert_eq!(zulip_encode("hello"), "hello");
+    }
+
+    #[test]
+    fn zulip_encode_space() {
+        // space → %20 → .20
+        assert_eq!(zulip_encode("hello world"), "hello.20world");
+    }
+
+    #[test]
+    fn zulip_encode_special_chars() {
+        // # → %23 → .23
+        assert_eq!(zulip_encode("C++"), "c.2b.2b");
+    }
+
+    #[test]
+    fn normalize_realm_url_strips_trailing_slash() {
+        assert_eq!(
+            normalize_realm_url("https://example.zulipchat.com/"),
+            "https://example.zulipchat.com"
+        );
+    }
+
+    #[test]
+    fn normalize_realm_url_unchanged_when_clean() {
+        assert_eq!(
+            normalize_realm_url("https://example.zulipchat.com"),
+            "https://example.zulipchat.com"
+        );
+    }
+
+    // --- integration (skipped when secrets absent) ---
+
+    #[test]
+    fn zulip_api_reachable_with_valid_credentials() {
+        let realm = match std::env::var("RECALL_TEST_ZULIP_REALM_URL") {
+            Ok(r) => r,
+            Err(_) => return,
+        };
+        let email = match std::env::var("RECALL_TEST_ZULIP_EMAIL") {
+            Ok(e) => e,
+            Err(_) => return,
+        };
+        let api_key = match std::env::var("RECALL_TEST_ZULIP_API_KEY") {
+            Ok(k) => k,
+            Err(_) => return,
+        };
+
+        let realm = normalize_realm_url(&realm);
+        let url = format!("{realm}/api/v1/users/me");
+        let auth = format!("Basic {}", STANDARD.encode(format!("{email}:{api_key}")));
+
+        let resp = ureq::get(&url)
+            .set("Authorization", &auth)
+            .set("Accept", "application/json")
+            .call()
+            .expect("Zulip API request failed");
+
+        assert_eq!(resp.status(), 200);
+        let body: serde_json::Value = resp.into_json().expect("Valid JSON from Zulip /users/me");
+        assert_eq!(
+            body.get("result").and_then(|v| v.as_str()),
+            Some("success"),
+            "Zulip /users/me result was not 'success': {body}"
+        );
+    }
+}
