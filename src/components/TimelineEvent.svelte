@@ -1,6 +1,6 @@
 <script lang="ts">
   import GitCommit from "@lucide/svelte/icons/git-commit";
-  import Github from "@lucide/svelte/icons/github";
+  import Github from "@lucide/svelte/icons/git-pull-request";
   import Calendar from "@lucide/svelte/icons/calendar";
   import Mail from "@lucide/svelte/icons/mail";
   import FileText from "@lucide/svelte/icons/file-text";
