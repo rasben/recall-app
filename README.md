@@ -1,8 +1,35 @@
-# Recall
+<center>
+  <table width="100%">
+    <tr>
+      <td align="top">
+        <h1>Recall</h1>
+        A desktop app that builds a timeline of your prior workdays so you can fill in Harvest losing your mind.
+        
+        Pick a date, and Recall pulls your activity from multiple sources into one view:
+        
+        - **Calendar (`iCal`)** — meetings and events
+          - **GitHub** — PRs, commits, reviews, issue comments
+          - **Local git repos** — commits by your author name
+          - **JIRA** — tickets you interacted with
+          - **Zulip** — messages you sent
+        
+      </td>
+      <td align="top">
+        <img src="static/poster.jpg" height="300px" width="auto"/>
+      </td>
+    </tr>
+  </table>
+  
+  <table>
+    <tr>
+      <td width="36%"><img src="static/app-example-intro.png"/></td>
+      <td width="36%"><img src="static/app-example.png"/></td>
+      <td width="30%"><img src="static/app-example-calendar.gif"/></td>
+    </tr>
+  </table>
+</center>
 
-A desktop app that builds a timeline of your prior workdays so you can fill in Harvest losing your mind.
-
-## Download
+## Install
 
 | Platform | Link |
 |----------|------|
@@ -13,28 +40,12 @@ A desktop app that builds a timeline of your prior workdays so you can fill in H
 
 > **macOS:** If the app is unsigned, right-click → Open on first launch to bypass Gatekeeper.
 
-Pick a date, and Recall pulls your activity from multiple sources into one view:
-
-- **Calendar (`iCal`)** — meetings and events
-- **GitHub** — PRs, commits, reviews, issue comments
-- **Local git repos** — commits by your author name
-- **JIRA** — tickets you interacted with
-- **Zulip** — messages you sent
-
-<table>
-  <tr>
-    <td width="36%"><img src="static/app-example-intro.png"/></td>
-    <td width="36%"><img src="static/app-example.png"/></td>
-    <td width="30%"><img src="static/app-example-calendar.gif"/></td>
-  </tr>
-</table>
-
 ## Development
 
 This app has built almost entirely with AI.
 First with `cursor`, then with `Claude Code`.
 
-I have also experimented with AI-design for the logo. 
+I have also experimented with AI-design for the logo.
 [See the process here](https://rasben.github.io/recall-app/design/logo/preview/)
 
 ```
@@ -43,7 +54,7 @@ npm install
 npm run tauri dev
 ```
 
-### Tech-Stack:
+### Tech-Stack
 
 - Svelte 5 + SvelteKit 2
 - Tauri 2

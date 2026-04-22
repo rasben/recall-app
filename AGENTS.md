@@ -136,7 +136,7 @@ These patterns are intentional; follow them when adding settings areas or data s
 
 ### Dev
 
-- Frontend only: `npm run dev` → Vite at **http://localhost:1420**
+- Frontend only: `npm run dev` → Vite at **<http://localhost:1420>**
 - Full app: `npm run tauri dev` (runs `npm run dev` then opens Tauri window).
 
 ### Build
