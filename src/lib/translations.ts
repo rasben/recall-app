@@ -24,6 +24,7 @@ const en = {
   "settings.title": "Settings",
   "settings.language": "Language",
   "settings.language.error": "Could not set language.",
+  "settings.go_to_data": "Click here to see what the hell you've spent your time on",
 
   // Theme
   "settings.theme.ui": "Interface",
@@ -47,13 +48,17 @@ const en = {
   // GitHub
   "settings.github.legend": "GitHub",
   "settings.github.enable": "Enable GitHub source",
-  "settings.github.use_cli": "Use GH CLI",
-  "settings.github.cli_only_warning":
-    "For now, only GH CLI is supported. In the future, we will support GH PAT tokens.",
+  "settings.github.username": "GitHub username",
+  "settings.github.username_placeholder": "your-github-username",
+  "settings.github.token": "Personal Access Token (PAT)",
+  "settings.github.token_placeholder": "ghp_...",
+  "settings.github.token_description":
+    'Create a <a class="underline font-medium text-foreground" href="https://github.com/settings/tokens/new" target="_blank" rel="noreferrer">fine-grained PAT</a>. For public repos, no extra permissions are needed. For private repos, grant read-only access to <strong>Contents</strong>.',
   "settings.github.events_label": "Events to show",
   "settings.github.no_events": "No events chosen",
+  "settings.github.saved": "GitHub settings saved",
   "settings.github.error_enable": "Could not enable GitHub source",
-  "settings.github.error_cli": "Cannot use GH CLI. Is it installed?",
+  "settings.github.error_save": "Could not save GitHub settings",
   "settings.github.error_events": "Could not set chosen events",
   "settings.github.event.pull_request": "Pull Request (PR)",
   "settings.github.event.pr_review": "PR: Review",
@@ -165,6 +170,7 @@ const da: Translations = {
   "settings.title": "Indstillinger",
   "settings.language": "Sprog",
   "settings.language.error": "Kunne ikke sætte sprog",
+  "settings.go_to_data": "Tryk her, for at se hvad satan du har brugt din tid på",
 
   "settings.theme.ui": "Interface",
   "settings.theme.legend": "Tema",
@@ -185,13 +191,17 @@ const da: Translations = {
 
   "settings.github.legend": "GitHub",
   "settings.github.enable": "Aktiver GitHub-kilde",
-  "settings.github.use_cli": "Brug GH CLI",
-  "settings.github.cli_only_warning":
-    "Foreløbig understøttes kun GH CLI. I fremtiden vil vi understøtte GH PAT-tokens.",
+  "settings.github.username": "GitHub-brugernavn",
+  "settings.github.username_placeholder": "dit-github-brugernavn",
+  "settings.github.token": "Personal Access Token (PAT)",
+  "settings.github.token_placeholder": "ghp_...",
+  "settings.github.token_description":
+    'Opret et <a class="underline font-medium text-foreground" href="https://github.com/settings/tokens/new" target="_blank" rel="noreferrer">fine-grained PAT</a>. For offentlige repos kræves ingen ekstra rettigheder. For private repos: giv læseadgang til <strong>Contents</strong>.',
   "settings.github.events_label": "Hændelser at vise",
   "settings.github.no_events": "Ingen hændelser valgt",
+  "settings.github.saved": "GitHub-indstillinger gemt",
   "settings.github.error_enable": "Kunne ikke aktivere GitHub-kilde",
-  "settings.github.error_cli": "Kan ikke bruge GH CLI. Er det installeret?",
+  "settings.github.error_save": "Kunne ikke gemme GitHub-indstillinger",
   "settings.github.error_events": "Kunne ikke gemme valgte hændelser",
   "settings.github.event.pull_request": "Pull Request (PR)",
   "settings.github.event.pr_review": "PR: Review",

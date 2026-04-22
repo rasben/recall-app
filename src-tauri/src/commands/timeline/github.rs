@@ -1,7 +1,3 @@
-/// To-Do - this file is completely AI-coded, and not well-reviewed.
-/// We need to review it, and optimize it.
-use std::process::Command;
-
 use chrono::{DateTime, Local, NaiveDate, TimeZone, Utc};
 use serde::Deserialize;
 use serde_json::Value;
@@ -34,7 +30,10 @@ pub(super) fn events_for_day(
     let Some(settings) = get_settings_github(state.clone()) else {
         return Ok(Vec::new());
     };
-    if !settings.enabled || !settings.use_cli {
+    if !settings.enabled {
+        return Ok(Vec::new());
+    }
+    if settings.username.is_empty() || settings.token.is_empty() {
         return Ok(Vec::new());
     }
     if settings.enabled_events.is_empty() {
@@ -56,8 +55,7 @@ pub(super) fn events_for_day(
         .single()
         .ok_or("Ambiguous local end of day")?;
 
-    let login = gh_cli_login()?;
-    let raw_events = gh_cli_user_events(&login)?;
+    let raw_events = rest_api_user_events(&settings.username, &settings.token)?;
 
     let mut rows: Vec<(i64, TimelineEvent)> = Vec::new();
 
@@ -98,7 +96,6 @@ pub(super) fn events_for_day(
                 source: TimelineEventSource::Github,
                 title: mapped.title,
                 detail: Some(mapped.detail),
-
                 url: mapped.url,
             },
         ));
@@ -114,7 +111,6 @@ struct MappedGithub {
     url: Option<String>,
 }
 
-/// Maps GitHub public timeline `type` strings to the settings enum (same names as the API).
 fn github_api_event_type(event_type: &str) -> Option<GitHubEvent> {
     match event_type {
         "PullRequestEvent" => Some(GitHubEvent::PullRequestEvent),
@@ -207,7 +203,6 @@ fn map_github_event(ev: &GhEvent) -> Option<MappedGithub> {
     }
 }
 
-/// User activity events often ship a slim `pull_request` without `title`; `head.ref` is usually present.
 fn pull_request_subject(pr: &Value) -> Option<String> {
     j_nonempty_str(pr, &["title"])
         .or_else(|| j_nonempty_str(pr, &["head", "ref"]).map(|r| format!("branch {r}")))
@@ -259,50 +254,37 @@ fn parse_github_datetime(s: &str) -> Result<DateTime<Utc>, String> {
         .map_err(|e| format!("Invalid GitHub timestamp {s:?}: {e}"))
 }
 
-fn gh_cli_login() -> Result<String, String> {
-    let output = Command::new("gh")
-        .args(["api", "user", "--jq", ".login"])
-        .output()
-        .map_err(|e| format!("Failed to run `gh` (is GitHub CLI installed?): {e}"))?;
+fn rest_api_user_events(username: &str, token: &str) -> Result<Vec<GhEvent>, String> {
+    let auth = format!("Bearer {token}");
+    let mut all_events: Vec<GhEvent> = Vec::new();
 
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!(
-            "`gh api user` failed. Run `gh auth login`. {}",
-            stderr.trim()
-        ));
+    for page in 1u32..=10 {
+        let url = format!(
+            "https://api.github.com/users/{}/events?per_page=100&page={}",
+            urlencoding::encode(username),
+            page
+        );
+        let response = match ureq::get(&url)
+            .set("Authorization", &auth)
+            .set("Accept", "application/vnd.github+json")
+            .set("X-GitHub-Api-Version", "2022-11-28")
+            .set("User-Agent", "recall-app")
+            .call()
+        {
+            Ok(r) => r,
+            Err(ureq::Error::Status(_, _)) => break,
+            Err(e) => return Err(format!("GitHub API request failed: {e}")),
+        };
+
+        let page_events: Vec<GhEvent> = response
+            .into_json()
+            .map_err(|e| format!("Could not parse GitHub events JSON: {e}"))?;
+
+        if page_events.is_empty() {
+            break;
+        }
+        all_events.extend(page_events);
     }
 
-    let login = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    if login.is_empty() {
-        return Err("`gh api user` returned an empty login.".into());
-    }
-    Ok(login)
-}
-
-fn gh_cli_user_events(login: &str) -> Result<Vec<GhEvent>, String> {
-    let endpoint = format!("users/{login}/events");
-    let output = Command::new("gh")
-        .arg("api")
-        .arg("-H")
-        .arg("Accept: application/vnd.github+json")
-        .arg(&endpoint)
-        .arg("--paginate")
-        .output()
-        .map_err(|e| format!("Failed to run `gh api {endpoint}`: {e}"))?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("`gh api {endpoint}` failed: {}", stderr.trim()));
-    }
-
-    serde_json::from_slice(&output.stdout).map_err(|e| {
-        format!(
-            "Could not parse GitHub events JSON from `gh`: {e}. Raw (truncated): {}",
-            String::from_utf8_lossy(&output.stdout)
-                .chars()
-                .take(200)
-                .collect::<String>()
-        )
-    })
+    Ok(all_events)
 }

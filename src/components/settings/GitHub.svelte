@@ -1,11 +1,13 @@
 <script lang="ts">
     import { Label } from "$lib/components/ui/label/index.js";
     import { Checkbox } from "$lib/components/ui/checkbox/index.js";
+    import { Input } from "$lib/components/ui/input/index.js";
     import { toast } from "svelte-sonner";
     import { onMount } from "svelte";
     import { commands, type SettingsGitHub, type GitHubEvent } from "../../bindings";
     import * as Select from "$lib/components/ui/select/index.js";
     import { t } from "$lib/i18n.svelte";
+    import PasswordInput from "../ui/PasswordInput.svelte";
 
     const eventTypeMap: Record<string, { type: GitHubEvent; labelKey: string }> = {
         pullRequestEvent: { type: "PullRequestEvent", labelKey: "settings.github.event.pull_request" },
@@ -22,7 +24,7 @@
 
     const defaultSettings: SettingsGitHub = {
         enabled: false,
-        use_cli: true,
+        username: "",
         token: "",
         enabled_events: [eventTypeMap.pullRequestEvent.type],
     };
@@ -46,9 +48,10 @@
         if (!ok) toast.error(t("settings.github.error_enable"));
     }
 
-    async function toggleCli(checked: boolean) {
-        const ok = await persist({ use_cli: checked });
-        if (!ok) toast.error(t("settings.github.error_cli"));
+    async function saveCredentials() {
+        const ok = await persist({});
+        if (ok) toast.success(t("settings.github.saved"));
+        else toast.error(t("settings.github.error_save"));
     }
 
     async function setEnabledEvents(value: string[] | undefined) {
@@ -70,20 +73,24 @@
     </div>
 
     {#if settings.enabled}
-        <div class="flex items-center gap-2 mb-4">
-            <Checkbox
-                id="github-use-cli"
-                checked={settings.use_cli}
-                onCheckedChange={(v) => toggleCli(v === true)}
+        <div class="mb-4">
+            <Label for="github-username" class="mb-2">{t("settings.github.username")}</Label>
+            <Input
+                id="github-username"
+                placeholder={t("settings.github.username_placeholder")}
+                bind:value={settings.username}
+                onblur={saveCredentials}
             />
-            <Label for="github-use-cli">{t("settings.github.use_cli")}</Label>
         </div>
 
-        {#if !settings.use_cli}
-            <div class="-mt-2 mb-4 font-bold text-red-600">
-                {t("settings.github.cli_only_warning")}
-            </div>
-        {/if}
+        <PasswordInput
+            bind:password={settings.token}
+            saveAction={saveCredentials}
+            label={t("settings.github.token")}
+            placeholder={t("settings.github.token_placeholder")}
+            description={t("settings.github.token_description")}
+            inputId="github-token"
+        />
 
         <Label for="github-enabled-events-trigger" class="mb-2">{t("settings.github.events_label")}</Label>
         <Select.Root

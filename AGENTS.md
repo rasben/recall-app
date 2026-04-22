@@ -21,7 +21,7 @@ Each source provides timestamped activity events that are merged into a day time
 | Source | What it captures | Auth / access | Status |
 |--------|-----------------|---------------|--------|
 | **Calendar (iCal)** | Meetings and events | Secret iCal URL (e.g. Google Calendar's "Secret address in iCal format") | ✅ Done |
-| **GitHub** | PRs, reviews, and issue/PR comments (public events via the REST Events API); excludes pushes so it does not overlap local **Git** commits. GitHub only returns the most recent events (API cap), so older days may be empty. | GitHub CLI (`gh auth login`) | ✅ Done |
+| **GitHub** | PRs, reviews, and issue/PR comments (public events via the REST Events API); excludes pushes so it does not overlap local **Git** commits. GitHub only returns the most recent events (API cap), so older days may be empty. | GitHub PAT (Personal Access Token) — username + token stored in settings | ✅ Done |
 | **Local git** | Commits across all local repos, by your git author name | Shell: `git log --all --since=... --author=...` | ✅ Done |
 | **JIRA** | Tickets you commented on, transitioned, or were assigned to | JIRA API token | ✅ Done |
 | **Zulip** | Messages you **sent** (stream and DMs) | Zulip API key + email | ✅ Done |

@@ -165,7 +165,7 @@ export type JiraEvent =
  */
 "Mentioned"
 export type SettingsGit = { enabled: boolean; path: string }
-export type SettingsGitHub = { enabled: boolean; use_cli: boolean; token: string; enabled_events: GitHubEvent[] }
+export type SettingsGitHub = { enabled: boolean; username: string; token: string; enabled_events: GitHubEvent[] }
 export type SettingsIcal = { enabled?: boolean; urls?: string[]; 
 /**
  * User's email address used to identify their ATTENDEE entry and filter declined events.

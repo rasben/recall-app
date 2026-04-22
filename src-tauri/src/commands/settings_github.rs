@@ -21,7 +21,7 @@ pub enum GitHubEvent {
 #[specta(export = false)]
 pub struct SettingsGitHub {
     pub enabled: bool,
-    pub use_cli: bool,
+    pub username: String,
     pub token: String,
     pub enabled_events: Vec<GitHubEvent>,
 }
