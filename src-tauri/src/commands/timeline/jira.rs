@@ -4,8 +4,6 @@ use base64::{engine::general_purpose::STANDARD, Engine as _};
 use chrono::{DateTime, Local, NaiveDate, Utc};
 use serde::Deserialize;
 use tauri::State;
-use ureq::Response;
-
 use crate::commands::settings_jira::get_settings_jira;
 use crate::state::AppState;
 use crate::timeline::{TimelineEvent, TimelineEventSource};
@@ -34,16 +32,16 @@ pub(crate) fn jira_request_json(
     json_body: Option<&str>,
 ) -> Result<(u16, String), String> {
     let auth = jira_basic_auth(email, api_token);
-    let resp: Result<Response, ureq::Error> = match (method, json_body) {
+    let resp = match (method, json_body) {
         ("GET", None) => ureq::get(url)
-            .set("Authorization", &auth)
-            .set("Accept", "application/json")
+            .header("Authorization", &auth)
+            .header("Accept", "application/json")
             .call(),
         ("POST", Some(body)) => ureq::post(url)
-            .set("Authorization", &auth)
-            .set("Accept", "application/json")
-            .set("Content-Type", "application/json")
-            .send_string(body),
+            .header("Authorization", &auth)
+            .header("Accept", "application/json")
+            .header("Content-Type", "application/json")
+            .send(body),
         ("GET", Some(_)) => {
             return Err("jira_request_json: GET with body is not supported".into());
         }
@@ -53,20 +51,15 @@ pub(crate) fn jira_request_json(
         _ => return Err(format!("unsupported HTTP method {method}")),
     };
 
-    match resp {
-        Ok(r) => {
-            let status = r.status();
-            let body = r
-                .into_string()
-                .map_err(|e| format!("read body ({label}): {e}"))?;
-            Ok((status, body))
-        }
-        Err(ureq::Error::Status(status, r)) => {
-            let body = r.into_string().unwrap_or_default();
-            Ok((status, body))
-        }
-        Err(e) => Err(format!("Jira HTTP ({label}): {e}")),
-    }
+    let mut r = match resp {
+        Ok(r) => r,
+        Err(ureq::Error::StatusCode(status)) => return Ok((status, String::new())),
+        Err(e) => return Err(format!("Jira HTTP ({label}): {e}")),
+    };
+
+    let status = r.status().as_u16();
+    let body = r.body_mut().read_to_string().map_err(|e| format!("read body ({label}): {e}"))?;
+    Ok((status, body))
 }
 
 pub(super) fn events_for_day(

@@ -190,12 +190,11 @@ fn sync_one_url(
     window_end: NaiveDate,
     user_email: &Option<String>,
 ) -> Result<(), String> {
-    let content = ureq::get(url)
-        .set("Accept", "text/calendar")
+    let mut resp = ureq::get(url)
+        .header("Accept", "text/calendar")
         .call()
-        .map_err(|e| format!("iCal fetch: {e}"))?
-        .into_string()
-        .map_err(|e| format!("iCal read: {e}"))?;
+        .map_err(|e| format!("iCal fetch: {e}"))?;
+    let content = resp.body_mut().read_to_string().map_err(|e| format!("iCal read: {e}"))?;
 
     let events = parse_and_expand(&content, window_start, window_end, user_email);
 
