@@ -11,6 +11,9 @@
   import Loading from "./ui/Loading.svelte";
   import MissingSettings from "./ui/MissingSettings.svelte";
   import { t } from "$lib/i18n.svelte";
+  import Travolta from "./ui/Travolta.svelte";
+  import NyanCat from "./ui/NyanCat.svelte";
+  import Waiting from "./ui/Waiting.svelte";
 
   const LOAD_DEBOUNCE_MS = 500;
   const PREFETCH_DAYS = 6;
@@ -169,14 +172,19 @@
   <div class="relative">
   {#if settingsLoaded && enabledSources.length === 0}
     <MissingSettings message={t("timeline.no_sources")} />
+
+    <Waiting />
   {:else if isLoading}
     <div class="absolute inset-x-0" in:fade={{ duration: 180, easing: cubicOut }} out:fade={{ duration: 240, easing: cubicOut }}>
       <Loading currentSource={loadingSource} {doneSources} {enabledSources} />
     </div>
+    <NyanCat />
   {:else if events.length === 0 && !loadError}
-    <p class="text-muted-foreground" in:fade|global={{ duration: 240, easing: cubicOut }}>
+    <p class="relative text-muted-foreground z-2" in:fade|global={{ duration: 240, easing: cubicOut }}>
       {t("timeline.no_activity")}
     </p>
+
+    <Travolta />
   {:else}
     <div class="space-y-6">
       {#each groupedByHour as group (`${selectedDate}-${group.hour}`)}

@@ -85,7 +85,7 @@
   });
 </script>
 
-<div class="flex items-center gap-5 mb-8">
+<div class="flex items-center gap-5 mb-8 relative z-2">
   <Button variant="outline" size="icon" onclick={() => onShift(-1)}>
     <ChevronLeft />
   </Button>
@@ -105,6 +105,7 @@
         onValueChange={handlePick}
         weekStartsOn={1}
         dayCounts={navState.dayCounts}
+        maxValue={today(getLocalTimeZone())}
         bind:placeholder={calendarMonth}
       />
       <div class="px-1 pb-1 space-y-2">

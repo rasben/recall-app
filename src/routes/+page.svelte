@@ -50,13 +50,19 @@
     {/if}
   </Button>
 
-  <main class="flex min-h-screen flex-col p-8">
+  <main class="relative min-h-screen">
     {#if settingsOpen}
-      <div in:fade={{ duration: 220 }} out:fade={{ duration: 160 }}>
+      <div class="absolute inset-0 flex flex-col p-8" in:fade={{ duration: 220 }} out:fade={{ duration: 160 }}>
         <Settings />
+        <Button
+            class="w-full max-h-none h-[50px] shadow-sm mt-8"
+            aria-label={settingsOpen ? t("page.close_settings") : t("page.open_settings")}
+            onclick={() => (settingsOpen = false)}>
+          {t("settings.go_to_data")}
+        </Button>
       </div>
     {:else}
-      <div in:fade={{ duration: 220 }} out:fade={{ duration: 160 }}>
+      <div class="absolute inset-0 flex flex-col p-8" in:fade={{ duration: 220 }} out:fade={{ duration: 160 }}>
         <Main />
       </div>
     {/if}

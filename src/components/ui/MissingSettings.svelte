@@ -7,7 +7,7 @@
     } = $props();
 </script>
 
-<div class="py-5 pr-[180px] text-right" in:fade|global={{ duration: 240, easing: cubicOut }}>
+<div class="py-5 pr-[180px] text-right relative z-2" in:fade|global={{ duration: 240, easing: cubicOut }}>
     {message}
     <div class="absolute w-[100px] top-0 right-10 arrow-float">
         <svg width="100%" height="auto" viewBox="0 0 1539 590" version="1.1" xmlns="http://www.w3.org/2000/svg" fill="currentColor" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">

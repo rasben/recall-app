@@ -24,7 +24,8 @@ const en = {
   "settings.title": "Settings",
   "settings.language": "Language",
   "settings.language.error": "Could not set language.",
-  "settings.go_to_data": "Click here to see what the hell you've spent your time on",
+  "settings.go_to_data":
+    "Click here to see what the hell you've spent your time on",
 
   // Theme
   "settings.theme.ui": "Interface",
@@ -142,7 +143,7 @@ const en = {
   "timeline.load_month": "Load all of {month}",
   "timeline.loading_month": "Loading…",
   "timeline.less_more_activity": "less → more activity",
-  "timeline.open_link": "Open link",
+  "timeline.open_link": "Open",
   "timeline.logged_in_harvest": "Logged in Harvest",
   "timeline.not_logged_in_harvest": "Not logged in Harvest",
 } as const;
@@ -170,7 +171,8 @@ const da: Translations = {
   "settings.title": "Indstillinger",
   "settings.language": "Sprog",
   "settings.language.error": "Kunne ikke sætte sprog",
-  "settings.go_to_data": "Tryk her, for at se hvad satan du har brugt din tid på",
+  "settings.go_to_data":
+    "Tryk her, for at se hvad satan du har brugt din tid på",
 
   "settings.theme.ui": "Interface",
   "settings.theme.legend": "Tema",
@@ -280,7 +282,7 @@ const da: Translations = {
   "timeline.load_month": "Indlæs hele {month}",
   "timeline.loading_month": "Indlæser…",
   "timeline.less_more_activity": "mindre → mere aktivitet",
-  "timeline.open_link": "Åbn link",
+  "timeline.open_link": "Åbn",
   "timeline.logged_in_harvest": "Logget i Harvest",
   "timeline.not_logged_in_harvest": "Ikke logget i Harvest",
 };
