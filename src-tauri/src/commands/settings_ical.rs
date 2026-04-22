@@ -470,3 +470,163 @@ pub(crate) fn parse_ics_datetime(value: &str) -> Option<DateTime<Local>> {
         Local.from_local_datetime(&naive).earliest()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn window() -> (NaiveDate, NaiveDate) {
+        (
+            NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
+            NaiveDate::from_ymd_opt(2024, 1, 31).unwrap(),
+        )
+    }
+
+    // --- parse_ics_datetime ---
+
+    #[test]
+    fn parse_datetime_utc_z_suffix() {
+        let dt = parse_ics_datetime("20240115T100000Z").expect("Should parse UTC datetime");
+        let expected = Utc
+            .with_ymd_and_hms(2024, 1, 15, 10, 0, 0)
+            .unwrap()
+            .timestamp();
+        assert_eq!(dt.timestamp(), expected);
+    }
+
+    #[test]
+    fn parse_datetime_local_no_suffix() {
+        assert!(parse_ics_datetime("20240115T143000").is_some());
+    }
+
+    #[test]
+    fn parse_datetime_invalid_returns_none() {
+        assert!(parse_ics_datetime("not-a-datetime").is_none());
+        assert!(parse_ics_datetime("").is_none());
+    }
+
+    // --- parse_and_expand with inline ICS feeds ---
+
+    #[test]
+    fn simple_event_appears_with_correct_duration() {
+        let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\n\
+                   BEGIN:VEVENT\r\nUID:simple@test\r\nSUMMARY:Team Standup\r\n\
+                   DTSTART:20240115T100000Z\r\nDTEND:20240115T103000Z\r\n\
+                   END:VEVENT\r\nEND:VCALENDAR\r\n";
+
+        let (ws, we) = window();
+        let events = parse_and_expand(ics, ws, we, &None);
+
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].summary, "Team Standup");
+        assert_eq!(events[0].uid, "simple@test");
+        assert!(!events[0].declined);
+        // DTEND - DTSTART = 30 minutes = 1800 seconds
+        assert_eq!(events[0].dtend.unwrap() - events[0].dtstart, 1800);
+    }
+
+    #[test]
+    fn all_day_event_is_excluded() {
+        let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\n\
+                   BEGIN:VEVENT\r\nUID:allday@test\r\nSUMMARY:Holiday\r\n\
+                   DTSTART;VALUE=DATE:20240115\r\nDTEND;VALUE=DATE:20240116\r\n\
+                   END:VEVENT\r\nEND:VCALENDAR\r\n";
+
+        let (ws, we) = window();
+        let events = parse_and_expand(ics, ws, we, &None);
+        assert!(events.is_empty(), "All-day events must be excluded");
+    }
+
+    #[test]
+    fn declined_attendee_event_is_marked_declined() {
+        let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\n\
+                   BEGIN:VEVENT\r\nUID:declined@test\r\nSUMMARY:Party\r\n\
+                   DTSTART:20240115T180000Z\r\nDTEND:20240115T200000Z\r\n\
+                   ATTENDEE;PARTSTAT=DECLINED:mailto:user@example.com\r\n\
+                   END:VEVENT\r\nEND:VCALENDAR\r\n";
+
+        let (ws, we) = window();
+        let email = Some("user@example.com".to_string());
+        let events = parse_and_expand(ics, ws, we, &email);
+
+        assert_eq!(events.len(), 1);
+        assert!(events[0].declined, "Event should be marked declined");
+    }
+
+    #[test]
+    fn accepted_attendee_event_is_not_declined() {
+        let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\n\
+                   BEGIN:VEVENT\r\nUID:accepted@test\r\nSUMMARY:Meeting\r\n\
+                   DTSTART:20240115T100000Z\r\nDTEND:20240115T110000Z\r\n\
+                   ATTENDEE;PARTSTAT=ACCEPTED:mailto:user@example.com\r\n\
+                   END:VEVENT\r\nEND:VCALENDAR\r\n";
+
+        let (ws, we) = window();
+        let email = Some("user@example.com".to_string());
+        let events = parse_and_expand(ics, ws, we, &email);
+
+        assert_eq!(events.len(), 1);
+        assert!(!events[0].declined);
+    }
+
+    #[test]
+    fn recurring_weekly_event_expands_all_occurrences() {
+        // RRULE:FREQ=WEEKLY;COUNT=4 starting Jan 1 → Jan 1, 8, 15, 22, all inside window
+        let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\n\
+                   BEGIN:VEVENT\r\nUID:weekly@test\r\nSUMMARY:Weekly Sync\r\n\
+                   DTSTART:20240101T140000Z\r\nDTEND:20240101T150000Z\r\n\
+                   RRULE:FREQ=WEEKLY;COUNT=4\r\n\
+                   END:VEVENT\r\nEND:VCALENDAR\r\n";
+
+        let (ws, we) = window();
+        let events = parse_and_expand(ics, ws, we, &None);
+
+        assert_eq!(events.len(), 4, "Should expand to 4 weekly occurrences");
+        assert!(events.iter().all(|e| e.summary == "Weekly Sync"));
+    }
+
+    #[test]
+    fn exdate_excludes_one_occurrence() {
+        // 3 weekly occurrences (Jan 1, 8, 15) minus EXDATE Jan 8 → 2 events
+        let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\n\
+                   BEGIN:VEVENT\r\nUID:exc@test\r\nSUMMARY:Weekly with Gap\r\n\
+                   DTSTART:20240101T100000Z\r\nDTEND:20240101T110000Z\r\n\
+                   RRULE:FREQ=WEEKLY;COUNT=3\r\nEXDATE:20240108T100000Z\r\n\
+                   END:VEVENT\r\nEND:VCALENDAR\r\n";
+
+        let (ws, we) = window();
+        let events = parse_and_expand(ics, ws, we, &None);
+
+        assert_eq!(events.len(), 2, "EXDATE should remove one occurrence");
+    }
+
+    #[test]
+    fn event_outside_window_is_excluded() {
+        let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\n\
+                   BEGIN:VEVENT\r\nUID:outside@test\r\nSUMMARY:March Event\r\n\
+                   DTSTART:20240301T100000Z\r\nDTEND:20240301T110000Z\r\n\
+                   END:VEVENT\r\nEND:VCALENDAR\r\n";
+
+        let (ws, we) = window();
+        let events = parse_and_expand(ics, ws, we, &None);
+        assert!(events.is_empty(), "Event outside window should be excluded");
+    }
+
+    #[test]
+    fn event_url_is_preserved() {
+        let ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\n\
+                   BEGIN:VEVENT\r\nUID:url@test\r\nSUMMARY:Meeting\r\n\
+                   DTSTART:20240115T100000Z\r\nDTEND:20240115T110000Z\r\n\
+                   URL:https://meet.example.com/room123\r\n\
+                   END:VEVENT\r\nEND:VCALENDAR\r\n";
+
+        let (ws, we) = window();
+        let events = parse_and_expand(ics, ws, we, &None);
+
+        assert_eq!(events.len(), 1);
+        assert_eq!(
+            events[0].event_url.as_deref(),
+            Some("https://meet.example.com/room123")
+        );
+    }
+}

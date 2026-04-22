@@ -254,7 +254,7 @@ fn parse_github_datetime(s: &str) -> Result<DateTime<Utc>, String> {
         .map_err(|e| format!("Invalid GitHub timestamp {s:?}: {e}"))
 }
 
-fn rest_api_user_events(username: &str, token: &str) -> Result<Vec<GhEvent>, String> {
+pub(crate) fn rest_api_user_events(username: &str, token: &str) -> Result<Vec<GhEvent>, String> {
     let auth = format!("Bearer {token}");
     let mut all_events: Vec<GhEvent> = Vec::new();
 
@@ -287,4 +287,134 @@ fn rest_api_user_events(username: &str, token: &str) -> Result<Vec<GhEvent>, Str
     }
 
     Ok(all_events)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    // --- pure helpers ---
+
+    #[test]
+    fn parse_github_datetime_valid() {
+        assert!(parse_github_datetime("2024-01-15T10:30:00Z").is_ok());
+        assert!(parse_github_datetime("2024-01-15T10:30:00+02:00").is_ok());
+    }
+
+    #[test]
+    fn parse_github_datetime_invalid() {
+        assert!(parse_github_datetime("not-a-date").is_err());
+    }
+
+    #[test]
+    fn format_with_optional_subject_with_text() {
+        assert_eq!(
+            format_with_optional_subject("PR #42 opened".into(), Some("My feature".into())),
+            "PR #42 opened: My feature"
+        );
+    }
+
+    #[test]
+    fn format_with_optional_subject_none() {
+        assert_eq!(
+            format_with_optional_subject("PR #42 opened".into(), None),
+            "PR #42 opened"
+        );
+    }
+
+    #[test]
+    fn format_with_optional_subject_whitespace_only() {
+        assert_eq!(
+            format_with_optional_subject("PR #42 opened".into(), Some("   ".into())),
+            "PR #42 opened"
+        );
+    }
+
+    #[test]
+    fn github_event_id_str_number() {
+        assert_eq!(github_event_id_str(&json!(42)), "42");
+    }
+
+    #[test]
+    fn github_event_id_str_string() {
+        assert_eq!(github_event_id_str(&json!("abc123")), "abc123");
+    }
+
+    #[test]
+    fn github_event_id_str_other() {
+        assert_eq!(github_event_id_str(&json!(null)), "unknown");
+    }
+
+    #[test]
+    fn j_str_found() {
+        let v = json!({"a": {"b": "hello"}});
+        assert_eq!(j_str(&v, &["a", "b"]), Some("hello".to_string()));
+    }
+
+    #[test]
+    fn j_str_missing() {
+        let v = json!({"a": {}});
+        assert_eq!(j_str(&v, &["a", "b"]), None);
+    }
+
+    #[test]
+    fn j_str_non_string() {
+        let v = json!({"a": 42});
+        assert_eq!(j_str(&v, &["a"]), None);
+    }
+
+    #[test]
+    fn j_u64_found() {
+        let v = json!({"number": 99});
+        assert_eq!(j_u64(&v, &["number"]), Some(99u64));
+    }
+
+    #[test]
+    fn j_u64_missing() {
+        assert_eq!(j_u64(&json!({}), &["number"]), None);
+    }
+
+    #[test]
+    fn github_api_event_type_known() {
+        use crate::commands::settings_github::GitHubEvent;
+        assert!(matches!(
+            github_api_event_type("PullRequestEvent"),
+            Some(GitHubEvent::PullRequestEvent)
+        ));
+        assert!(matches!(
+            github_api_event_type("PullRequestReviewEvent"),
+            Some(GitHubEvent::PullRequestReviewEvent)
+        ));
+        assert!(matches!(
+            github_api_event_type("IssueCommentEvent"),
+            Some(GitHubEvent::IssueCommentEvent)
+        ));
+    }
+
+    #[test]
+    fn github_api_event_type_unknown() {
+        assert!(github_api_event_type("PushEvent").is_none());
+        assert!(github_api_event_type("WatchEvent").is_none());
+    }
+
+    // --- integration (skipped when secrets absent) ---
+
+    #[test]
+    fn github_api_returns_events_with_valid_credentials() {
+        let token = match std::env::var("RECALL_TEST_GITHUB_TOKEN") {
+            Ok(t) => t,
+            Err(_) => return,
+        };
+        let username = match std::env::var("RECALL_TEST_GITHUB_USERNAME") {
+            Ok(u) => u,
+            Err(_) => return,
+        };
+        let result = rest_api_user_events(&username, &token);
+        assert!(
+            result.is_ok(),
+            "GitHub API call failed: {:?}",
+            result.err()
+        );
+    }
 }
