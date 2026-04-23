@@ -3,6 +3,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use chrono::{Local, NaiveDate, TimeZone};
 use tauri::State;
@@ -12,6 +14,15 @@ use crate::state::AppState;
 use crate::timeline::{TimelineEvent, TimelineEventSource};
 
 const MAX_SCAN_DEPTH: u32 = 14;
+const REPO_SCAN_TTL: Duration = Duration::from_secs(60);
+
+struct RepoScanCache {
+    root: PathBuf,
+    scanned_at: Instant,
+    repos: Vec<PathBuf>,
+}
+
+static REPO_SCAN_CACHE: Mutex<Option<RepoScanCache>> = Mutex::new(None);
 
 pub(super) fn events_for_day(
     state: &State<'_, AppState>,
@@ -56,8 +67,7 @@ pub(super) fn events_for_day(
         return Err(format!("Git scan path is not a directory: {root}"));
     }
 
-    let mut repos = Vec::new();
-    collect_git_repo_roots(&root_path, &mut repos, 0)
+    let repos = cached_repo_scan(&root_path)
         .map_err(|e| format!("Failed to scan {root}: {e}"))?;
 
     if repos.is_empty() {
@@ -163,6 +173,31 @@ fn git_log_for_repo(
         ));
     }
     Ok(rows)
+}
+
+/// Return the list of git repos under `root`, using a short-lived in-memory
+/// cache so rapid day-to-day navigation doesn't re-walk the filesystem each
+/// time. Cache is invalidated when the root path changes or the TTL expires.
+fn cached_repo_scan(root: &Path) -> std::io::Result<Vec<PathBuf>> {
+    if let Ok(guard) = REPO_SCAN_CACHE.lock() {
+        if let Some(cache) = guard.as_ref() {
+            if cache.root == root && cache.scanned_at.elapsed() < REPO_SCAN_TTL {
+                return Ok(cache.repos.clone());
+            }
+        }
+    }
+
+    let mut repos = Vec::new();
+    collect_git_repo_roots(root, &mut repos, 0)?;
+
+    if let Ok(mut guard) = REPO_SCAN_CACHE.lock() {
+        *guard = Some(RepoScanCache {
+            root: root.to_path_buf(),
+            scanned_at: Instant::now(),
+            repos: repos.clone(),
+        });
+    }
+    Ok(repos)
 }
 
 fn collect_git_repo_roots(dir: &Path, out: &mut Vec<PathBuf>, depth: u32) -> std::io::Result<()> {
