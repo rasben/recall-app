@@ -54,8 +54,19 @@ npm run tauri dev
 - Rust backend
 - SQLite for settings/credentials.
 
+## Security warning
+
+> ⚠️ **Your API tokens are stored in plain text.**
+>
+> GitHub / Jira / Zulip tokens and iCal secret URLs are saved unencrypted in the SQLite file under the app-data directory (e.g. `~/Library/Application Support/com.recall-app.app/db.sqlite` on macOS). Anything running as your user — a malicious npm postinstall script, a rogue VS Code extension, a cloud-synced backup on a stolen laptop — can read them.
+>
+> If that matters to you, use tokens with the narrowest scope you can, and treat them as rotatable.
+
 ## To-Do's
 
+- Security
+  - Move credentials out of plain SQLite into the OS keychain
+    (e.g. `tauri-plugin-stronghold` or the `keyring` crate — macOS Keychain / Windows Credential Manager / Linux Secret Service)
 - Performance
   - Make data-fetching happen async
   - Investigate why Zulip takes so long
