@@ -136,12 +136,15 @@ fn github_api_event_type(event_type: &str) -> Option<GitHubEvent> {
 
 fn map_github_event(ev: &GhEvent) -> Option<MappedGithub> {
     let repo = ev.repo.name.clone();
+    // The `/users/{username}/events` endpoint strips `html_url` from nested
+    // payload objects (only api.github.com URLs remain), so every html_url is
+    // reconstructed from the repo slug plus the event's number/id fields.
     match ev.event_type.as_str() {
         "PullRequestEvent" => {
             let action = j_str(&ev.payload, &["action"])?;
             let pr = ev.payload.get("pull_request")?;
             let number = j_u64(pr, &["number"]).unwrap_or(0);
-            let url = j_str(pr, &["html_url"]);
+            let url = Some(format!("https://github.com/{repo}/pull/{number}"));
             let title = format_with_optional_subject(
                 format!("Pull request #{number} {action}"),
                 pull_request_subject(pr),
@@ -157,7 +160,12 @@ fn map_github_event(ev: &GhEvent) -> Option<MappedGithub> {
             let state = j_str(review, &["state"]).unwrap_or_else(|| "reviewed".to_string());
             let pr = ev.payload.get("pull_request")?;
             let number = j_u64(pr, &["number"]).unwrap_or(0);
-            let url = j_str(review, &["html_url"]).or_else(|| j_str(pr, &["html_url"]));
+            let url = match j_u64(review, &["id"]) {
+                Some(review_id) => Some(format!(
+                    "https://github.com/{repo}/pull/{number}#pullrequestreview-{review_id}"
+                )),
+                None => Some(format!("https://github.com/{repo}/pull/{number}")),
+            };
             let title = format_with_optional_subject(
                 format!("PR review ({state}) on #{number}"),
                 pull_request_subject(pr),
@@ -172,7 +180,12 @@ fn map_github_event(ev: &GhEvent) -> Option<MappedGithub> {
             let pr = ev.payload.get("pull_request")?;
             let number = j_u64(pr, &["number"]).unwrap_or(0);
             let comment = ev.payload.get("comment")?;
-            let url = j_str(comment, &["html_url"]);
+            let url = match j_u64(comment, &["id"]) {
+                Some(comment_id) => Some(format!(
+                    "https://github.com/{repo}/pull/{number}#discussion_r{comment_id}"
+                )),
+                None => Some(format!("https://github.com/{repo}/pull/{number}")),
+            };
             let title = format_with_optional_subject(
                 format!("PR review comment on #{number}"),
                 pull_request_subject(pr),
@@ -187,7 +200,7 @@ fn map_github_event(ev: &GhEvent) -> Option<MappedGithub> {
             let action = j_str(&ev.payload, &["action"])?;
             let issue = ev.payload.get("issue")?;
             let number = j_u64(issue, &["number"]).unwrap_or(0);
-            let url = j_str(issue, &["html_url"]);
+            let url = Some(format!("https://github.com/{repo}/issues/{number}"));
             let title = format_with_optional_subject(
                 format!("Issue #{number} {action}"),
                 issue_subject(issue),
@@ -202,7 +215,17 @@ fn map_github_event(ev: &GhEvent) -> Option<MappedGithub> {
             let issue = ev.payload.get("issue")?;
             let number = j_u64(issue, &["number"]).unwrap_or(0);
             let comment = ev.payload.get("comment")?;
-            let url = j_str(comment, &["html_url"]);
+            // PR comments arrive as IssueCommentEvents too — use `pull/` when
+            // the issue has a pull_request field so the anchor lands on the
+            // PR's conversation tab, not the issue page.
+            let is_pr = issue.get("pull_request").is_some();
+            let path = if is_pr { "pull" } else { "issues" };
+            let url = match j_u64(comment, &["id"]) {
+                Some(comment_id) => Some(format!(
+                    "https://github.com/{repo}/{path}/{number}#issuecomment-{comment_id}"
+                )),
+                None => Some(format!("https://github.com/{repo}/{path}/{number}")),
+            };
             let title =
                 format_with_optional_subject(format!("Comment on #{number}"), issue_subject(issue));
             Some(MappedGithub {

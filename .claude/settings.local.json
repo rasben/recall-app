@@ -11,7 +11,9 @@
       "Bash(cargo doc *)",
       "Bash(grep -E \"^d|\\\\.json$|\\\\.config\")",
       "Bash(cargo test *)",
-      "Bash(cargo clippy *)"
+      "Bash(cargo clippy *)",
+      "Bash(gh api *)",
+      "Bash(python3 -c ' *)"
     ]
   }
 }
