@@ -23,6 +23,17 @@ pub(super) fn events_for_day(
     state: &State<'_, AppState>,
     day: &str,
 ) -> Result<Vec<(i64, TimelineEvent)>, String> {
+    let day_naive =
+        NaiveDate::parse_from_str(day, "%Y-%m-%d").map_err(|_| format!("Invalid date: {day}"))?;
+    let rows = events_for_range(state, day_naive, day_naive)?;
+    Ok(rows.into_iter().map(|(_, ts, ev)| (ts, ev)).collect())
+}
+
+pub(super) fn events_for_range(
+    state: &State<'_, AppState>,
+    start_day: NaiveDate,
+    end_day: NaiveDate,
+) -> Result<Vec<(NaiveDate, i64, TimelineEvent)>, String> {
     let Some(settings) = get_settings_zulip(state.clone()) else {
         return Ok(Vec::new());
     };
@@ -37,19 +48,17 @@ pub(super) fn events_for_day(
     let email = settings.email.trim().to_string();
     let api_key = settings.api_key.trim().to_string();
 
-    let day_naive =
-        NaiveDate::parse_from_str(day, "%Y-%m-%d").map_err(|_| format!("Invalid date: {day}"))?;
-    let next_day = day_naive
+    let next_end = end_day
         .succ_opt()
-        .ok_or_else(|| format!("no day after {day}"))?;
+        .ok_or_else(|| format!("no day after {end_day}"))?;
 
-    let day_start = Local
-        .from_local_datetime(&day_naive.and_hms_opt(0, 0, 0).unwrap())
+    let range_start = Local
+        .from_local_datetime(&start_day.and_hms_opt(0, 0, 0).unwrap())
         .earliest()
         .map(|d| d.timestamp())
         .unwrap_or(0);
-    let day_end = Local
-        .from_local_datetime(&next_day.and_hms_opt(0, 0, 0).unwrap())
+    let range_end = Local
+        .from_local_datetime(&next_end.and_hms_opt(0, 0, 0).unwrap())
         .earliest()
         .map(|d| d.timestamp())
         .unwrap_or(i64::MAX);
@@ -61,10 +70,9 @@ pub(super) fn events_for_day(
     let auth = format!("Basic {}", STANDARD.encode(format!("{email}:{api_key}")));
 
     // The /api/v1/messages endpoint has no date filter, so we page backwards
-    // from "newest" until we either (a) see a message older than day_start
-    // (meaning the day is fully covered) or (b) the server reports there are
-    // no older messages. Without this loop an older day beyond the most recent
-    // ~1000 messages would silently appear empty.
+    // from "newest" until we either (a) see a message older than range_start
+    // (meaning the range is fully covered) or (b) the server reports there
+    // are no older messages.
     let mut anchor: String = "newest".to_string();
     let mut seen_ids: HashSet<u64> = HashSet::new();
     let mut in_window: Vec<ZulipMessage> = Vec::new();
@@ -118,14 +126,14 @@ pub(super) fn events_for_day(
                 earliest_ts = msg.timestamp;
                 earliest_id = Some(msg.id);
             }
-            if msg.timestamp >= day_start && msg.timestamp < day_end {
+            if msg.timestamp >= range_start && msg.timestamp < range_end {
                 in_window.push(msg);
             }
         }
 
-        // Reached the far side of the target day, or Zulip says there's
+        // Reached the far side of the target range, or Zulip says there's
         // nothing older than what we just got.
-        if earliest_ts < day_start || parsed.found_oldest.unwrap_or(false) {
+        if earliest_ts < range_start || parsed.found_oldest.unwrap_or(false) {
             break;
         }
 
@@ -141,9 +149,16 @@ pub(super) fn events_for_day(
         anchor = next_anchor_id.to_string();
     }
 
-    // Group messages for the target day by stream (or DM bucket).
-    let mut groups: HashMap<String, Vec<ZulipMessage>> = HashMap::new();
+    // Bucket per (local day, stream-or-DM) and aggregate each bucket into a
+    // single "Sent N messages…" event — same grouping semantics as the
+    // per-day fetch, just applied across every day in the range at once.
+    let mut groups: HashMap<(NaiveDate, String), Vec<ZulipMessage>> = HashMap::new();
     for msg in in_window {
+        let local_day = DateTime::<Utc>::from_timestamp(msg.timestamp, 0)
+            .map(|d| d.with_timezone(&Local).date_naive());
+        let Some(local_day) = local_day else {
+            continue;
+        };
         let key = if msg.msg_type == "stream" {
             msg.display_recipient
                 .as_str()
@@ -152,11 +167,11 @@ pub(super) fn events_for_day(
         } else {
             "__dm__".to_string()
         };
-        groups.entry(key).or_default().push(msg);
+        groups.entry((local_day, key)).or_default().push(msg);
     }
 
-    let mut rows: Vec<(i64, TimelineEvent)> = Vec::new();
-    for (stream_key, mut msgs) in groups {
+    let mut rows: Vec<(NaiveDate, i64, TimelineEvent)> = Vec::new();
+    for ((day_naive, stream_key), mut msgs) in groups {
         msgs.sort_by_key(|m| m.timestamp);
         let earliest_ts = msgs[0].timestamp;
         let count = msgs.len();
@@ -184,7 +199,6 @@ pub(super) fn events_for_day(
         }
         let detail = seen_topics.join(", ");
 
-
         let first_id = msgs[0].id;
         let first_topic = msgs[0].subject.as_deref().unwrap_or("");
         let msg_url = if is_dm {
@@ -200,13 +214,15 @@ pub(super) fn events_for_day(
             )
         };
 
+        let day_iso = day_naive.format("%Y-%m-%d").to_string();
         let id = if is_dm {
-            format!("zulip:dm:{day}")
+            format!("zulip:dm:{day_iso}")
         } else {
-            format!("zulip:stream:{}:{day}", stream_key)
+            format!("zulip:stream:{}:{day_iso}", stream_key)
         };
 
         rows.push((
+            day_naive,
             earliest_ts,
             TimelineEvent {
                 id,
@@ -219,7 +235,7 @@ pub(super) fn events_for_day(
         ));
     }
 
-    rows.sort_by_key(|(ts, _)| *ts);
+    rows.sort_by_key(|(_, ts, _)| *ts);
     Ok(rows)
 }
 

@@ -66,6 +66,17 @@ pub(super) fn events_for_day(
     state: &State<'_, AppState>,
     day: &str,
 ) -> Result<Vec<(i64, TimelineEvent)>, String> {
+    let day_naive =
+        NaiveDate::parse_from_str(day, "%Y-%m-%d").map_err(|_| format!("Invalid date: {day}"))?;
+    let rows = events_for_range(state, day_naive, day_naive)?;
+    Ok(rows.into_iter().map(|(_, ts, ev)| (ts, ev)).collect())
+}
+
+pub(super) fn events_for_range(
+    state: &State<'_, AppState>,
+    start_day: NaiveDate,
+    end_day: NaiveDate,
+) -> Result<Vec<(NaiveDate, i64, TimelineEvent)>, String> {
     let Some(settings) = get_settings_jira(state.clone()) else {
         return Ok(Vec::new());
     };
@@ -101,13 +112,11 @@ pub(super) fn events_for_day(
         return Ok(Vec::new());
     };
 
-    let day_naive =
-        NaiveDate::parse_from_str(day, "%Y-%m-%d").map_err(|_| format!("Invalid date: {day}"))?;
-    let next = day_naive
+    let next_end = end_day
         .succ_opt()
-        .ok_or_else(|| format!("no day after {day}"))?;
-    let day_from = day_naive.format("%Y-%m-%d").to_string();
-    let day_to = next.format("%Y-%m-%d").to_string();
+        .ok_or_else(|| format!("no day after {end_day}"))?;
+    let day_from = start_day.format("%Y-%m-%d").to_string();
+    let day_to = next_end.format("%Y-%m-%d").to_string();
     // Only issues you touched: created, field/workflow edits, comments (per Atlassian `updatedBy()`).
     // `currentUser()` is not supported inside `updatedBy()`, so we use `accountId` from /myself.
     // https://support.atlassian.com/jira-software-cloud/docs/advanced-search-reference-jql-functions/
@@ -144,14 +153,15 @@ pub(super) fn events_for_day(
     let parsed: SearchResponse =
         serde_json::from_str(&search_body).map_err(|e| format!("Jira search JSON: {e}"))?;
 
-    let mut rows: Vec<(i64, TimelineEvent)> = Vec::new();
+    let mut rows: Vec<(NaiveDate, i64, TimelineEvent)> = Vec::new();
     for issue in parsed.issues {
         let updated = match parse_jira_updated(&issue.fields.updated) {
             Ok(t) => t,
             Err(_) => continue,
         };
         let local = updated.with_timezone(&Local);
-        if local.date_naive() != day_naive {
+        let day_naive = local.date_naive();
+        if day_naive < start_day || day_naive > end_day {
             continue;
         }
 
@@ -163,6 +173,7 @@ pub(super) fn events_for_day(
         let detail = Some(issue.fields.summary.clone());
 
         rows.push((
+            day_naive,
             ts,
             TimelineEvent {
                 id: format!("jira:{}:{}:{}", issue.key, day_naive, action),
@@ -175,7 +186,7 @@ pub(super) fn events_for_day(
         ));
     }
 
-    rows.sort_by_key(|(ts, _)| *ts);
+    rows.sort_by_key(|(_, ts, _)| *ts);
     Ok(rows)
 }
 

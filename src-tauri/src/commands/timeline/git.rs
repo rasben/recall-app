@@ -28,6 +28,17 @@ pub(super) fn events_for_day(
     state: &State<'_, AppState>,
     day: &str,
 ) -> Result<Vec<(i64, TimelineEvent)>, String> {
+    let day_naive = NaiveDate::parse_from_str(day, "%Y-%m-%d")
+        .map_err(|_| format!("Invalid date (expected YYYY-MM-DD): {day}"))?;
+    let rows = events_for_range(state, day_naive, day_naive)?;
+    Ok(rows.into_iter().map(|(_, ts, ev)| (ts, ev)).collect())
+}
+
+pub(super) fn events_for_range(
+    state: &State<'_, AppState>,
+    start_day: NaiveDate,
+    end_day: NaiveDate,
+) -> Result<Vec<(NaiveDate, i64, TimelineEvent)>, String> {
     let Some(settings) = get_settings_git(state.clone()) else {
         return Ok(Vec::new());
     };
@@ -39,26 +50,23 @@ pub(super) fn events_for_day(
         return Ok(Vec::new());
     }
 
-    let day_naive = NaiveDate::parse_from_str(day, "%Y-%m-%d")
-        .map_err(|_| format!("Invalid date (expected YYYY-MM-DD): {day}"))?;
-
-    let next_day = day_naive
+    let next_end = end_day
         .succ_opt()
-        .ok_or_else(|| format!("no day after {day}"))?;
-    let since = day_naive.and_hms_opt(0, 0, 0).ok_or("Invalid day start")?;
-    let until = next_day.and_hms_opt(0, 0, 0).ok_or("Invalid day end")?;
+        .ok_or_else(|| format!("no day after {end_day}"))?;
+    let since = start_day.and_hms_opt(0, 0, 0).ok_or("Invalid range start")?;
+    let until = next_end.and_hms_opt(0, 0, 0).ok_or("Invalid range end")?;
 
     let since_local = Local
         .from_local_datetime(&since)
         .single()
-        .ok_or("Ambiguous local start of day")?;
+        .ok_or("Ambiguous local start of range")?;
     let until_local = Local
         .from_local_datetime(&until)
         .single()
-        .ok_or("Ambiguous local end of day")?;
+        .ok_or("Ambiguous local end of range")?;
 
-    // git log --until is exclusive of the given time, so passing next-day 00:00
-    // captures everything through the end of `day`.
+    // git log --until is exclusive of the given time, so passing the day
+    // after end_day at 00:00 captures everything through the end of end_day.
     let since_str = since_local.format("%Y-%m-%d %H:%M:%S").to_string();
     let until_str = until_local.format("%Y-%m-%d %H:%M:%S").to_string();
 
@@ -83,29 +91,31 @@ pub(super) fn events_for_day(
     // subprocess — serialized, a user with dozens of scanned repos waits
     // seconds per day view; parallelized, the wall time drops to roughly the
     // slowest single-repo call.
-    let per_repo: Vec<Result<Vec<(i64, TimelineEvent)>, String>> = std::thread::scope(|scope| {
-        let handles: Vec<_> = repos
-            .iter()
-            .map(|repo| {
-                let since_str = since_str.clone();
-                let until_str = until_str.clone();
-                let author = author.clone();
-                scope.spawn(move || git_log_for_repo(repo, &since_str, &until_str, &author))
-            })
-            .collect();
+    type RepoRows = Vec<(NaiveDate, i64, TimelineEvent)>;
+    let per_repo: Vec<Result<RepoRows, String>> =
+        std::thread::scope(|scope| {
+            let handles: Vec<_> = repos
+                .iter()
+                .map(|repo| {
+                    let since_str = since_str.clone();
+                    let until_str = until_str.clone();
+                    let author = author.clone();
+                    scope.spawn(move || git_log_for_repo(repo, &since_str, &until_str, &author))
+                })
+                .collect();
 
-        handles
-            .into_iter()
-            .map(|h| h.join().unwrap_or_else(|_| Err("git log thread panicked".to_string())))
-            .collect()
-    });
+            handles
+                .into_iter()
+                .map(|h| h.join().unwrap_or_else(|_| Err("git log thread panicked".to_string())))
+                .collect()
+        });
 
-    let mut rows: Vec<(i64, TimelineEvent)> = Vec::new();
+    let mut rows: Vec<(NaiveDate, i64, TimelineEvent)> = Vec::new();
     for repo_rows in per_repo {
         rows.extend(repo_rows?);
     }
 
-    rows.sort_by_key(|(ts, _)| *ts);
+    rows.sort_by_key(|(_, ts, _)| *ts);
     Ok(rows)
 }
 
@@ -114,7 +124,7 @@ fn git_log_for_repo(
     since_str: &str,
     until_str: &str,
     author: &str,
-) -> Result<Vec<(i64, TimelineEvent)>, String> {
+) -> Result<Vec<(NaiveDate, i64, TimelineEvent)>, String> {
     let repo_name = repo
         .file_name()
         .map(|s| s.to_string_lossy().into_owned())
@@ -145,22 +155,23 @@ fn git_log_for_repo(
         ));
     }
 
-    let mut rows: Vec<(i64, TimelineEvent)> = Vec::new();
+    let mut rows: Vec<(NaiveDate, i64, TimelineEvent)> = Vec::new();
     for record in output.stdout.split(|&b| b == 0).filter(|chunk| !chunk.is_empty()) {
         let line = String::from_utf8_lossy(record);
         let Some((hash, ts, subject)) = parse_git_log_record(&line) else {
             continue;
         };
-        let time = Local
-            .timestamp_opt(ts, 0)
-            .single()
-            .map(|dt| dt.format("%H:%M").to_string())
-            .unwrap_or_else(|| "00:00".to_string());
+        let Some(local_dt) = Local.timestamp_opt(ts, 0).single() else {
+            continue;
+        };
+        let day = local_dt.date_naive();
+        let time = local_dt.format("%H:%M").to_string();
 
         let short = &hash[..7.min(hash.len())];
         let id = format!("git:{}:{}", repo.display(), hash);
 
         rows.push((
+            day,
             ts,
             TimelineEvent {
                 id,

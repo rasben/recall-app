@@ -46,33 +46,11 @@
     const month = calendarMonth ?? pickerValue;
     loadingMonth = true;
 
-    const todayStr = todayIso();
-    const year = month.year;
-    const mo = month.month;
-    const daysInMonth = new Date(year, mo, 0).getDate();
-
-    const daysToLoad: string[] = [];
-    for (let d = 1; d <= daysInMonth; d++) {
-      const iso = `${year}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-      if (iso >= todayStr) continue;
-      if (navState.dayCounts[iso] !== undefined) continue;
-      daysToLoad.push(iso);
+    const result = await commands.getDayCountsForMonth(month.year, month.month);
+    if (result.status === "ok") {
+      Object.assign(navState.dayCounts, result.data);
     }
 
-    const promises = daysToLoad.map(
-      (day, i) =>
-        new Promise<void>((resolve) => {
-          window.setTimeout(async () => {
-            const result = await commands.getTimelineForDay(day);
-            if (result.status === "ok") {
-              navState.dayCounts[day] = result.data.length;
-            }
-            resolve();
-          }, i * 100);
-        }),
-    );
-
-    await Promise.all(promises);
     loadingMonth = false;
   }
 
