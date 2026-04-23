@@ -69,69 +69,99 @@ pub(super) fn events_for_day(
         return Ok(Vec::new());
     }
 
+    // Run `git log` for every repo in parallel. Each invocation spawns a git
+    // subprocess — serialized, a user with dozens of scanned repos waits
+    // seconds per day view; parallelized, the wall time drops to roughly the
+    // slowest single-repo call.
+    let per_repo: Vec<Result<Vec<(i64, TimelineEvent)>, String>> = std::thread::scope(|scope| {
+        let handles: Vec<_> = repos
+            .iter()
+            .map(|repo| {
+                let since_str = since_str.clone();
+                let until_str = until_str.clone();
+                let author = author.clone();
+                scope.spawn(move || git_log_for_repo(repo, &since_str, &until_str, &author))
+            })
+            .collect();
+
+        handles
+            .into_iter()
+            .map(|h| h.join().unwrap_or_else(|_| Err("git log thread panicked".to_string())))
+            .collect()
+    });
+
     let mut rows: Vec<(i64, TimelineEvent)> = Vec::new();
-
-    for repo in &repos {
-        let repo_name = repo
-            .file_name()
-            .map(|s| s.to_string_lossy().into_owned())
-            .unwrap_or_else(|| repo.to_string_lossy().into_owned());
-
-        let output = Command::new("git")
-            .arg("-C")
-            .arg(repo)
-            .arg("log")
-            .arg("--all")
-            .arg("--since")
-            .arg(&since_str)
-            .arg("--until")
-            .arg(&until_str)
-            .arg("--author")
-            .arg(&author)
-            .arg("-z")
-            .arg("--pretty=format:%H%x09%ct%x09%s")
-            .output()
-            .map_err(|e| format!("Failed to run git in {}: {e}", repo.display()))?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(format!(
-                "git log failed in {}: {}",
-                repo.display(),
-                stderr.trim()
-            ));
-        }
-
-        let stdout = output.stdout;
-        for record in stdout.split(|&b| b == 0).filter(|chunk| !chunk.is_empty()) {
-            let line = String::from_utf8_lossy(record);
-            let Some((hash, ts, subject)) = parse_git_log_record(&line) else {
-                continue;
-            };
-            let time = Local
-                .timestamp_opt(ts, 0)
-                .single()
-                .map(|dt| dt.format("%H:%M").to_string())
-                .unwrap_or_else(|| "00:00".to_string());
-
-            let short = &hash[..7.min(hash.len())];
-            let id = format!("git:{}:{}", repo.display(), hash);
-
-            rows.push((
-                ts,
-                TimelineEvent {
-                    id,
-                    time,
-                    source: TimelineEventSource::Git,
-                    title: subject,
-                    detail: Some(format!("{repo_name} — {short}")),
-                    url: None,
-                },
-            ));
-        }
+    for repo_rows in per_repo {
+        rows.extend(repo_rows?);
     }
 
     rows.sort_by_key(|(ts, _)| *ts);
+    Ok(rows)
+}
+
+fn git_log_for_repo(
+    repo: &Path,
+    since_str: &str,
+    until_str: &str,
+    author: &str,
+) -> Result<Vec<(i64, TimelineEvent)>, String> {
+    let repo_name = repo
+        .file_name()
+        .map(|s| s.to_string_lossy().into_owned())
+        .unwrap_or_else(|| repo.to_string_lossy().into_owned());
+
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(repo)
+        .arg("log")
+        .arg("--all")
+        .arg("--since")
+        .arg(since_str)
+        .arg("--until")
+        .arg(until_str)
+        .arg("--author")
+        .arg(author)
+        .arg("-z")
+        .arg("--pretty=format:%H%x09%ct%x09%s")
+        .output()
+        .map_err(|e| format!("Failed to run git in {}: {e}", repo.display()))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!(
+            "git log failed in {}: {}",
+            repo.display(),
+            stderr.trim()
+        ));
+    }
+
+    let mut rows: Vec<(i64, TimelineEvent)> = Vec::new();
+    for record in output.stdout.split(|&b| b == 0).filter(|chunk| !chunk.is_empty()) {
+        let line = String::from_utf8_lossy(record);
+        let Some((hash, ts, subject)) = parse_git_log_record(&line) else {
+            continue;
+        };
+        let time = Local
+            .timestamp_opt(ts, 0)
+            .single()
+            .map(|dt| dt.format("%H:%M").to_string())
+            .unwrap_or_else(|| "00:00".to_string());
+
+        let short = &hash[..7.min(hash.len())];
+        let id = format!("git:{}:{}", repo.display(), hash);
+
+        rows.push((
+            ts,
+            TimelineEvent {
+                id,
+                time,
+                source: TimelineEventSource::Git,
+                title: subject,
+                detail: Some(format!("{repo_name} — {short}")),
+                url: None,
+            },
+        ));
+    }
     Ok(rows)
 }
 
