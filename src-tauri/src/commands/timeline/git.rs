@@ -11,7 +11,7 @@ use tauri::State;
 
 use crate::commands::settings_git::get_settings_git;
 use crate::state::AppState;
-use crate::timeline::{TimelineEvent, TimelineEventSource};
+use crate::timeline::{sanitize_event_url, TimelineEvent, TimelineEventSource};
 
 const MAX_SCAN_DEPTH: u32 = 14;
 const REPO_SCAN_TTL: Duration = Duration::from_secs(60);
@@ -130,6 +130,8 @@ fn git_log_for_repo(
         .map(|s| s.to_string_lossy().into_owned())
         .unwrap_or_else(|| repo.to_string_lossy().into_owned());
 
+    let commit_url_base = repo_commit_url_base(repo);
+
     let output = Command::new("git")
         .arg("-C")
         .arg(repo)
@@ -169,6 +171,9 @@ fn git_log_for_repo(
 
         let short = &hash[..7.min(hash.len())];
         let id = format!("git:{}:{}", repo.display(), hash);
+        let url = commit_url_base
+            .as_deref()
+            .and_then(|base| sanitize_event_url(&format!("{base}/{hash}")));
 
         rows.push((
             day,
@@ -179,7 +184,7 @@ fn git_log_for_repo(
                 source: TimelineEventSource::Git,
                 title: subject,
                 detail: Some(format!("{repo_name} — {short}")),
-                url: None,
+                url,
             },
         ));
     }
@@ -289,6 +294,60 @@ fn try_git_config_user_name(repo: &Path) -> Option<String> {
     }
 }
 
+/// Return a commit-browser URL base (e.g. `https://github.com/foo/bar/commit`)
+/// derived from the repo's `origin` remote, or `None` if the remote is missing
+/// or not a recognized hosted-git URL (GitHub, GitLab, Bitbucket).
+fn repo_commit_url_base(repo: &Path) -> Option<String> {
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(repo)
+        .args(["config", "--get", "remote.origin.url"])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let raw = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    remote_to_commit_url_base(&raw)
+}
+
+fn remote_to_commit_url_base(raw: &str) -> Option<String> {
+    let raw = raw.trim();
+    if raw.is_empty() {
+        return None;
+    }
+
+    // Normalize to (host, path).
+    let (host, path) = if let Some(rest) = raw.strip_prefix("git@") {
+        let (host, path) = rest.split_once(':')?;
+        (host.to_string(), path.to_string())
+    } else if let Some(rest) = raw.strip_prefix("ssh://git@") {
+        let (host, path) = rest.split_once('/')?;
+        (host.to_string(), path.to_string())
+    } else if let Some(rest) = raw.strip_prefix("https://") {
+        let (host, path) = rest.split_once('/')?;
+        let host = host.trim_start_matches("www.");
+        // Drop any embedded credentials like `user@host`.
+        let host = host.rsplit('@').next().unwrap_or(host);
+        (host.to_string(), path.to_string())
+    } else {
+        return None;
+    };
+
+    let path = path.trim_start_matches('/').trim_end_matches('/');
+    let path = path.strip_suffix(".git").unwrap_or(path);
+    if path.is_empty() {
+        return None;
+    }
+
+    let segment = match host.as_str() {
+        "github.com" | "gitlab.com" => "commit",
+        "bitbucket.org" => "commits",
+        _ => return None,
+    };
+    Some(format!("https://{host}/{path}/{segment}"))
+}
+
 /// Parse one null-delimited record from `git log -z --pretty=format:%H%x09%ct%x09%s`.
 /// Returns `(full_hash, unix_timestamp, subject)` or `None` if the record is malformed.
 fn parse_git_log_record(record: &str) -> Option<(String, i64, String)> {
@@ -365,6 +424,50 @@ mod tests {
     #[test]
     fn parse_record_non_numeric_timestamp_returns_none() {
         assert!(parse_git_log_record("a1b2c3d4e5f6\tnot-a-ts\tMsg").is_none());
+    }
+
+    // --- remote_to_commit_url_base ---
+
+    #[test]
+    fn remote_to_commit_url_base_github_https() {
+        assert_eq!(
+            remote_to_commit_url_base("https://github.com/foo/bar.git").as_deref(),
+            Some("https://github.com/foo/bar/commit"),
+        );
+    }
+
+    #[test]
+    fn remote_to_commit_url_base_github_ssh() {
+        assert_eq!(
+            remote_to_commit_url_base("git@github.com:foo/bar.git").as_deref(),
+            Some("https://github.com/foo/bar/commit"),
+        );
+    }
+
+    #[test]
+    fn remote_to_commit_url_base_gitlab_subgroup() {
+        assert_eq!(
+            remote_to_commit_url_base("git@gitlab.com:group/sub/proj.git").as_deref(),
+            Some("https://gitlab.com/group/sub/proj/commit"),
+        );
+    }
+
+    #[test]
+    fn remote_to_commit_url_base_bitbucket_uses_commits() {
+        assert_eq!(
+            remote_to_commit_url_base("https://bitbucket.org/foo/bar.git").as_deref(),
+            Some("https://bitbucket.org/foo/bar/commits"),
+        );
+    }
+
+    #[test]
+    fn remote_to_commit_url_base_unknown_host_returns_none() {
+        assert!(remote_to_commit_url_base("git@example.com:foo/bar.git").is_none());
+    }
+
+    #[test]
+    fn remote_to_commit_url_base_empty_returns_none() {
+        assert!(remote_to_commit_url_base("").is_none());
     }
 
     // --- collect_git_repo_roots ---

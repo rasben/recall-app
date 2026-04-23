@@ -9,7 +9,9 @@
       "Bash(cargo search *)",
       "Bash(cargo info *)",
       "Bash(cargo doc *)",
-      "Bash(grep -E \"^d|\\\\.json$|\\\\.config\")"
+      "Bash(grep -E \"^d|\\\\.json$|\\\\.config\")",
+      "Bash(cargo test *)",
+      "Bash(cargo clippy *)"
     ]
   }
 }
