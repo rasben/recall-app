@@ -1,5 +1,5 @@
-/// To-Do - this file is completely AI-coded, and not well-reviewed.
-/// We need to review it, and optimize it.
+// To-Do - this file is completely AI-coded, and not well-reviewed.
+// We need to review it, and optimize it.
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;

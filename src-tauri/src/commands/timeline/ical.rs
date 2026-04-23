@@ -42,13 +42,6 @@ pub(super) fn events_for_day(
         )
         .map_err(|e| e.to_string())?;
 
-    let active_urls: std::collections::HashSet<String> = settings
-        .urls
-        .into_iter()
-        .map(|u| u.trim().to_string())
-        .filter(|u| !u.is_empty())
-        .collect();
-
     let rows = stmt
         .query_map(params![day_start, day_end], |row| {
             Ok((
@@ -97,8 +90,6 @@ pub(super) fn events_for_day(
             )
         })
         .collect();
-
-    let _ = active_urls; // ical_events is cleared when URLs change, so no extra filtering needed
 
     results.sort_by_key(|(ts, _)| *ts);
     Ok(results)
