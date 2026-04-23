@@ -36,11 +36,11 @@
       const release = await response.json();
       const latestTag = release.tag_name?.replace(/^v/, "");
       if (latestTag && isNewerVersion(latestTag, currentVersion)) {
-        toast.message(`New version available: v${latestTag}`, {
+        toast.message(t("page.new_version.title", { version: latestTag }), {
           closeButton: true,
-          description: `You're running v${currentVersion}`,
+          description: t("page.new_version.description", { current: currentVersion }),
           action: {
-            label: "Download",
+            label: t("page.new_version.download"),
             onClick: () => openUrl(release.html_url),
           },
           duration: 20000,
