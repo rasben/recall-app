@@ -1,4 +1,10 @@
 <script lang="ts">
+	import '@fontsource/archivo-black/400.css';
+	import '@fontsource/space-grotesk/300.css';
+	import '@fontsource/space-grotesk/400.css';
+	import '@fontsource/space-grotesk/500.css';
+	import '@fontsource/space-grotesk/600.css';
+	import '@fontsource/space-grotesk/700.css';
 	import './tailwind-base.css';
 	import './layout.scss';
     import { Toaster } from "$lib/components/ui/sonner/index.js";

@@ -16,6 +16,8 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@fontsource/archivo-black": "^5.2.8",
+    "@fontsource/space-grotesk": "^5.2.10",
     "@internationalized/date": "^3.12.1",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-dialog": "^2.7.0",
