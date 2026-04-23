@@ -123,8 +123,8 @@ const en = {
   "settings.calendar.description":
     'Find this in <a href="https://calendar.google.com/calendar/r/settings" target="_blank" rel="noopener noreferrer" class="underline">Google Calendar Settings</a>.<br />Click on a calendar → scroll to <strong>"Secret address in iCal format"</strong>.<br />Keep it private — anyone with this URL can read your calendar.',
 
-  // Cache
-  "settings.cache.legend": "Cache",
+  // System
+  "settings.system.legend": "System",
   "settings.cache.clearing": "Clearing…",
   "settings.cache.clear": "Clear all caches",
   "settings.cache.day": "cached day",
@@ -132,6 +132,10 @@ const en = {
   "settings.cache.on_disk": "on disk",
   "settings.cache.error": "Failed to clear caches",
   "settings.cache.cleared": "Caches cleared",
+
+  // Welcome
+  "settings.welcome.show": "Show welcome screen",
+  "settings.welcome.description": "i get it. it's a really cool h1 effect.",
 
   // Timeline
   "timeline.no_sources":
@@ -264,14 +268,17 @@ const da: Translations = {
   "settings.calendar.description":
     'Find det i <a href="https://calendar.google.com/calendar/r/settings" target="_blank" rel="noopener noreferrer" class="underline">Google Kalender-indstillinger</a>.<br />Klik på en kalender → scroll til <strong>"Hemmelig adresse i iCal-format"</strong>.<br />Hold det privat — alle med denne URL kan læse din kalender.',
 
-  "settings.cache.legend": "Cache",
+  "settings.system.legend": "System",
   "settings.cache.clearing": "Rydder…",
-  "settings.cache.clear": "Ryd alle caches",
+  "settings.cache.clear": "Ryd alle cacher",
   "settings.cache.day": "cachet dag",
   "settings.cache.days": "cachede dage",
   "settings.cache.on_disk": "på disk",
-  "settings.cache.error": "Kunne ikke rydde caches",
-  "settings.cache.cleared": "Caches ryddet",
+  "settings.cache.error": "Kunne ikke rydde cacher",
+  "settings.cache.cleared": "Cacher ryddet",
+
+  "settings.welcome.show": "Vis velkomstskærm",
+  "settings.welcome.description": "forstår dig godt. det er en fed h1 effekt.",
 
   "timeline.no_sources":
     "Ingen datakilder aktiveret. Aktiver mindst én i indstillingerne.",

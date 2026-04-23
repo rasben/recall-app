@@ -5,8 +5,10 @@
   import SettingsCalendar from "./Calendar.svelte";
   import SettingsJira from "./Jira.svelte";
   import SettingsZulip from "./Zulip.svelte";
-  import SettingsCache from "./Cache.svelte";
+  import SettingsSystem from "./System.svelte";
   import { t } from "$lib/i18n.svelte";
+
+  let { onShowWelcome }: { onShowWelcome?: () => void } = $props();
 </script>
 
 <div class="flex items-center justify-between mb-4">
@@ -19,4 +21,4 @@
 <SettingsCalendar />
 <SettingsJira />
 <SettingsZulip />
-<SettingsCache />
+<SettingsSystem {onShowWelcome} />

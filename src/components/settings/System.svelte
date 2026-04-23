@@ -8,6 +8,7 @@
     let clearing = $state(false);
     let cachedDays = $state<number | null>(null);
     let bytes = $state<number | null>(null);
+    let { onShowWelcome }: { onShowWelcome?: () => void } = $props();
 
     function formatBytes(b: number): string {
         if (b < 1024) return `${b} B`;
@@ -40,16 +41,28 @@
 </script>
 
 <fieldset class="border-2 p-4 mt-6">
-    <legend>{t("settings.cache.legend")}</legend>
-    <div class="flex items-center gap-4 flex-wrap">
-        <Button variant="outline" disabled={clearing} onclick={clearCaches}>
-            {clearing ? t("settings.cache.clearing") : t("settings.cache.clear")}
-        </Button>
-        {#if cachedDays !== null && bytes !== null}
-            <span class="text-xs text-muted-foreground">
-                {cachedDays} {cachedDays === 1 ? t("settings.cache.day") : t("settings.cache.days")} &middot; {formatBytes(Number(bytes))} {t("settings.cache.on_disk")}
-            </span>
-        {/if}
+    <legend>{t("settings.system.legend")}</legend>
+    <div class="flex justify-center">
+        <div>
+            <Button variant="outline" disabled={clearing} onclick={clearCaches}>
+                {clearing ? t("settings.cache.clearing") : t("settings.cache.clear")}
+            </Button>
+            {#if cachedDays !== null && bytes !== null}
+                <div class="text-xs text-muted-foreground mt-4">
+                    {cachedDays} {cachedDays === 1 ? t("settings.cache.day") : t("settings.cache.days")} &middot; {formatBytes(Number(bytes))} {t("settings.cache.on_disk")}
+                </div>
+            {/if}
+        </div>
+        <figure class="mx-8 w-[2px] bg-muted"></figure>
+        <div>
+            <Button variant="outline" onclick={onShowWelcome}>
+                {t("settings.welcome.show")}
+            </Button>
+            <div class="text-xs text-muted-foreground mt-4">
+                {t("settings.welcome.description")}
+            </div>
+        </div>
     </div>
+
 
 </fieldset>
