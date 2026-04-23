@@ -69,6 +69,12 @@
     welcomed = true;
     if (openSettings) settingsOpen = true;
   }
+
+  function showWelcome() {
+    localStorage.removeItem("recall:welcomed");
+    welcomed = false;
+    settingsOpen = false;
+  }
 </script>
 
 {#if welcomeChecked && !welcomed}
@@ -92,7 +98,7 @@
   <main class="relative min-h-screen">
     {#if settingsOpen}
       <div class="absolute inset-0 flex flex-col p-8 mb-8" in:fade={{ duration: 220 }} out:fade={{ duration: 160 }}>
-        <Settings />
+        <Settings onShowWelcome={showWelcome} />
         <Button
             class="w-full max-h-none h-[50px] shadow-sm mt-8"
             aria-label={settingsOpen ? t("page.close_settings") : t("page.open_settings")}
