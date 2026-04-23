@@ -189,15 +189,39 @@ pub(super) fn events_for_range(
             format!("Sent {count} {noun} in #{stream_key}")
         };
 
-        // detail: deduplicated topic names (shown always, one line).
-        let mut seen_topics: Vec<&str> = Vec::new();
-        for m in &msgs {
-            let t = m.subject.as_deref().unwrap_or("(no topic)");
-            if !seen_topics.contains(&t) {
-                seen_topics.push(t);
+        // detail: for streams, deduplicated topic names; for DMs, deduplicated
+        // recipient names (excluding the sender).
+        let detail = if is_dm {
+            let mut seen_names: Vec<String> = Vec::new();
+            for m in &msgs {
+                let Some(recipients) = m.display_recipient.as_array() else {
+                    continue;
+                };
+                for r in recipients {
+                    let Some(name) = r.get("full_name").and_then(|v| v.as_str()) else {
+                        continue;
+                    };
+                    let recipient_email = r.get("email").and_then(|v| v.as_str()).unwrap_or("");
+                    if recipient_email.eq_ignore_ascii_case(&email) {
+                        continue;
+                    }
+                    let name_s = name.to_string();
+                    if !seen_names.contains(&name_s) {
+                        seen_names.push(name_s);
+                    }
+                }
             }
-        }
-        let detail = seen_topics.join(", ");
+            seen_names.join(", ")
+        } else {
+            let mut seen_topics: Vec<&str> = Vec::new();
+            for m in &msgs {
+                let t = m.subject.as_deref().unwrap_or("(no topic)");
+                if !seen_topics.contains(&t) {
+                    seen_topics.push(t);
+                }
+            }
+            seen_topics.join(", ")
+        };
 
         let first_id = msgs[0].id;
         let first_topic = msgs[0].subject.as_deref().unwrap_or("");
