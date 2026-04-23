@@ -5,7 +5,7 @@ use tauri::State;
 
 use crate::commands::settings_github::{get_settings_github, GitHubEvent};
 use crate::state::AppState;
-use crate::timeline::{TimelineEvent, TimelineEventSource};
+use crate::timeline::{sanitize_event_url, TimelineEvent, TimelineEventSource};
 
 #[derive(Debug, Deserialize)]
 struct GhEvent {
@@ -100,7 +100,7 @@ pub(super) fn events_for_day(
                 source: TimelineEventSource::Github,
                 title: mapped.title,
                 detail: Some(mapped.detail),
-                url: mapped.url,
+                url: mapped.url.and_then(|u| sanitize_event_url(&u)),
             },
         ));
     }

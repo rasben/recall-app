@@ -4,7 +4,7 @@ use tauri::State;
 
 use crate::commands::settings_ical::load_settings_ical;
 use crate::state::AppState;
-use crate::timeline::{TimelineEvent, TimelineEventSource};
+use crate::timeline::{sanitize_event_url, TimelineEvent, TimelineEventSource};
 
 pub(super) fn events_for_day(
     state: &State<'_, AppState>,
@@ -92,7 +92,7 @@ pub(super) fn events_for_day(
                     source: TimelineEventSource::Calendar,
                     title: summary,
                     detail,
-                    url: event_url,
+                    url: event_url.as_deref().and_then(sanitize_event_url),
                 },
             )
         })

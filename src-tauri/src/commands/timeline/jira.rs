@@ -6,7 +6,7 @@ use serde::Deserialize;
 use tauri::State;
 use crate::commands::settings_jira::get_settings_jira;
 use crate::state::AppState;
-use crate::timeline::{TimelineEvent, TimelineEventSource};
+use crate::timeline::{sanitize_event_url, TimelineEvent, TimelineEventSource};
 
 /// Quote a user id / account id for use inside JQL `updatedBy("…")`.
 fn jql_quoted_identifier(id: &str) -> String {
@@ -170,8 +170,7 @@ pub(super) fn events_for_day(
                 source: TimelineEventSource::Jira,
                 title,
                 detail,
-
-                url: Some(browse),
+                url: sanitize_event_url(&browse),
             },
         ));
     }

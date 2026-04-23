@@ -13,7 +13,7 @@ const ZULIP_MAX_PAGES: u32 = 10;
 
 use crate::commands::settings_zulip::get_settings_zulip;
 use crate::state::AppState;
-use crate::timeline::{TimelineEvent, TimelineEventSource};
+use crate::timeline::{sanitize_event_url, TimelineEvent, TimelineEventSource};
 
 fn normalize_realm_url(raw: &str) -> String {
     raw.trim().trim_end_matches('/').to_string()
@@ -214,7 +214,7 @@ pub(super) fn events_for_day(
                 source: TimelineEventSource::Zulip,
                 title,
                 detail: Some(detail),
-                url: Some(msg_url),
+                url: sanitize_event_url(&msg_url),
             },
         ));
     }
