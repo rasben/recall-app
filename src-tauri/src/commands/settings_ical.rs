@@ -449,10 +449,18 @@ fn expand_rrule_for_range(
     let after_tz: DateTime<rrule::Tz> = start_local.with_timezone(&rrule::Tz::UTC);
     let before_tz: DateTime<rrule::Tz> = end_local.with_timezone(&rrule::Tz::UTC);
 
-    rrule_set
-        .after(after_tz)
-        .before(before_tz)
-        .all(5000)
+    let result = rrule_set.after(after_tz).before(before_tz).all(5000);
+    if result.limited {
+        // Hit the 5000-occurrence cap — the window very likely has more
+        // matching dates that we silently dropped. Surface it so a user
+        // with e.g. an hourly recurrence isn't left wondering why late
+        // events are missing.
+        eprintln!(
+            "[iCal] RRULE expansion hit the 5000-occurrence cap for DTSTART={dtstart_val}; \
+             later occurrences in the window were truncated."
+        );
+    }
+    result
         .dates
         .into_iter()
         .map(|dt| Utc.from_utc_datetime(&dt.naive_utc()).with_timezone(&Local))

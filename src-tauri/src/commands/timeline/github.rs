@@ -5,7 +5,7 @@ use tauri::State;
 
 use crate::commands::settings_github::{get_settings_github, GitHubEvent};
 use crate::state::AppState;
-use crate::timeline::{TimelineEvent, TimelineEventSource};
+use crate::timeline::{sanitize_event_url, TimelineEvent, TimelineEventSource};
 
 #[derive(Debug, Deserialize)]
 struct GhEvent {
@@ -43,8 +43,11 @@ pub(super) fn events_for_day(
     let day_naive =
         NaiveDate::parse_from_str(day, "%Y-%m-%d").map_err(|_| format!("Invalid date: {day}"))?;
 
+    let next_day = day_naive
+        .succ_opt()
+        .ok_or_else(|| format!("no day after {day}"))?;
     let since = day_naive.and_hms_opt(0, 0, 0).ok_or("Invalid day start")?;
-    let until = day_naive.and_hms_opt(23, 59, 59).ok_or("Invalid day end")?;
+    let until = next_day.and_hms_opt(0, 0, 0).ok_or("Invalid day end")?;
 
     let since_local = Local
         .from_local_datetime(&since)
@@ -55,7 +58,8 @@ pub(super) fn events_for_day(
         .single()
         .ok_or("Ambiguous local end of day")?;
 
-    let raw_events = rest_api_user_events(&settings.username, &settings.token)?;
+    let raw_events =
+        rest_api_user_events(&settings.username, &settings.token, since_local.timestamp())?;
 
     let mut rows: Vec<(i64, TimelineEvent)> = Vec::new();
 
@@ -80,7 +84,8 @@ pub(super) fn events_for_day(
         if local.naive_local().date() != day_naive {
             continue;
         }
-        if local < since_local || local > until_local {
+        // until_local is the exclusive upper bound (midnight of the next day).
+        if local < since_local || local >= until_local {
             continue;
         }
 
@@ -96,7 +101,7 @@ pub(super) fn events_for_day(
                 source: TimelineEventSource::Github,
                 title: mapped.title,
                 detail: Some(mapped.detail),
-                url: mapped.url,
+                url: mapped.url.and_then(|u| sanitize_event_url(&u)),
             },
         ));
     }
@@ -254,7 +259,11 @@ fn parse_github_datetime(s: &str) -> Result<DateTime<Utc>, String> {
         .map_err(|e| format!("Invalid GitHub timestamp {s:?}: {e}"))
 }
 
-fn rest_api_user_events(username: &str, token: &str) -> Result<Vec<GhEvent>, String> {
+fn rest_api_user_events(
+    username: &str,
+    token: &str,
+    since_ts: i64,
+) -> Result<Vec<GhEvent>, String> {
     let auth = format!("Bearer {token}");
     let mut all_events: Vec<GhEvent> = Vec::new();
 
@@ -272,7 +281,17 @@ fn rest_api_user_events(username: &str, token: &str) -> Result<Vec<GhEvent>, Str
             .call()
         {
             Ok(r) => r,
-            Err(ureq::Error::StatusCode(_)) => break,
+            Err(ureq::Error::StatusCode(status)) => {
+                // Silently stop paginating once GitHub says "no more pages"
+                // (422 is returned past the events-API page limit); surface
+                // real failures (auth, server errors) so the UI can show them.
+                if status == 422 && page > 1 {
+                    break;
+                }
+                return Err(format!(
+                    "GitHub API returned HTTP {status} (check your username and token)"
+                ));
+            }
             Err(e) => return Err(format!("GitHub API request failed: {e}")),
         };
         let page_events: Vec<GhEvent> = response
@@ -283,7 +302,20 @@ fn rest_api_user_events(username: &str, token: &str) -> Result<Vec<GhEvent>, Str
         if page_events.is_empty() {
             break;
         }
+
+        // Events are returned newest-first. If the last event on this page is
+        // already older than the target day's start, every subsequent page
+        // will be older too — stop paginating to save API calls.
+        let oldest_ts = page_events
+            .last()
+            .and_then(|e| parse_github_datetime(&e.created_at).ok())
+            .map(|dt| dt.timestamp());
         all_events.extend(page_events);
+        if let Some(ts) = oldest_ts {
+            if ts < since_ts {
+                break;
+            }
+        }
     }
 
     Ok(all_events)
@@ -410,7 +442,7 @@ mod tests {
             Ok(u) => u,
             Err(_) => return,
         };
-        let result = rest_api_user_events(&username, &token);
+        let result = rest_api_user_events(&username, &token, 0);
         assert!(
             result.is_ok(),
             "GitHub API call failed: {:?}",

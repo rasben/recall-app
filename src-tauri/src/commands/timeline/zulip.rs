@@ -1,12 +1,19 @@
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use chrono::{DateTime, Local, NaiveDate, TimeZone, Utc};
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use tauri::State;
+
+/// Upper bound on messages fetched per API call (Zulip server caps at ~1000).
+const ZULIP_PAGE_SIZE: u32 = 1000;
+/// Upper bound on pages per day lookup — prevents runaway pagination for users
+/// who send huge volumes. 10 * 1000 = 10k messages is far more than a realistic
+/// single day, and if we don't reach the target day by then, something is wrong.
+const ZULIP_MAX_PAGES: u32 = 10;
 
 use crate::commands::settings_zulip::get_settings_zulip;
 use crate::state::AppState;
-use crate::timeline::{TimelineEvent, TimelineEventSource};
+use crate::timeline::{sanitize_event_url, TimelineEvent, TimelineEventSource};
 
 fn normalize_realm_url(raw: &str) -> String {
     raw.trim().trim_end_matches('/').to_string()
@@ -51,40 +58,92 @@ pub(super) fn events_for_day(
     let narrow_str =
         serde_json::to_string(&narrow).map_err(|e| format!("Zulip narrow JSON: {e}"))?;
 
-    let fetch_url = format!(
-        "{realm}/api/v1/messages?anchor=newest&num_before=5000&num_after=0&narrow={}&apply_markdown=false",
-        urlencoding::encode(&narrow_str)
-    );
-
     let auth = format!("Basic {}", STANDARD.encode(format!("{email}:{api_key}")));
-    let resp = ureq::get(&fetch_url)
-        .header("Authorization", &auth)
-        .header("Accept", "application/json")
-        .call();
 
-    let (status, body) = match resp {
-        Ok(mut r) => {
-            let status = r.status().as_u16();
-            let body = r.body_mut().read_to_string().map_err(|e| format!("Zulip read body: {e}"))?;
-            (status, body)
+    // The /api/v1/messages endpoint has no date filter, so we page backwards
+    // from "newest" until we either (a) see a message older than day_start
+    // (meaning the day is fully covered) or (b) the server reports there are
+    // no older messages. Without this loop an older day beyond the most recent
+    // ~1000 messages would silently appear empty.
+    let mut anchor: String = "newest".to_string();
+    let mut seen_ids: HashSet<u64> = HashSet::new();
+    let mut in_window: Vec<ZulipMessage> = Vec::new();
+
+    for page_idx in 0..ZULIP_MAX_PAGES {
+        let fetch_url = format!(
+            "{realm}/api/v1/messages?anchor={}&num_before={}&num_after=0&narrow={}&apply_markdown=false",
+            urlencoding::encode(&anchor),
+            ZULIP_PAGE_SIZE,
+            urlencoding::encode(&narrow_str)
+        );
+
+        let resp = ureq::get(&fetch_url)
+            .header("Authorization", &auth)
+            .header("Accept", "application/json")
+            .call();
+
+        let (status, body) = match resp {
+            Ok(mut r) => {
+                let status = r.status().as_u16();
+                let body = r
+                    .body_mut()
+                    .read_to_string()
+                    .map_err(|e| format!("Zulip read body: {e}"))?;
+                (status, body)
+            }
+            Err(ureq::Error::StatusCode(status)) => (status, String::new()),
+            Err(e) => return Err(format!("Zulip HTTP: {e}")),
+        };
+
+        if status >= 400 {
+            return Err(format!(
+                "Zulip returned HTTP {status} (check realm URL, email, and API key)"
+            ));
         }
-        Err(ureq::Error::StatusCode(status)) => (status, String::new()),
-        Err(e) => return Err(format!("Zulip HTTP: {e}")),
-    };
 
-    if status >= 400 {
-        return Ok(Vec::new());
+        let parsed: MessagesResponse = serde_json::from_str(&body)
+            .map_err(|e| format!("Zulip messages JSON: {e}"))?;
+
+        if parsed.messages.is_empty() {
+            break;
+        }
+
+        let mut earliest_ts = i64::MAX;
+        let mut earliest_id: Option<u64> = None;
+        for msg in parsed.messages {
+            if !seen_ids.insert(msg.id) {
+                continue;
+            }
+            if msg.timestamp < earliest_ts {
+                earliest_ts = msg.timestamp;
+                earliest_id = Some(msg.id);
+            }
+            if msg.timestamp >= day_start && msg.timestamp < day_end {
+                in_window.push(msg);
+            }
+        }
+
+        // Reached the far side of the target day, or Zulip says there's
+        // nothing older than what we just got.
+        if earliest_ts < day_start || parsed.found_oldest.unwrap_or(false) {
+            break;
+        }
+
+        let Some(next_anchor_id) = earliest_id else {
+            break;
+        };
+
+        // Guard against an unexpected infinite loop (server returning
+        // the same batch for the same anchor).
+        if page_idx + 1 == ZULIP_MAX_PAGES {
+            break;
+        }
+        anchor = next_anchor_id.to_string();
     }
 
-    let parsed: MessagesResponse =
-        serde_json::from_str(&body).map_err(|e| format!("Zulip messages JSON: {e}"))?;
-
-    // Filter to the requested day and group by stream (or DM bucket).
+    // Group messages for the target day by stream (or DM bucket).
     let mut groups: HashMap<String, Vec<ZulipMessage>> = HashMap::new();
-    for msg in parsed.messages {
-        if msg.timestamp < day_start || msg.timestamp >= day_end {
-            continue;
-        }
+    for msg in in_window {
         let key = if msg.msg_type == "stream" {
             msg.display_recipient
                 .as_str()
@@ -155,7 +214,7 @@ pub(super) fn events_for_day(
                 source: TimelineEventSource::Zulip,
                 title,
                 detail: Some(detail),
-                url: Some(msg_url),
+                url: sanitize_event_url(&msg_url),
             },
         ));
     }
@@ -168,6 +227,8 @@ pub(super) fn events_for_day(
 #[derive(Deserialize)]
 struct MessagesResponse {
     messages: Vec<ZulipMessage>,
+    #[serde(default)]
+    found_oldest: Option<bool>,
 }
 
 /// Zulip's narrow-component encoding: encodeURIComponent but with '%' replaced by '.', lowercased.

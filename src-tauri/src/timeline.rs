@@ -1,6 +1,23 @@
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
+/// Return the input only if it is an http(s) URL; otherwise None.
+/// Used to sanitize event URLs before they reach the frontend's openUrl().
+/// Event URLs come from external feeds (iCal URL:, GitHub/Jira/Zulip API
+/// responses); we refuse anything that could launch a non-http handler.
+pub fn sanitize_event_url(raw: &str) -> Option<String> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let lower = trimmed.to_ascii_lowercase();
+    if lower.starts_with("http://") || lower.starts_with("https://") {
+        Some(trimmed.to_string())
+    } else {
+        None
+    }
+}
+
 /// Activity source for the day timeline (matches frontend `TimelineEvent` styling keys).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
 #[serde(rename_all = "lowercase")]

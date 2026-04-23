@@ -1,12 +1,12 @@
-/// To-Do - this file is completely AI-coded, and not well-reviewed.
-/// We need to review it, and optimize it.
+// To-Do - this file is completely AI-coded, and not well-reviewed.
+// We need to review it, and optimize it.
 use base64::{engine::general_purpose::STANDARD, Engine as _};
 use chrono::{DateTime, Local, NaiveDate, Utc};
 use serde::Deserialize;
 use tauri::State;
 use crate::commands::settings_jira::get_settings_jira;
 use crate::state::AppState;
-use crate::timeline::{TimelineEvent, TimelineEventSource};
+use crate::timeline::{sanitize_event_url, TimelineEvent, TimelineEventSource};
 
 /// Quote a user id / account id for use inside JQL `updatedBy("…")`.
 fn jql_quoted_identifier(id: &str) -> String {
@@ -87,7 +87,9 @@ pub(super) fn events_for_day(
     let (myself_status, myself_body) =
         jira_request_json("myself", "GET", &myself_url, email, token, None)?;
     if myself_status >= 400 {
-        return Ok(Vec::new());
+        return Err(format!(
+            "Jira /myself returned HTTP {myself_status} (check site URL, email, and API token)"
+        ));
     }
     let myself: serde_json::Value =
         serde_json::from_str(&myself_body).map_err(|e| format!("Jira myself JSON: {e}"))?;
@@ -133,7 +135,10 @@ pub(super) fn events_for_day(
         Some(&search_body_json),
     )?;
     if search_status >= 400 {
-        return Ok(Vec::new());
+        return Err(format!(
+            "Jira search returned HTTP {search_status}: {}",
+            search_body.chars().take(200).collect::<String>()
+        ));
     }
 
     let parsed: SearchResponse =
@@ -165,8 +170,7 @@ pub(super) fn events_for_day(
                 source: TimelineEventSource::Jira,
                 title,
                 detail,
-
-                url: Some(browse),
+                url: sanitize_event_url(&browse),
             },
         ));
     }

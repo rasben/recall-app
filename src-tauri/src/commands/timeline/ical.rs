@@ -4,7 +4,7 @@ use tauri::State;
 
 use crate::commands::settings_ical::load_settings_ical;
 use crate::state::AppState;
-use crate::timeline::{TimelineEvent, TimelineEventSource};
+use crate::timeline::{sanitize_event_url, TimelineEvent, TimelineEventSource};
 
 pub(super) fn events_for_day(
     state: &State<'_, AppState>,
@@ -18,32 +18,36 @@ pub(super) fn events_for_day(
     let day_naive =
         NaiveDate::parse_from_str(day, "%Y-%m-%d").map_err(|_| format!("Invalid date: {day}"))?;
 
+    let next_day = day_naive
+        .succ_opt()
+        .ok_or_else(|| format!("no day after {day}"))?;
     let day_start = Local
         .from_local_datetime(&day_naive.and_hms_opt(0, 0, 0).unwrap())
         .earliest()
         .map(|dt| dt.timestamp())
         .ok_or("Invalid day start")?;
+    // Exclusive upper bound: midnight of the next day.
     let day_end = Local
-        .from_local_datetime(&day_naive.and_hms_opt(23, 59, 59).unwrap())
+        .from_local_datetime(&next_day.and_hms_opt(0, 0, 0).unwrap())
         .earliest()
         .map(|dt| dt.timestamp())
         .ok_or("Invalid day end")?;
 
     let conn = state.db.lock().map_err(|_| "DB lock failed".to_string())?;
+    // Match events that start in the target day OR start earlier and run
+    // into it (overnight events like "On-call Mon 18:00 → Tue 09:00" need
+    // to show on Tuesday too).
     let mut stmt = conn
         .prepare(
             "SELECT uid, dtstart, dtend, summary, event_url
              FROM ical_events
-             WHERE dtstart >= ?1 AND dtstart <= ?2 AND (declined IS NULL OR declined = 0)",
+             WHERE (declined IS NULL OR declined = 0)
+               AND (
+                 (dtstart >= ?1 AND dtstart < ?2)
+                 OR (dtend IS NOT NULL AND dtstart < ?1 AND dtend > ?1)
+               )",
         )
         .map_err(|e| e.to_string())?;
-
-    let active_urls: std::collections::HashSet<String> = settings
-        .urls
-        .into_iter()
-        .map(|u| u.trim().to_string())
-        .filter(|u| !u.is_empty())
-        .collect();
 
     let rows = stmt
         .query_map(params![day_start, day_end], |row| {
@@ -60,7 +64,12 @@ pub(super) fn events_for_day(
     let mut results: Vec<(i64, TimelineEvent)> = rows
         .filter_map(|r| r.ok())
         .map(|(uid, dtstart, dtend, summary, event_url)| {
-            let time = {
+            // For overnight events carrying into the target day, clamp the
+            // displayed time to "00:00" so it doesn't show yesterday's hour.
+            // Keep dtstart as the sort key so these events appear at the top.
+            let time = if dtstart < day_start {
+                "00:00".to_string()
+            } else {
                 use chrono::DateTime;
                 let dt = DateTime::from_timestamp(dtstart, 0)
                     .map(|d| d.with_timezone(&Local))
@@ -88,13 +97,11 @@ pub(super) fn events_for_day(
                     source: TimelineEventSource::Calendar,
                     title: summary,
                     detail,
-                    url: event_url,
+                    url: event_url.as_deref().and_then(sanitize_event_url),
                 },
             )
         })
         .collect();
-
-    let _ = active_urls; // ical_events is cleared when URLs change, so no extra filtering needed
 
     results.sort_by_key(|(ts, _)| *ts);
     Ok(results)
