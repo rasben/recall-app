@@ -151,10 +151,16 @@ fn collect_git_repo_roots(dir: &Path, out: &mut Vec<PathBuf>, depth: u32) -> std
     };
 
     for entry in read.flatten() {
-        let path = entry.path();
-        if !path.is_dir() {
+        // Don't follow symlinks — avoids infinite loops (e.g. ~/Downloads
+        // with a link back to $HOME) and keeps the scan rooted under the
+        // user-configured directory.
+        let Ok(file_type) = entry.file_type() else {
+            continue;
+        };
+        if !file_type.is_dir() || file_type.is_symlink() {
             continue;
         }
+        let path = entry.path();
         let name = path
             .file_name()
             .map(|s| s.to_string_lossy().to_string())
