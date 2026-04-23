@@ -31,8 +31,11 @@ pub(super) fn events_for_day(
     let day_naive = NaiveDate::parse_from_str(day, "%Y-%m-%d")
         .map_err(|_| format!("Invalid date (expected YYYY-MM-DD): {day}"))?;
 
+    let next_day = day_naive
+        .succ_opt()
+        .ok_or_else(|| format!("no day after {day}"))?;
     let since = day_naive.and_hms_opt(0, 0, 0).ok_or("Invalid day start")?;
-    let until = day_naive.and_hms_opt(23, 59, 59).ok_or("Invalid day end")?;
+    let until = next_day.and_hms_opt(0, 0, 0).ok_or("Invalid day end")?;
 
     let since_local = Local
         .from_local_datetime(&since)
@@ -43,6 +46,8 @@ pub(super) fn events_for_day(
         .single()
         .ok_or("Ambiguous local end of day")?;
 
+    // git log --until is exclusive of the given time, so passing next-day 00:00
+    // captures everything through the end of `day`.
     let since_str = since_local.format("%Y-%m-%d %H:%M:%S").to_string();
     let until_str = until_local.format("%Y-%m-%d %H:%M:%S").to_string();
 

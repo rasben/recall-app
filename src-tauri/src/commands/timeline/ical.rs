@@ -18,13 +18,17 @@ pub(super) fn events_for_day(
     let day_naive =
         NaiveDate::parse_from_str(day, "%Y-%m-%d").map_err(|_| format!("Invalid date: {day}"))?;
 
+    let next_day = day_naive
+        .succ_opt()
+        .ok_or_else(|| format!("no day after {day}"))?;
     let day_start = Local
         .from_local_datetime(&day_naive.and_hms_opt(0, 0, 0).unwrap())
         .earliest()
         .map(|dt| dt.timestamp())
         .ok_or("Invalid day start")?;
+    // Exclusive upper bound: midnight of the next day.
     let day_end = Local
-        .from_local_datetime(&day_naive.and_hms_opt(23, 59, 59).unwrap())
+        .from_local_datetime(&next_day.and_hms_opt(0, 0, 0).unwrap())
         .earliest()
         .map(|dt| dt.timestamp())
         .ok_or("Invalid day end")?;
@@ -34,7 +38,7 @@ pub(super) fn events_for_day(
         .prepare(
             "SELECT uid, dtstart, dtend, summary, event_url
              FROM ical_events
-             WHERE dtstart >= ?1 AND dtstart <= ?2 AND (declined IS NULL OR declined = 0)",
+             WHERE dtstart >= ?1 AND dtstart < ?2 AND (declined IS NULL OR declined = 0)",
         )
         .map_err(|e| e.to_string())?;
 

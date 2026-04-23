@@ -43,8 +43,11 @@ pub(super) fn events_for_day(
     let day_naive =
         NaiveDate::parse_from_str(day, "%Y-%m-%d").map_err(|_| format!("Invalid date: {day}"))?;
 
+    let next_day = day_naive
+        .succ_opt()
+        .ok_or_else(|| format!("no day after {day}"))?;
     let since = day_naive.and_hms_opt(0, 0, 0).ok_or("Invalid day start")?;
-    let until = day_naive.and_hms_opt(23, 59, 59).ok_or("Invalid day end")?;
+    let until = next_day.and_hms_opt(0, 0, 0).ok_or("Invalid day end")?;
 
     let since_local = Local
         .from_local_datetime(&since)
@@ -80,7 +83,8 @@ pub(super) fn events_for_day(
         if local.naive_local().date() != day_naive {
             continue;
         }
-        if local < since_local || local > until_local {
+        // until_local is the exclusive upper bound (midnight of the next day).
+        if local < since_local || local >= until_local {
             continue;
         }
 

@@ -59,9 +59,7 @@ pub async fn get_timeline_for_day(
         done("GitHub");
 
         loading("Calendar");
-        if let Ok(cal_rows) = ical::events_for_day(&state, &day) {
-            rows.extend(cal_rows);
-        }
+        rows.extend(ical::events_for_day(&state, &day)?);
         done("Calendar");
 
         loading("Jira");
