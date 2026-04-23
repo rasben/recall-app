@@ -58,7 +58,8 @@ pub(super) fn events_for_day(
         .single()
         .ok_or("Ambiguous local end of day")?;
 
-    let raw_events = rest_api_user_events(&settings.username, &settings.token)?;
+    let raw_events =
+        rest_api_user_events(&settings.username, &settings.token, since_local.timestamp())?;
 
     let mut rows: Vec<(i64, TimelineEvent)> = Vec::new();
 
@@ -258,7 +259,11 @@ fn parse_github_datetime(s: &str) -> Result<DateTime<Utc>, String> {
         .map_err(|e| format!("Invalid GitHub timestamp {s:?}: {e}"))
 }
 
-fn rest_api_user_events(username: &str, token: &str) -> Result<Vec<GhEvent>, String> {
+fn rest_api_user_events(
+    username: &str,
+    token: &str,
+    since_ts: i64,
+) -> Result<Vec<GhEvent>, String> {
     let auth = format!("Bearer {token}");
     let mut all_events: Vec<GhEvent> = Vec::new();
 
@@ -297,7 +302,20 @@ fn rest_api_user_events(username: &str, token: &str) -> Result<Vec<GhEvent>, Str
         if page_events.is_empty() {
             break;
         }
+
+        // Events are returned newest-first. If the last event on this page is
+        // already older than the target day's start, every subsequent page
+        // will be older too — stop paginating to save API calls.
+        let oldest_ts = page_events
+            .last()
+            .and_then(|e| parse_github_datetime(&e.created_at).ok())
+            .map(|dt| dt.timestamp());
         all_events.extend(page_events);
+        if let Some(ts) = oldest_ts {
+            if ts < since_ts {
+                break;
+            }
+        }
     }
 
     Ok(all_events)
@@ -424,7 +442,7 @@ mod tests {
             Ok(u) => u,
             Err(_) => return,
         };
-        let result = rest_api_user_events(&username, &token);
+        let result = rest_api_user_events(&username, &token, 0);
         assert!(
             result.is_ok(),
             "GitHub API call failed: {:?}",
