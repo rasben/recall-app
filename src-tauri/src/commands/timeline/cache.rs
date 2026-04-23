@@ -12,6 +12,12 @@ use crate::commands::settings::now;
 use crate::state::AppState;
 use crate::timeline::TimelineEvent;
 
+/// Maximum number of cached days to retain. One row ≈ a day of events
+/// (typically small JSON), so this is a soft upper bound that prevents the
+/// table from growing forever over years of use. Two calendar years of
+/// coverage comfortably spans any realistic Harvest-entry backfill.
+const MAX_CACHED_DAYS: i64 = 730;
+
 pub(super) fn get_cached_day(
     state: &State<'_, AppState>,
     day: &str,
@@ -34,6 +40,17 @@ pub(super) fn save_cached_day(
     conn.execute(
         "INSERT OR REPLACE INTO timeline_day_cache (day, events_json, updated_at) VALUES (?1, ?2, ?3)",
         params![day, json, now()],
+    )
+    .map_err(|e| e.to_string())?;
+
+    // Evict the oldest-by-day rows once we exceed the cap so the table
+    // doesn't grow without bound. `day` is a YYYY-MM-DD string, so a
+    // lexicographic sort matches chronological order.
+    conn.execute(
+        "DELETE FROM timeline_day_cache WHERE day NOT IN (
+             SELECT day FROM timeline_day_cache ORDER BY day DESC LIMIT ?1
+         )",
+        params![MAX_CACHED_DAYS],
     )
     .map_err(|e| e.to_string())?;
     Ok(())
