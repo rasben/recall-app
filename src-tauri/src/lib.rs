@@ -46,7 +46,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(builder.invoke_handler())
         .setup(move |app| {
-            let (conn, db_path) = db::init_db(app.handle());
+            let (conn, db_path) = db::init_db(app.handle())?;
 
             app.manage(AppState {
                 db: Arc::new(Mutex::new(conn)),
