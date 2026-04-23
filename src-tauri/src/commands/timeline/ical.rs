@@ -34,11 +34,18 @@ pub(super) fn events_for_day(
         .ok_or("Invalid day end")?;
 
     let conn = state.db.lock().map_err(|_| "DB lock failed".to_string())?;
+    // Match events that start in the target day OR start earlier and run
+    // into it (overnight events like "On-call Mon 18:00 → Tue 09:00" need
+    // to show on Tuesday too).
     let mut stmt = conn
         .prepare(
             "SELECT uid, dtstart, dtend, summary, event_url
              FROM ical_events
-             WHERE dtstart >= ?1 AND dtstart < ?2 AND (declined IS NULL OR declined = 0)",
+             WHERE (declined IS NULL OR declined = 0)
+               AND (
+                 (dtstart >= ?1 AND dtstart < ?2)
+                 OR (dtend IS NOT NULL AND dtstart < ?1 AND dtend > ?1)
+               )",
         )
         .map_err(|e| e.to_string())?;
 
@@ -57,7 +64,12 @@ pub(super) fn events_for_day(
     let mut results: Vec<(i64, TimelineEvent)> = rows
         .filter_map(|r| r.ok())
         .map(|(uid, dtstart, dtend, summary, event_url)| {
-            let time = {
+            // For overnight events carrying into the target day, clamp the
+            // displayed time to "00:00" so it doesn't show yesterday's hour.
+            // Keep dtstart as the sort key so these events appear at the top.
+            let time = if dtstart < day_start {
+                "00:00".to_string()
+            } else {
                 use chrono::DateTime;
                 let dt = DateTime::from_timestamp(dtstart, 0)
                     .map(|d| d.with_timezone(&Local))
