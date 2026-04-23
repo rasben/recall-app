@@ -26,6 +26,7 @@ pub fn run() {
         commands::settings_ical::trigger_ical_sync,
         commands::settings_ical::get_ical_sync_status,
         commands::timeline::get_timeline_for_day,
+        commands::timeline::get_day_counts_for_month,
         commands::harvest_done::get_timeline_harvest_done_for_event_ids,
         commands::harvest_done::set_timeline_harvest_done,
         commands::settings::clear_all_caches,

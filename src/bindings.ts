@@ -88,6 +88,20 @@ async getTimelineForDay(day: string) : Promise<Result<TimelineEvent[], string>> 
     else return { status: "error", error: e  as any };
 }
 },
+/**
+ * Fetch event counts for every elapsed day of the given calendar month,
+ * populating the per-day cache along the way. Uses one range query per
+ * source instead of N per-day queries, so a fresh month completes in a
+ * fraction of the time and without hammering third-party rate limits.
+ */
+async getDayCountsForMonth(year: number, month: number) : Promise<Result<{ [key in string]: number }, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_day_counts_for_month", { year, month }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async getTimelineHarvestDoneForEventIds(eventIds: string[]) : Promise<Result<string[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_timeline_harvest_done_for_event_ids", { eventIds }) };

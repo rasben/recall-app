@@ -27,6 +27,17 @@ pub(super) fn events_for_day(
     state: &State<'_, AppState>,
     day: &str,
 ) -> Result<Vec<(i64, TimelineEvent)>, String> {
+    let day_naive =
+        NaiveDate::parse_from_str(day, "%Y-%m-%d").map_err(|_| format!("Invalid date: {day}"))?;
+    let rows = events_for_range(state, day_naive, day_naive)?;
+    Ok(rows.into_iter().map(|(_, ts, ev)| (ts, ev)).collect())
+}
+
+pub(super) fn events_for_range(
+    state: &State<'_, AppState>,
+    start_day: NaiveDate,
+    end_day: NaiveDate,
+) -> Result<Vec<(NaiveDate, i64, TimelineEvent)>, String> {
     let Some(settings) = get_settings_github(state.clone()) else {
         return Ok(Vec::new());
     };
@@ -40,28 +51,25 @@ pub(super) fn events_for_day(
         return Ok(Vec::new());
     }
 
-    let day_naive =
-        NaiveDate::parse_from_str(day, "%Y-%m-%d").map_err(|_| format!("Invalid date: {day}"))?;
-
-    let next_day = day_naive
+    let next_end = end_day
         .succ_opt()
-        .ok_or_else(|| format!("no day after {day}"))?;
-    let since = day_naive.and_hms_opt(0, 0, 0).ok_or("Invalid day start")?;
-    let until = next_day.and_hms_opt(0, 0, 0).ok_or("Invalid day end")?;
+        .ok_or_else(|| format!("no day after {end_day}"))?;
+    let since = start_day.and_hms_opt(0, 0, 0).ok_or("Invalid range start")?;
+    let until = next_end.and_hms_opt(0, 0, 0).ok_or("Invalid range end")?;
 
     let since_local = Local
         .from_local_datetime(&since)
         .single()
-        .ok_or("Ambiguous local start of day")?;
+        .ok_or("Ambiguous local start of range")?;
     let until_local = Local
         .from_local_datetime(&until)
         .single()
-        .ok_or("Ambiguous local end of day")?;
+        .ok_or("Ambiguous local end of range")?;
 
     let raw_events =
         rest_api_user_events(&settings.username, &settings.token, since_local.timestamp())?;
 
-    let mut rows: Vec<(i64, TimelineEvent)> = Vec::new();
+    let mut rows: Vec<(NaiveDate, i64, TimelineEvent)> = Vec::new();
 
     for ev in raw_events {
         if matches!(ev.event_type.as_str(), "PushEvent") {
@@ -81,19 +89,18 @@ pub(super) fn events_for_day(
 
         let created = parse_github_datetime(&ev.created_at)?;
         let local = created.with_timezone(&Local);
-        if local.naive_local().date() != day_naive {
-            continue;
-        }
-        // until_local is the exclusive upper bound (midnight of the next day).
+        // until_local is the exclusive upper bound (midnight after end_day).
         if local < since_local || local >= until_local {
             continue;
         }
+        let day = local.naive_local().date();
 
         let ts = local.timestamp();
         let time = local.format("%H:%M").to_string();
         let id = format!("github:{}", github_event_id_str(&ev.id));
 
         rows.push((
+            day,
             ts,
             TimelineEvent {
                 id,
@@ -106,7 +113,7 @@ pub(super) fn events_for_day(
         ));
     }
 
-    rows.sort_by_key(|(ts, _)| *ts);
+    rows.sort_by_key(|(_, ts, _)| *ts);
     Ok(rows)
 }
 
