@@ -67,9 +67,6 @@ npm run tauri dev
 - Security
   - Move credentials out of plain SQLite into the OS keychain
     (e.g. `tauri-plugin-stronghold` or the `keyring` crate — macOS Keychain / Windows Credential Manager / Linux Secret Service)
-- Performance
-  - Make data-fetching happen async
-  - Investigate why Zulip takes so long
 - Bug: Using `local git` source on Windows opens a bunch of terminal windows.
   - Makes it look like a virus.
 - Gmail data-source (requires Google OAuth — see AGENTS.md for why this is deferred)
