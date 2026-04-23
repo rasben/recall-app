@@ -39,10 +39,8 @@
     stroke: var(--foreground);
   }
 
-  .dark {
-    #sparkle {
-      stroke: var(--primary);
-    }
+  :global(.dark) #sparkle {
+    stroke: var(--primary);
   }
 </style>
 
