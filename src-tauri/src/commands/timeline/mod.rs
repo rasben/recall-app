@@ -90,6 +90,7 @@ pub async fn get_timeline_for_day(
 #[tauri::command]
 #[specta::specta]
 pub async fn get_day_counts_for_month(
+    app: tauri::AppHandle,
     state: State<'_, AppState>,
     year: i32,
     month: u32,
@@ -162,11 +163,34 @@ pub async fn get_day_counts_for_month(
             }
         };
 
+        // Emit per-source progress so the frontend can show a real progress
+        // bar on the "load month" button instead of an opaque spinner.
+        let loading = |source: &'static str| {
+            let _ = app.emit("month:source", SourceProgress { source, done: false });
+        };
+        let done = |source: &'static str| {
+            let _ = app.emit("month:source", SourceProgress { source, done: true });
+        };
+
+        loading("Git");
         extend(git::events_for_range(&state, fetch_start, fetch_end)?);
+        done("Git");
+
+        loading("GitHub");
         extend(github::events_for_range(&state, fetch_start, fetch_end)?);
+        done("GitHub");
+
+        loading("Calendar");
         extend(ical::events_for_range(&state, fetch_start, fetch_end)?);
+        done("Calendar");
+
+        loading("Jira");
         extend(jira::events_for_range(&state, fetch_start, fetch_end)?);
+        done("Jira");
+
+        loading("Zulip");
         extend(zulip::events_for_range(&state, fetch_start, fetch_end)?);
+        done("Zulip");
 
         for day in uncached {
             let iso = day.format("%Y-%m-%d").to_string();

@@ -19,6 +19,9 @@ const en = {
   // Page shell
   "page.open_settings": "Open settings",
   "page.close_settings": "Close settings",
+  "page.new_version.title": "New version available: v{version}",
+  "page.new_version.description": "You're running v{current}",
+  "page.new_version.download": "Download",
 
   // Settings
   "settings.title": "Settings",
@@ -171,6 +174,9 @@ const da: Translations = {
 
   "page.open_settings": "Åbn indstillinger",
   "page.close_settings": "Luk indstillinger",
+  "page.new_version.title": "Ny version tilgængelig: v{version}",
+  "page.new_version.description": "Du kører v{current}",
+  "page.new_version.download": "Hent",
 
   "settings.title": "Indstillinger",
   "settings.language": "Sprog",
