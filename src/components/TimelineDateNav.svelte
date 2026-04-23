@@ -9,6 +9,8 @@
   import { navState } from "$lib/nav-state.svelte";
   import { commands } from "../bindings";
   import { t, langLocale } from "$lib/i18n.svelte";
+  import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+  import { onDestroy } from "svelte";
 
   let {
     selectedDate,
@@ -29,6 +31,18 @@
   let pickerValue = $derived(parseDate(selectedDate));
   let calendarMonth = $state<DateValue | undefined>(undefined);
   let loadingMonth = $state(false);
+  const MONTH_SOURCES_TOTAL = 5;
+  let monthSourcesDone = $state(0);
+  let monthProgress = $derived(
+    loadingMonth ? Math.min(monthSourcesDone / MONTH_SOURCES_TOTAL, 1) : 0,
+  );
+
+  let unlistenMonth: UnlistenFn | undefined;
+  listen<{ source: string; done: boolean }>("month:source", (e) => {
+    if (e.payload.done) monthSourcesDone += 1;
+  }).then((fn) => (unlistenMonth = fn));
+
+  onDestroy(() => unlistenMonth?.());
 
   function handlePick(next: DateValue | undefined) {
     if (!next) return;
@@ -44,6 +58,7 @@
   async function loadMonth() {
     if (loadingMonth) return;
     const month = calendarMonth ?? pickerValue;
+    monthSourcesDone = 0;
     loadingMonth = true;
 
     const result = await commands.getDayCountsForMonth(month.year, month.month);
@@ -52,6 +67,7 @@
     }
 
     loadingMonth = false;
+    monthSourcesDone = 0;
   }
 
   let visibleMonthLabel = $derived.by(() => {
@@ -99,11 +115,20 @@
         <Button
                 variant="outline"
                 size="sm"
-                class="w-full text-xs"
+                class="load-month-btn relative w-full overflow-hidden text-xs"
                 disabled={loadingMonth}
                 onclick={loadMonth}
         >
-          {loadingMonth ? t("timeline.loading_month") : t("timeline.load_month", { month: visibleMonthLabel })}
+          {#if loadingMonth}
+            <span
+              class="load-month-progress pointer-events-none absolute inset-y-0 left-0 bg-primary/20"
+              style="width: {monthProgress * 100}%"
+              aria-hidden="true"
+            ></span>
+          {/if}
+          <span class="relative">
+            {loadingMonth ? t("timeline.loading_month") : t("timeline.load_month", { month: visibleMonthLabel })}
+          </span>
         </Button>
       </div>
     </Popover.Content>
@@ -119,3 +144,9 @@
     </Button>
   {/if}
 </div>
+
+<style>
+  :global(.load-month-btn) .load-month-progress {
+    transition: width 300ms ease-out;
+  }
+</style>
