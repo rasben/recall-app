@@ -87,7 +87,9 @@ pub(super) fn events_for_day(
     let (myself_status, myself_body) =
         jira_request_json("myself", "GET", &myself_url, email, token, None)?;
     if myself_status >= 400 {
-        return Ok(Vec::new());
+        return Err(format!(
+            "Jira /myself returned HTTP {myself_status} (check site URL, email, and API token)"
+        ));
     }
     let myself: serde_json::Value =
         serde_json::from_str(&myself_body).map_err(|e| format!("Jira myself JSON: {e}"))?;
@@ -133,7 +135,10 @@ pub(super) fn events_for_day(
         Some(&search_body_json),
     )?;
     if search_status >= 400 {
-        return Ok(Vec::new());
+        return Err(format!(
+            "Jira search returned HTTP {search_status}: {}",
+            search_body.chars().take(200).collect::<String>()
+        ));
     }
 
     let parsed: SearchResponse =

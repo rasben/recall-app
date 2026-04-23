@@ -73,7 +73,9 @@ pub(super) fn events_for_day(
     };
 
     if status >= 400 {
-        return Ok(Vec::new());
+        return Err(format!(
+            "Zulip returned HTTP {status} (check realm URL, email, and API key)"
+        ));
     }
 
     let parsed: MessagesResponse =

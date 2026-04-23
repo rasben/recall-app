@@ -272,7 +272,17 @@ fn rest_api_user_events(username: &str, token: &str) -> Result<Vec<GhEvent>, Str
             .call()
         {
             Ok(r) => r,
-            Err(ureq::Error::StatusCode(_)) => break,
+            Err(ureq::Error::StatusCode(status)) => {
+                // Silently stop paginating once GitHub says "no more pages"
+                // (422 is returned past the events-API page limit); surface
+                // real failures (auth, server errors) so the UI can show them.
+                if status == 422 && page > 1 {
+                    break;
+                }
+                return Err(format!(
+                    "GitHub API returned HTTP {status} (check your username and token)"
+                ));
+            }
             Err(e) => return Err(format!("GitHub API request failed: {e}")),
         };
         let page_events: Vec<GhEvent> = response
