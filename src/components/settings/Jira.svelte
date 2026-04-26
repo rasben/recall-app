@@ -6,7 +6,6 @@
   import { onMount } from "svelte";
   import { commands, type SettingsJira, type JiraEvent } from "../../bindings";
   import PasswordInput from "../ui/PasswordInput.svelte";
-  import * as Select from "$lib/components/ui/select/index.js";
   import { t } from "$lib/i18n.svelte";
 
   const defaultSiteUrl = "https://reload.atlassian.net";
@@ -17,11 +16,6 @@
     issueCompleted: { type: "IssueCompleted", labelKey: "settings.jira.event.issue_completed" },
     mentioned: { type: "Mentioned", labelKey: "settings.jira.event.mentioned" },
   };
-
-  function eventTypeLabel(event: JiraEvent): string {
-    const entry = Object.values(eventTypeMap).find((e) => e.type === event);
-    return entry ? t(entry.labelKey as Parameters<typeof t>[0]) : event;
-  }
 
   let defaultSettings: SettingsJira = {
     enabled: false,
@@ -114,9 +108,11 @@
     }
   }
 
-  async function setEnabledEvents(value: string[] | undefined) {
+  async function toggleEvent(type: JiraEvent, checked: boolean) {
     const original = settings.enabled_events ?? [];
-    const nextEvents = (value ?? []) as JiraEvent[];
+    const nextEvents = checked
+      ? (original.includes(type) ? original : [...original, type])
+      : original.filter((e) => e !== type);
     enabledEvents = nextEvents;
     const ok = await persist({ enabled_events: nextEvents });
     if (!ok) {
@@ -172,22 +168,19 @@
 
     {#if apiToken}
 
-    <Label for="jira-enabled-events-trigger" class="mb-2">{t("settings.jira.events_label")}</Label>
-    <Select.Root type="multiple" bind:value={enabledEvents} onValueChange={setEnabledEvents}>
-      <Select.Trigger id="jira-enabled-events-trigger" class="w-full">
-        {enabledEvents.length === 0
-          ? t("settings.jira.no_events")
-          : [...enabledEvents]
-              .sort((a, b) => eventTypeLabel(a).localeCompare(eventTypeLabel(b)))
-              .map(eventTypeLabel)
-              .join(", ")}
-      </Select.Trigger>
-      <Select.Content class="max-h-[300px]">
-        {#each Object.entries(eventTypeMap) as [, { type, labelKey }]}
-          <Select.Item value={type} label={t(labelKey as Parameters<typeof t>[0])} />
-        {/each}
-      </Select.Content>
-    </Select.Root>
+    <Label class="mb-2">{t("settings.jira.events_label")}</Label>
+    <div class="flex flex-col gap-2">
+      {#each Object.entries(eventTypeMap) as [, { type, labelKey }]}
+        <div class="flex items-center gap-2">
+          <Checkbox
+            id="jira-event-{type}"
+            checked={enabledEvents.includes(type)}
+            onCheckedChange={(v) => toggleEvent(type, v === true)}
+          />
+          <Label for="jira-event-{type}">{t(labelKey as Parameters<typeof t>[0])}</Label>
+        </div>
+      {/each}
+    </div>
     {/if}
   {/if}
 </fieldset>
