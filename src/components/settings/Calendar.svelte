@@ -12,20 +12,21 @@
   const defaultSettings: SettingsIcal = {
     enabled: false,
     urls: [],
-    email: null,
+    emails: [],
   };
 
   let settings = $state<SettingsIcal>(defaultSettings);
   let icalUrls = $state<string[]>([""]);
-  let emailInput = $state<string>("");
+  let emails = $state<string[]>([""]);
   let syncStatus = $state<IcalSyncStatus | null>(null);
   let pollTimer: ReturnType<typeof setInterval> | null = null;
 
   onMount(async () => {
     settings = (await commands.getSettingsIcal()) ?? defaultSettings;
-    const saved = settings.urls ?? [];
-    icalUrls = saved.length > 0 ? [...saved] : [""];
-    emailInput = settings.email ?? "";
+    const savedUrls = settings.urls ?? [];
+    icalUrls = savedUrls.length > 0 ? [...savedUrls] : [""];
+    const savedEmails = settings.emails ?? [];
+    emails = savedEmails.length > 0 ? [...savedEmails] : [""];
     if (settings.enabled) refreshSyncStatus();
   });
 
@@ -72,9 +73,9 @@
     if (ok) toast.success(t("settings.calendar.saved_url"));
   }
 
-  async function saveEmail() {
-    const trimmed = emailInput.trim();
-    const ok = await persist({ email: trimmed.length > 0 ? trimmed : null });
+  async function saveEmails() {
+    const cleaned = emails.map((e) => e.trim()).filter((e) => e.length > 0);
+    const ok = await persist({ emails: cleaned });
     if (ok) toast.success(t("settings.calendar.saved_email"));
   }
 
@@ -85,6 +86,15 @@
   function removeUrl(index: number) {
     icalUrls = icalUrls.filter((_, i) => i !== index);
     saveUrls();
+  }
+
+  function addEmail() {
+    emails = [...emails, ""];
+  }
+
+  function removeEmail(index: number) {
+    emails = emails.filter((_, i) => i !== index);
+    saveEmails();
   }
 
   function formatSyncTime(ts: number | null | undefined): string {
@@ -106,44 +116,35 @@
   </div>
 
   {#if settings.enabled}
+    <Label class="mb-2">{t("settings.calendar.ical_url")}</Label>
+    <p class="text-muted-foreground text-sm mb-2">
+      {@html t("settings.calendar.description")}
+    </p>
     {#each icalUrls as _, i}
-      <PasswordInput
-        bind:password={icalUrls[i]}
-        saveAction={saveUrls}
-        label={t("settings.calendar.ical_url")}
-        placeholder="https://calendar.google.com/calendar/ical/…"
-        inputId="ical-url-{i}"
-        description={icalUrls.length > 1 ? '' : t("settings.calendar.description")}
-      />
-      {#if icalUrls.length > 1}
-        <Button variant="outline" class="-mt-6 mb-2" onclick={() => removeUrl(i)}>
-          {t("settings.calendar.remove")}
-        </Button>
-      {/if}
-    {/each}
-
-    {#if icalUrls.length > 0}
-    <div class="mt-4">
-      <Label for="calendar-email" class="text-sm">{t("settings.calendar.email_label")}</Label>
-      <p class="text-xs text-muted-foreground mb-1">{t("settings.calendar.email_hint")}</p>
-      <div class="flex gap-2">
-        <Input
-          id="calendar-email"
-          type="email"
-          placeholder="you@example.com"
-          bind:value={emailInput}
-          onblur={saveEmail}
-          onkeydown={(e) => { if (e.key === 'Enter') saveEmail(); }}
-        />
+      <div class="flex gap-2 items-start">
+        <div class="flex-1">
+          <PasswordInput
+            bind:password={icalUrls[i]}
+            saveAction={saveUrls}
+            label=""
+            placeholder="https://calendar.google.com/calendar/ical/…"
+            inputId="ical-url-{i}"
+          />
+        </div>
+        {#if icalUrls.length > 1}
+          <Button variant="outline" onclick={() => removeUrl(i)}>
+            {t("settings.calendar.remove")}
+          </Button>
+        {/if}
       </div>
-    </div>
-    <div class="flex items-center gap-4 flex-wrap mt-4">
+    {/each}
+    <div class="flex items-center gap-4 flex-wrap">
       <Button variant="outline" onclick={addUrl}>
         {t("settings.calendar.add_ical")}
       </Button>
 
       {#if syncStatus}
-        <span class="text-xs text-muted-foreground">
+        <div class="text-xs pt-2 text-muted-foreground">
           {#if syncStatus.syncing}
             <span class="animate-pulse">{t("settings.calendar.syncing")}</span>
           {:else if syncStatus.last_error}
@@ -151,8 +152,35 @@
           {:else}
             {t("settings.calendar.last_synced", { time: formatSyncTime(syncStatus.last_synced_at) })}
           {/if}
-        </span>
+        </div>
       {/if}
+    </div>
+
+    {#if icalUrls.length > 0}
+    <div class="mt-8">
+      <Label class="mb-2">{t("settings.calendar.email_label")}</Label>
+      <p class="text-xs text-muted-foreground mb-1">{t("settings.calendar.email_hint")}</p>
+      {#each emails as _, i}
+        <div class="flex gap-2">
+          <Input
+                class="mb-4"
+            id="calendar-email-{i}"
+            type="email"
+            placeholder="you@example.com"
+            bind:value={emails[i]}
+            onblur={saveEmails}
+            onkeydown={(e) => { if (e.key === 'Enter') saveEmails(); }}
+          />
+          {#if emails.length > 1}
+            <Button variant="outline" onclick={() => removeEmail(i)}>
+              {t("settings.calendar.remove")}
+            </Button>
+          {/if}
+        </div>
+      {/each}
+      <Button variant="outline" onclick={addEmail}>
+        {t("settings.calendar.add_email")}
+      </Button>
     </div>
     {/if}
   {/if}

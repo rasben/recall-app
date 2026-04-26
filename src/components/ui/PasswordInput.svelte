@@ -23,7 +23,9 @@ let {
 </script>
 
 <fieldset class="mb-4">
-    <Label for={inputId} class="mb-2">{label}</Label>
+    {#if label}
+        <Label for={inputId} class="mb-2">{label}</Label>
+    {/if}
     <div class="relative">
         <Input type={showPassword ? 'text' : 'password'} id={inputId} placeholder={placeholder} bind:value={password} onblur={async () => await saveAction()} />
         <button onclick={() => showPassword = !showPassword} class="absolute hover:bg-primary-hover bg-primary border-2 px-1 right-0 top-0 bottom-0">
