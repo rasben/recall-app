@@ -5,7 +5,6 @@
     import { toast } from "svelte-sonner";
     import { onMount } from "svelte";
     import { commands, type SettingsGitHub, type GitHubEvent } from "../../bindings";
-    import * as Select from "$lib/components/ui/select/index.js";
     import { t } from "$lib/i18n.svelte";
     import PasswordInput from "../ui/PasswordInput.svelte";
 
@@ -16,11 +15,6 @@
         issuesEvent: { type: "IssuesEvent", labelKey: "settings.github.event.issue" },
         issueCommentEvent: { type: "IssueCommentEvent", labelKey: "settings.github.event.issue_comment" },
     };
-
-    function eventTypeLabel(event: GitHubEvent): string {
-        const entry = Object.values(eventTypeMap).find((e) => e.type === event);
-        return entry ? t(entry.labelKey as Parameters<typeof t>[0]) : event;
-    }
 
     const defaultSettings: SettingsGitHub = {
         enabled: false,
@@ -54,8 +48,12 @@
         else toast.error(t("settings.github.error_save"));
     }
 
-    async function setEnabledEvents(value: string[] | undefined) {
-        const ok = await persist({ enabled_events: (value ?? []) as GitHubEvent[] });
+    async function toggleEvent(type: GitHubEvent, checked: boolean) {
+        const current = settings.enabled_events ?? [];
+        const next = checked
+            ? (current.includes(type) ? current : [...current, type])
+            : current.filter((e) => e !== type);
+        const ok = await persist({ enabled_events: next });
         if (!ok) toast.error(t("settings.github.error_events"));
     }
 </script>
@@ -92,25 +90,18 @@
             inputId="github-token"
         />
 
-        <Label for="github-enabled-events-trigger" class="mb-2">{t("settings.github.events_label")}</Label>
-        <Select.Root
-            type="multiple"
-            bind:value={settings.enabled_events}
-            onValueChange={setEnabledEvents}
-        >
-            <Select.Trigger id="github-enabled-events-trigger" class="w-full">
-                {settings.enabled_events.length === 0
-                    ? t("settings.github.no_events")
-                    : [...settings.enabled_events]
-                        .sort((a, b) => eventTypeLabel(a).localeCompare(eventTypeLabel(b)))
-                        .map(eventTypeLabel)
-                        .join(", ")}
-            </Select.Trigger>
-            <Select.Content class="max-h-[300px]">
-                {#each Object.entries(eventTypeMap) as [, { type, labelKey }]}
-                    <Select.Item value={type} label={t(labelKey as Parameters<typeof t>[0])} />
-                {/each}
-            </Select.Content>
-        </Select.Root>
+        <Label class="mb-2">{t("settings.github.events_label")}</Label>
+        <div class="flex flex-col gap-2">
+            {#each Object.entries(eventTypeMap) as [, { type, labelKey }]}
+                <div class="flex items-center gap-2">
+                    <Checkbox
+                        id="github-event-{type}"
+                        checked={settings.enabled_events.includes(type)}
+                        onCheckedChange={(v) => toggleEvent(type, v === true)}
+                    />
+                    <Label for="github-event-{type}">{t(labelKey as Parameters<typeof t>[0])}</Label>
+                </div>
+            {/each}
+        </div>
     {/if}
 </fieldset>
