@@ -10,7 +10,7 @@ Recall is a desktop app that helps you fill in your Harvest time tracking by bui
 
 The target user is a developer at Reload (the company) who uses Harvest for time tracking.
 
-Roadmap / to-do list lives in `README.md` under "To-Do's" — check it before picking up new work so you can pick something that fits the user's current priorities (items are tagged must-have vs. nice-to-have).
+Roadmap / to-do list lives in [`TODO.md`](./TODO.md) — check it before picking up new work so you can pick something that fits the user's current priorities.
 
 ---
 

@@ -1,0 +1,74 @@
+# To-Do's
+
+Roadmap and ideas for Recall. Items aren't strictly ordered — pick what feels useful.
+
+## Product — close the Harvest loop
+
+The whole point of the app is to feed Harvest, but it doesn't actually talk to Harvest yet. The checkmark is a manual "I did this elsewhere" marker.
+
+- Cheap version: "Copy as Harvest entry" on each event (formatted note + suggested project/task), or a deep link that opens Harvest with the entry prefilled.
+- Real version: Harvest API integration.
+  - Read existing entries so the checkmarks are derived, not manual.
+  - One-click submit per event, or per grouped block.
+- Suggested durations / event grouping. Events are points in time; Harvest wants durations. Heuristic: group consecutive events from the same source/repo/ticket into a block, duration = gap until next block, capped at e.g. 90 min. Pairs naturally with Harvest submit.
+- Per-event notes. Free-text field keyed on the event UUID, used as the Harvest entry note when you submit.
+
+## Reliability & data freshness
+
+- Per-source resilience. Today, any source returning `Err(...)` aborts the whole day in `timeline/mod.rs`. If GitHub is down or the JIRA token expired, the user sees nothing instead of "everything except GitHub".
+  - Switch each source to log its error into a per-source error map.
+  - Emit it alongside `timeline:source` and show a small badge in the loading UI ("GitHub failed — open settings").
+  - Same fix in `get_day_counts_for_month`.
+- "Test connection" buttons per settings panel. A `test_settings_jira` etc. command that does a single auth-checking call and surfaces the actual error inline. Every misconfig today manifests as "no events, no idea why" — the worst possible failure mode.
+- Cache freshness for past days. `timeline_day_cache` is write-once for any elapsed day, but yesterday's data isn't really immutable (a JIRA ticket gets reassigned to you, a PR comment lands at 23:55, a calendar event accepted retroactively shows up).
+  - TTL on cached days (e.g. cache valid for 7 days, then refetch in background and update silently), or
+  - "Refresh this day" button on the timeline header, or
+  - Auto-invalidate the most recent N cached days on app launch.
+
+## Data sources
+
+- Gmail (requires Google OAuth — see AGENTS.md for why this is deferred)
+  - Sent emails
+  - Read emails
+- Google Drive (requires Google OAuth)
+  - Edited/Created files
+  - Read files
+- Zulip — expanded data
+  - Messages you've read
+- Slack. Reload uses Zulip, but client orgs often don't, and many Reload devs are in client Slacks. User-token install is straightforward.
+- Linear. Same trivial PAT auth model as JIRA.
+- Local IDE / editor activity. A small "I had this repo focused for X minutes" signal from VS Code or a generic file-watcher on the repo dir would catch the long stretches of work that produce no commits or comments — the most under-represented category in time tracking.
+
+## Privacy & security
+
+- Move credentials out of plain SQLite into the OS keychain
+  (e.g. `tauri-plugin-stronghold` or the `keyring` crate — macOS Keychain / Windows Credential Manager / Linux Secret Service).
+- Add a screen that shows the last 50 commands / API calls that have been run.
+  - E.g. the terminal commands run by git data sources, or the APIs called by JIRA.
+- "Export & purge all data" button. Pairs naturally with the keychain migration.
+
+## Releases & distribution
+
+- Tauri auto-updater. Today: redownload the DMG and `xattr -cr`. Tauri has the `updater` plugin — set it up against the GitHub Releases artifacts already published.
+- macOS code signing / notarization. Get an Apple developer cert so users don't need the `xattr` workaround. Worth promoting from inline-comment in the README to a real item with a cost note.
+
+## Quality
+
+- Frontend tests. `npm test` is Rust-only. The Svelte side is now non-trivial (DayTimeline has debounce, prefetch, source-progress events, Harvest-done sync). Vitest + a couple of `@testing-library/svelte` tests around `groupEventsByHour`, the debounce behavior, and `toggleDone` rollback-on-error would prevent the obvious regressions.
+
+## Bugs
+
+- Using `local git` source on Windows opens a bunch of terminal windows. Makes it look like a virus.
+
+## UX polish
+
+- Per-source visibility toggle in the timeline header (hide GitHub for a moment without touching settings).
+- Weekly view.
+- "What's missing in Harvest today" inverted view (show un-checked only).
+- Danish localization. `$lib/i18n.svelte` and `t()` are already wired up — shipping `da.json` is a few hours and a nice touch for colleagues at Reload.
+
+## Fun
+
+- Add more transitions and animations.
+- Add a TUI.
+  - Either a real TUI, or a fake one, making the app easily navigated with the keyboard.

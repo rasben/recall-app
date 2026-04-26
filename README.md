@@ -65,23 +65,4 @@ npm run tauri dev
 
 ## To-Do's
 
-- Security
-  - Move credentials out of plain SQLite into the OS keychain
-    (e.g. `tauri-plugin-stronghold` or the `keyring` crate — macOS Keychain / Windows Credential Manager / Linux Secret Service)
-- Bug: Using `local git` source on Windows opens a bunch of terminal windows.
-  - Makes it look like a virus.
-- Gmail data-source (requires Google OAuth — see AGENTS.md for why this is deferred)
-  - Sent emails
-  - Read emails
-- Google Drive (requires Google OAuth)
-  - Edited/Created files
-  - Read files
-- Zulip - expanded data
-  - Messages you've read
-- Privacy/Ease-of-mind
-  - Add a screen, that shows the last 50 commands that has been run
-    - E.g., the terminal commands that has been run by git data sources, or the APIs called by Jira datasources
-- Fun
-  - Add more transitions and animations
-  - Add a TUI
-    - Either a real TUI, or a fake one, making the app easily navigated with keyboard
+See [TODO.md](./TODO.md) for the roadmap and ideas list.
