@@ -22,9 +22,10 @@ pub struct SettingsIcal {
     pub enabled: bool,
     #[serde(default)]
     pub urls: Vec<String>,
-    /// User's email address used to identify their ATTENDEE entry and filter declined events.
+    /// User's email addresses used to identify ATTENDEE entries and filter declined events.
+    /// Multiple are supported because the same iCal feed can include events for several accounts.
     #[serde(default)]
-    pub email: Option<String>,
+    pub emails: Vec<String>,
 }
 
 pub(crate) fn load_settings_ical(state: &State<'_, AppState>) -> SettingsIcal {
@@ -132,10 +133,10 @@ pub(crate) fn start_sync(state: &State<'_, AppState>) {
     // The sync opens its own connection so it never contends with the main DB mutex.
     let db_path = state.db_path.clone();
     let syncing = Arc::clone(&state.ical_syncing);
-    let email = settings.email.clone();
+    let emails = settings.emails.clone();
 
     tauri::async_runtime::spawn_blocking(move || {
-        run_sync(db_path, syncing, urls, email);
+        run_sync(db_path, syncing, urls, emails);
     });
 }
 
@@ -143,7 +144,7 @@ fn run_sync(
     db_path: std::path::PathBuf,
     syncing: Arc<AtomicBool>,
     urls: Vec<String>,
-    user_email: Option<String>,
+    user_emails: Vec<String>,
 ) {
     let mut conn = match rusqlite::Connection::open(&db_path) {
         Ok(c) => c,
@@ -161,13 +162,14 @@ fn run_sync(
 
     let mut last_error: Option<String> = None;
 
-    let email_lower = user_email
-        .as_deref()
+    let emails_lower: Vec<String> = user_emails
+        .into_iter()
         .map(|e| e.trim().to_lowercase())
-        .filter(|e| !e.is_empty());
+        .filter(|e| !e.is_empty())
+        .collect();
 
     for url in &urls {
-        if let Err(e) = sync_one_url(&mut conn, url.trim(), window_start, window_end, &email_lower) {
+        if let Err(e) = sync_one_url(&mut conn, url.trim(), window_start, window_end, &emails_lower) {
             last_error = Some(e);
         }
     }
@@ -188,7 +190,7 @@ fn sync_one_url(
     url: &str,
     window_start: NaiveDate,
     window_end: NaiveDate,
-    user_email: &Option<String>,
+    user_emails: &[String],
 ) -> Result<(), String> {
     let mut resp = ureq::get(url)
         .header("Accept", "text/calendar")
@@ -196,7 +198,7 @@ fn sync_one_url(
         .map_err(|e| format!("iCal fetch: {e}"))?;
     let content = resp.body_mut().read_to_string().map_err(|e| format!("iCal read: {e}"))?;
 
-    let events = parse_and_expand(&content, window_start, window_end, user_email);
+    let events = parse_and_expand(&content, window_start, window_end, user_emails);
 
     // A single transaction makes thousands of inserts orders of magnitude faster.
     let tx = conn.transaction().map_err(|e| e.to_string())?;
@@ -239,7 +241,7 @@ struct ExpandedEvent {
     declined: bool,
 }
 
-fn parse_events_from_ics(body: &str, user_email: &Option<String>) -> Vec<ParsedEvent> {
+fn parse_events_from_ics(body: &str, user_emails: &[String]) -> Vec<ParsedEvent> {
     let reader = BufReader::new(body.as_bytes());
     let parser = IcalParser::new(reader);
     let mut events = Vec::new();
@@ -288,9 +290,9 @@ fn parse_events_from_ics(body: &str, user_email: &Option<String>) -> Vec<ParsedE
 
             let uid = get("UID").unwrap_or_else(|| format!("no-uid:{dtstart_val}"));
 
-            // Declined: true if the user's ATTENDEE entry has PARTSTAT=DECLINED.
-            let declined = match user_email {
-                Some(email) => event
+            // Declined: true if any of the user's ATTENDEE entries has PARTSTAT=DECLINED.
+            let declined = !user_emails.is_empty()
+                && event
                     .properties
                     .iter()
                     .filter(|p| p.name == "ATTENDEE")
@@ -298,7 +300,10 @@ fn parse_events_from_ics(body: &str, user_email: &Option<String>) -> Vec<ParsedE
                         let value_matches = p
                             .value
                             .as_deref()
-                            .map(|v| v.to_lowercase().contains(email.as_str()))
+                            .map(|v| {
+                                let v_lower = v.to_lowercase();
+                                user_emails.iter().any(|e| v_lower.contains(e.as_str()))
+                            })
                             .unwrap_or(false);
                         let partstat_declined = p
                             .params
@@ -307,9 +312,7 @@ fn parse_events_from_ics(body: &str, user_email: &Option<String>) -> Vec<ParsedE
                             .map(|(_, v)| v.iter().any(|s| s == "DECLINED"))
                             .unwrap_or(false);
                         value_matches && partstat_declined
-                    }),
-                None => false,
-            };
+                    });
 
             events.push(ParsedEvent {
                 uid,
@@ -334,9 +337,9 @@ fn parse_and_expand(
     body: &str,
     window_start: NaiveDate,
     window_end: NaiveDate,
-    user_email: &Option<String>,
+    user_emails: &[String],
 ) -> Vec<ExpandedEvent> {
-    let parsed = parse_events_from_ics(body, user_email);
+    let parsed = parse_events_from_ics(body, user_emails);
 
     // Collect RECURRENCE-ID overrides per uid so we can skip those master occurrences.
     let mut overridden_ts: HashMap<String, HashSet<i64>> = HashMap::new();
@@ -521,7 +524,7 @@ mod tests {
                    END:VEVENT\r\nEND:VCALENDAR\r\n";
 
         let (ws, we) = window();
-        let events = parse_and_expand(ics, ws, we, &None);
+        let events = parse_and_expand(ics, ws, we, &[]);
 
         assert_eq!(events.len(), 1);
         assert_eq!(events[0].summary, "Team Standup");
@@ -539,7 +542,7 @@ mod tests {
                    END:VEVENT\r\nEND:VCALENDAR\r\n";
 
         let (ws, we) = window();
-        let events = parse_and_expand(ics, ws, we, &None);
+        let events = parse_and_expand(ics, ws, we, &[]);
         assert!(events.is_empty(), "All-day events must be excluded");
     }
 
@@ -552,8 +555,8 @@ mod tests {
                    END:VEVENT\r\nEND:VCALENDAR\r\n";
 
         let (ws, we) = window();
-        let email = Some("user@example.com".to_string());
-        let events = parse_and_expand(ics, ws, we, &email);
+        let emails = vec!["user@example.com".to_string()];
+        let events = parse_and_expand(ics, ws, we, &emails);
 
         assert_eq!(events.len(), 1);
         assert!(events[0].declined, "Event should be marked declined");
@@ -568,8 +571,8 @@ mod tests {
                    END:VEVENT\r\nEND:VCALENDAR\r\n";
 
         let (ws, we) = window();
-        let email = Some("user@example.com".to_string());
-        let events = parse_and_expand(ics, ws, we, &email);
+        let emails = vec!["user@example.com".to_string()];
+        let events = parse_and_expand(ics, ws, we, &emails);
 
         assert_eq!(events.len(), 1);
         assert!(!events[0].declined);
@@ -585,7 +588,7 @@ mod tests {
                    END:VEVENT\r\nEND:VCALENDAR\r\n";
 
         let (ws, we) = window();
-        let events = parse_and_expand(ics, ws, we, &None);
+        let events = parse_and_expand(ics, ws, we, &[]);
 
         assert_eq!(events.len(), 4, "Should expand to 4 weekly occurrences");
         assert!(events.iter().all(|e| e.summary == "Weekly Sync"));
@@ -601,7 +604,7 @@ mod tests {
                    END:VEVENT\r\nEND:VCALENDAR\r\n";
 
         let (ws, we) = window();
-        let events = parse_and_expand(ics, ws, we, &None);
+        let events = parse_and_expand(ics, ws, we, &[]);
 
         assert_eq!(events.len(), 2, "EXDATE should remove one occurrence");
     }
@@ -614,7 +617,7 @@ mod tests {
                    END:VEVENT\r\nEND:VCALENDAR\r\n";
 
         let (ws, we) = window();
-        let events = parse_and_expand(ics, ws, we, &None);
+        let events = parse_and_expand(ics, ws, we, &[]);
         assert!(events.is_empty(), "Event outside window should be excluded");
     }
 
@@ -627,7 +630,7 @@ mod tests {
                    END:VEVENT\r\nEND:VCALENDAR\r\n";
 
         let (ws, we) = window();
-        let events = parse_and_expand(ics, ws, we, &None);
+        let events = parse_and_expand(ics, ws, we, &[]);
 
         assert_eq!(events.len(), 1);
         assert_eq!(
