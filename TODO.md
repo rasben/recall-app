@@ -7,11 +7,7 @@ Roadmap and ideas for Recall. Items aren't strictly ordered — pick what feels 
 The whole point of the app is to feed Harvest, but it doesn't actually talk to Harvest yet. The checkmark is a manual "I did this elsewhere" marker.
 
 - Cheap version: "Copy as Harvest entry" on each event (formatted note + suggested project/task), or a deep link that opens Harvest with the entry prefilled.
-- Real version: Harvest API integration.
-  - Read existing entries so the checkmarks are derived, not manual.
-  - One-click submit per event, or per grouped block.
 - Suggested durations / event grouping. Events are points in time; Harvest wants durations. Heuristic: group consecutive events from the same source/repo/ticket into a block, duration = gap until next block, capped at e.g. 90 min. Pairs naturally with Harvest submit.
-- Per-event notes. Free-text field keyed on the event UUID, used as the Harvest entry note when you submit.
 
 ## Data sources
 
@@ -51,7 +47,6 @@ The whole point of the app is to feed Harvest, but it doesn't actually talk to H
 ## UX polish
 
 - Per-source visibility toggle in the timeline header (hide GitHub for a moment without touching settings).
-- Weekly view.
 - "What's missing in Harvest today" inverted view (show un-checked only).
 
 ## Fun
