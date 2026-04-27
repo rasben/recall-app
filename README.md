@@ -63,6 +63,10 @@ npm run tauri dev
 >
 > If that matters to you, use tokens with the narrowest scope you can, and treat them as rotatable.
 
+## Privacy & analytics
+
+The app pings [Plausible](https://plausible.io) on launch — a cookie-free, privacy-first analytics tool. No personal data, no fingerprinting.
+
 ## To-Do's
 
 See [TODO.md](./TODO.md) for the roadmap and ideas list.
