@@ -49,13 +49,18 @@ pub fn run() {
         .setup(move |app| {
             let (conn, db_path) = db::init_db(app.handle())?;
 
+            let db_arc = Arc::new(Mutex::new(conn));
+
             app.manage(AppState {
-                db: Arc::new(Mutex::new(conn)),
+                db: db_arc.clone(),
                 db_path,
                 ical_syncing: Arc::new(AtomicBool::new(false)),
             });
 
             builder.mount_events(app);
+
+            // Anonymous once-per-day ping so we can see rough usage via GitHub Insights
+            commands::telemetry::maybe_ping(db_arc);
 
             Ok(())
         })

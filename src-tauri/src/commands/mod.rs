@@ -1,4 +1,5 @@
 pub mod harvest_done;
+pub mod telemetry;
 pub mod settings;
 pub mod settings_git;
 pub mod settings_github;
