@@ -33,8 +33,7 @@ The whole point of the app is to feed Harvest, but it doesn't actually talk to H
 
 ## Releases & distribution
 
-- Tauri auto-updater. Today: redownload the DMG and `xattr -cr`. Tauri has the `updater` plugin — set it up against the GitHub Releases artifacts already published.
-- macOS code signing / notarization. Get an Apple developer cert so users don't need the `xattr` workaround. Worth promoting from inline-comment in the README to a real item with a cost note.
+- Tauri auto-updater. Today: redownload the DMG. Tauri has the `updater` plugin — set it up against the GitHub Releases artifacts already published.
 
 ## Quality
 
