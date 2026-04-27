@@ -6,6 +6,7 @@
   import { onMount } from "svelte";
   import { commands, type SettingsJira, type JiraEvent } from "../../bindings";
   import PasswordInput from "../ui/PasswordInput.svelte";
+  import TestConnectionButton from "../ui/TestConnectionButton.svelte";
   import { t } from "$lib/i18n.svelte";
 
   const defaultSiteUrl = "https://reload.atlassian.net";
@@ -55,7 +56,7 @@
     const next: SettingsJira = { ...settings, ...partial };
     const result = await commands.setSettingsJira(next);
     if (result.status === "error") {
-      toast.error(t("settings.jira.error_save"));
+      toast.error(t("settings.jira.error_save"), {richColors: true});
       return false;
     }
     settings = next;
@@ -102,7 +103,7 @@
     const ok = await persist({ api_token: apiToken });
     if (!ok) {
       apiToken = original;
-      toast.error(t("settings.jira.error_token"));
+      toast.error(t("settings.jira.error_token"), {richColors: true});
     } else {
       toast.success(t("settings.jira.saved_token"));
     }
@@ -118,12 +119,12 @@
     if (!ok) {
       enabledEvents = original;
       settings.enabled_events = original;
-      toast.error(t("settings.jira.error_events"));
+      toast.error(t("settings.jira.error_events"), {richColors: true});
     }
   }
 </script>
 
-<fieldset class="border-2 p-4 mt-6">
+<fieldset class="relative border-2 p-4 mt-6">
   <legend>{t("settings.jira.legend")}</legend>
 
   <div class="flex items-center gap-2 mb-4">
@@ -167,7 +168,6 @@
     />
 
     {#if apiToken}
-
     <Label class="mb-2">{t("settings.jira.events_label")}</Label>
     <div class="flex flex-col gap-2">
       {#each Object.entries(eventTypeMap) as [, { type, labelKey }]}
@@ -182,5 +182,7 @@
       {/each}
     </div>
     {/if}
+
+    <TestConnectionButton test={commands.testSettingsJira} />
   {/if}
 </fieldset>

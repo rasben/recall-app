@@ -18,6 +18,8 @@ use crate::timeline::TimelineEvent;
 struct SourceProgress {
     source: &'static str,
     done: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
 }
 
 #[tauri::command]
@@ -44,43 +46,83 @@ pub async fn get_timeline_for_day(
         }
 
         let loading = |source: &'static str| {
-            let _ = app.emit("timeline:source", SourceProgress { source, done: false });
+            let _ = app.emit("timeline:source", SourceProgress { source, done: false, error: None });
         };
         let done = |source: &'static str| {
-            let _ = app.emit("timeline:source", SourceProgress { source, done: true });
+            let _ = app.emit("timeline:source", SourceProgress { source, done: true, error: None });
+        };
+        let fail = |source: &'static str, err: String| {
+            let _ = app.emit("timeline:source", SourceProgress { source, done: true, error: Some(err) });
         };
 
         let mut rows: Vec<(i64, TimelineEvent)> = Vec::new();
+        let mut any_error = false;
 
         loading("Git");
-        rows.extend(git::events_for_day(&state, &day)?);
-        done("Git");
+        match git::events_for_day(&state, &day) {
+            Ok(r) => { rows.extend(r); done("Git"); }
+            Err(e) => { any_error = true; fail("Git", e); }
+        }
 
         loading("GitHub");
-        rows.extend(github::events_for_day(&state, &day)?);
-        done("GitHub");
+        match github::events_for_day(&state, &day) {
+            Ok(r) => { rows.extend(r); done("GitHub"); }
+            Err(e) => { any_error = true; fail("GitHub", e); }
+        }
 
         loading("Calendar");
-        rows.extend(ical::events_for_day(&state, &day)?);
-        done("Calendar");
+        match ical::events_for_day(&state, &day) {
+            Ok(r) => { rows.extend(r); done("Calendar"); }
+            Err(e) => { any_error = true; fail("Calendar", e); }
+        }
 
         loading("Jira");
-        rows.extend(jira::events_for_day(&state, &day)?);
-        done("Jira");
+        match jira::events_for_day(&state, &day) {
+            Ok(r) => { rows.extend(r); done("Jira"); }
+            Err(e) => { any_error = true; fail("Jira", e); }
+        }
 
         loading("Zulip");
-        rows.extend(zulip::events_for_day(&state, &day)?);
-        done("Zulip");
+        match zulip::events_for_day(&state, &day) {
+            Ok(r) => { rows.extend(r); done("Zulip"); }
+            Err(e) => { any_error = true; fail("Zulip", e); }
+        }
 
         rows.sort_by_key(|(ts, _)| *ts);
         let events: Vec<TimelineEvent> = rows.into_iter().map(|(_, ev)| ev).collect();
 
-        if use_cache {
+        // Skip caching if any source failed — partial results must not become
+        // permanent since the missing data would never be re-fetched.
+        if use_cache && !any_error {
             let _ = cache::save_cached_day(&state, &day, &events);
         }
 
         Ok(events)
     })
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn test_settings_git(state: State<'_, AppState>) -> Result<(), String> {
+    tokio::task::block_in_place(|| git::test_connection(&state))
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn test_settings_github(state: State<'_, AppState>) -> Result<(), String> {
+    tokio::task::block_in_place(|| github::test_connection(&state))
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn test_settings_jira(state: State<'_, AppState>) -> Result<(), String> {
+    tokio::task::block_in_place(|| jira::test_connection(&state))
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn test_settings_zulip(state: State<'_, AppState>) -> Result<(), String> {
+    tokio::task::block_in_place(|| zulip::test_connection(&state))
 }
 
 /// Fetch event counts for every elapsed day of the given calendar month,
@@ -166,31 +208,46 @@ pub async fn get_day_counts_for_month(
         // Emit per-source progress so the frontend can show a real progress
         // bar on the "load month" button instead of an opaque spinner.
         let loading = |source: &'static str| {
-            let _ = app.emit("month:source", SourceProgress { source, done: false });
+            let _ = app.emit("month:source", SourceProgress { source, done: false, error: None });
         };
         let done = |source: &'static str| {
-            let _ = app.emit("month:source", SourceProgress { source, done: true });
+            let _ = app.emit("month:source", SourceProgress { source, done: true, error: None });
+        };
+        let fail = |source: &'static str, err: String| {
+            let _ = app.emit("month:source", SourceProgress { source, done: true, error: Some(err) });
         };
 
+        let mut any_error = false;
+
         loading("Git");
-        extend(git::events_for_range(&state, fetch_start, fetch_end)?);
-        done("Git");
+        match git::events_for_range(&state, fetch_start, fetch_end) {
+            Ok(r) => { extend(r); done("Git"); }
+            Err(e) => { any_error = true; fail("Git", e); }
+        }
 
         loading("GitHub");
-        extend(github::events_for_range(&state, fetch_start, fetch_end)?);
-        done("GitHub");
+        match github::events_for_range(&state, fetch_start, fetch_end) {
+            Ok(r) => { extend(r); done("GitHub"); }
+            Err(e) => { any_error = true; fail("GitHub", e); }
+        }
 
         loading("Calendar");
-        extend(ical::events_for_range(&state, fetch_start, fetch_end)?);
-        done("Calendar");
+        match ical::events_for_range(&state, fetch_start, fetch_end) {
+            Ok(r) => { extend(r); done("Calendar"); }
+            Err(e) => { any_error = true; fail("Calendar", e); }
+        }
 
         loading("Jira");
-        extend(jira::events_for_range(&state, fetch_start, fetch_end)?);
-        done("Jira");
+        match jira::events_for_range(&state, fetch_start, fetch_end) {
+            Ok(r) => { extend(r); done("Jira"); }
+            Err(e) => { any_error = true; fail("Jira", e); }
+        }
 
         loading("Zulip");
-        extend(zulip::events_for_range(&state, fetch_start, fetch_end)?);
-        done("Zulip");
+        match zulip::events_for_range(&state, fetch_start, fetch_end) {
+            Ok(r) => { extend(r); done("Zulip"); }
+            Err(e) => { any_error = true; fail("Zulip", e); }
+        }
 
         for day in uncached {
             let iso = day.format("%Y-%m-%d").to_string();
@@ -198,7 +255,9 @@ pub async fn get_day_counts_for_month(
             rows.sort_by_key(|(ts, _)| *ts);
             let events: Vec<TimelineEvent> = rows.into_iter().map(|(_, ev)| ev).collect();
             counts.insert(iso.clone(), events.len() as u32);
-            let _ = cache::save_cached_day(&state, &iso, &events);
+            if !any_error {
+                let _ = cache::save_cached_day(&state, &iso, &events);
+            }
         }
 
         Ok(counts)

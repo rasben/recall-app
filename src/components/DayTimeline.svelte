@@ -27,6 +27,7 @@
   let selectedDate = $derived(navState.selectedDate);
   let events = $state<TimelineEvent[]>([]);
   let loadError = $state<string | null>(null);
+  let sourceErrors = $state(new Map<string, string>());
   let doneIds = $state<Set<string>>(new Set());
   let isLoading = $state(true);
   let loadingSource = $state<string | null>(null);
@@ -37,10 +38,13 @@
   let pastInitialDay = $state(false);
 
   let unlistenSource: (() => void) | null = null;
-  listen<{ source: string; done: boolean }>("timeline:source", ({ payload }) => {
+  listen<{ source: string; done: boolean; error?: string }>("timeline:source", ({ payload }) => {
     if (payload.done) {
       doneSources = new Set([...doneSources, payload.source]);
       loadingSource = null;
+      if (payload.error) {
+        sourceErrors = new Map([...sourceErrors, [payload.source, payload.error]]);
+      }
     } else {
       loadingSource = payload.source;
     }
@@ -89,6 +93,7 @@
 
     doneIds = new Set();
     doneSources = new Set();
+    sourceErrors = new Map();
     loadingSource = null;
     loadError = null;
     events = [];
@@ -169,6 +174,17 @@
     </p>
   {/if}
 
+  {#if !isLoading && sourceErrors.size > 0}
+    <div
+      class="rounded border-2 border-destructive/50 bg-destructive/5 p-3 space-y-1"
+      transition:fade={{ duration: 200, easing: cubicOut }}
+    >
+      {#each [...sourceErrors.entries()] as [source, error]}
+        <p class="text-sm text-destructive"><strong>{source}:</strong> {error}</p>
+      {/each}
+    </div>
+  {/if}
+
   <div class="relative">
   {#if settingsLoaded && enabledSources.length === 0}
     <MissingSettings message={t("timeline.no_sources")} />
@@ -176,7 +192,7 @@
     <Waiting />
   {:else if isLoading}
     <div class="absolute inset-x-0" in:fade={{ duration: 180, easing: cubicOut }} out:fade={{ duration: 240, easing: cubicOut }}>
-      <Loading currentSource={loadingSource} {doneSources} {enabledSources} />
+      <Loading currentSource={loadingSource} {doneSources} {enabledSources} {sourceErrors} />
     </div>
     <NyanCat />
   {:else if events.length === 0 && !loadError}

@@ -19,7 +19,7 @@
         applyTheme(value);
         const result = await commands.setSettingsUi(settings);
         if (result.status === "error") {
-            toast.error(t("settings.theme.error"));
+            toast.error(t("settings.theme.error"), {richColors: true});
         } else {
             toast.success(t("settings.theme.saved"));
         }

@@ -9,6 +9,7 @@
   import { commands } from "../../bindings";
   import type { SettingsGit } from "../../bindings"
   import FolderOpen from "@lucide/svelte/icons/folder-open";
+  import TestConnectionButton from "../ui/TestConnectionButton.svelte";
   import { t } from "$lib/i18n.svelte";
 
   let settings = $state<SettingsGit>({ enabled: false, path: "~/code" });
@@ -28,13 +29,13 @@
       const ok = await save();
       if (!ok) {
           settings.enabled = !checked;
-          toast.error(t("settings.git.error_enable"));
+          toast.error(t("settings.git.error_enable"), {richColors: true});
       }
   }
 
   async function setPath() {
       const ok = await save();
-      if (!ok) toast.error(t("settings.git.error_path"));
+      if (!ok) toast.error(t("settings.git.error_path"), {richColors: true});
       else toast.success(t("settings.git.saved_path"));
   }
 
@@ -48,7 +49,7 @@
 </script>
 
 
-<fieldset class="border-2 p-4 mt-6">
+<fieldset class="relative border-2 p-4 mt-6">
     <legend>{t("settings.git.legend")}</legend>
 
     <div class="flex items-center gap-2 mb-4">
@@ -79,5 +80,7 @@
               {t("settings.git.path_hint", { path: settings.path })}
             </p>
         {/if}
+
+        <TestConnectionButton test={commands.testSettingsGit} />
     {/if}
 </fieldset>

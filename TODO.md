@@ -15,11 +15,6 @@ The whole point of the app is to feed Harvest, but it doesn't actually talk to H
 
 ## Reliability & data freshness
 
-- Per-source resilience. Today, any source returning `Err(...)` aborts the whole day in `timeline/mod.rs`. If GitHub is down or the JIRA token expired, the user sees nothing instead of "everything except GitHub".
-  - Switch each source to log its error into a per-source error map.
-  - Emit it alongside `timeline:source` and show a small badge in the loading UI ("GitHub failed — open settings").
-  - Same fix in `get_day_counts_for_month`.
-- "Test connection" buttons per settings panel. A `test_settings_jira` etc. command that does a single auth-checking call and surfaces the actual error inline. Every misconfig today manifests as "no events, no idea why" — the worst possible failure mode.
 - Cache freshness for past days. `timeline_day_cache` is write-once for any elapsed day, but yesterday's data isn't really immutable (a JIRA ticket gets reassigned to you, a PR comment lands at 23:55, a calendar event accepted retroactively shows up).
   - TTL on cached days (e.g. cache valid for 7 days, then refetch in background and update silently), or
   - "Refresh this day" button on the timeline header, or

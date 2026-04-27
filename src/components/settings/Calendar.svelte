@@ -53,7 +53,7 @@
     const next: SettingsIcal = { ...settings, ...partial };
     const result = await commands.setSettingsIcal(next);
     if (result.status === "error") {
-      toast.error(t("settings.calendar.error_save"));
+      toast.error(t("settings.calendar.error_save"), {richColors: true});
       return false;
     }
     settings = next;

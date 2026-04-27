@@ -19,6 +19,35 @@ fn normalize_realm_url(raw: &str) -> String {
     raw.trim().trim_end_matches('/').to_string()
 }
 
+pub(super) fn test_connection(state: &State<'_, AppState>) -> Result<(), String> {
+    let Some(settings) = get_settings_zulip(state.clone()) else {
+        return Err("Zulip is not configured".into());
+    };
+    let realm = normalize_realm_url(&settings.realm_url);
+    if realm.is_empty() {
+        return Err("Realm URL is required".into());
+    }
+    if settings.email.trim().is_empty() || settings.api_key.trim().is_empty() {
+        return Err("Email and API key are required".into());
+    }
+    let url = format!("{realm}/api/v1/users/me");
+    let auth = format!(
+        "Basic {}",
+        STANDARD.encode(format!("{}:{}", settings.email.trim(), settings.api_key.trim()))
+    );
+    match ureq::get(&url)
+        .header("Authorization", &auth)
+        .header("Accept", "application/json")
+        .call()
+    {
+        Ok(_) => Ok(()),
+        Err(ureq::Error::StatusCode(status)) => Err(format!(
+            "Zulip returned HTTP {status} — check realm URL, email, and API key"
+        )),
+        Err(e) => Err(format!("Zulip request failed: {e}")),
+    }
+}
+
 pub(super) fn events_for_day(
     state: &State<'_, AppState>,
     day: &str,

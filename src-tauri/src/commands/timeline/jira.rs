@@ -62,6 +62,28 @@ pub(crate) fn jira_request_json(
     Ok((status, body))
 }
 
+pub(super) fn test_connection(state: &State<'_, AppState>) -> Result<(), String> {
+    let Some(settings) = get_settings_jira(state.clone()) else {
+        return Err("Jira is not configured".into());
+    };
+    let base = normalize_site_url(&settings.site_url);
+    if base.is_empty() {
+        return Err("Site URL is required".into());
+    }
+    if settings.email.trim().is_empty() || settings.api_token.trim().is_empty() {
+        return Err("Email and API token are required".into());
+    }
+    let url = format!("{base}/rest/api/3/myself");
+    let (status, _) =
+        jira_request_json("myself", "GET", &url, settings.email.trim(), settings.api_token.trim(), None)?;
+    if status >= 400 {
+        return Err(format!(
+            "Jira returned HTTP {status} — check site URL, email, and API token"
+        ));
+    }
+    Ok(())
+}
+
 pub(super) fn events_for_day(
     state: &State<'_, AppState>,
     day: &str,

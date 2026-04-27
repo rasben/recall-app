@@ -18,7 +18,7 @@
 <SettingsUI />
 <SettingsGit />
 <SettingsGitHub />
-<SettingsCalendar />
 <SettingsJira />
 <SettingsZulip />
+<SettingsCalendar />
 <SettingsSystem {onShowWelcome} />

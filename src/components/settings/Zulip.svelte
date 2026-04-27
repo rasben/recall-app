@@ -6,6 +6,7 @@
   import { onMount } from "svelte";
   import { commands, type SettingsZulip } from "../../bindings";
   import PasswordInput from "../ui/PasswordInput.svelte";
+  import TestConnectionButton from "../ui/TestConnectionButton.svelte";
   import { t } from "$lib/i18n.svelte";
 
   const defaultRealmUrl = "https://reload.zulipchat.com";
@@ -39,7 +40,7 @@
     const next: SettingsZulip = { ...settings, ...partial };
     const result = await commands.setSettingsZulip(next);
     if (result.status === "error") {
-      toast.error(t("settings.zulip.error_save"));
+      toast.error(t("settings.zulip.error_save"), {richColors: true});
       return false;
     }
     settings = next;
@@ -85,9 +86,10 @@
       toast.success(t("settings.zulip.saved_api_key"));
     }
   }
+
 </script>
 
-<fieldset class="border-2 p-4 mt-6">
+<fieldset class="relative border-2 p-4 mt-6">
   <legend>{t("settings.zulip.legend")}</legend>
 
   <div class="flex items-center gap-2 mb-4">
@@ -122,11 +124,13 @@
 
     <Label for="zulip-realm-url" class="mb-2">{t("settings.zulip.realm_url")}</Label>
     <Input
-            id="zulip-realm-url"
-            type="url"
-            placeholder={defaultRealmUrl}
-            bind:value={realmUrl}
-            onblur={saveRealmUrl}
+      id="zulip-realm-url"
+      type="url"
+      placeholder={defaultRealmUrl}
+      bind:value={realmUrl}
+      onblur={saveRealmUrl}
     />
+
+    <TestConnectionButton test={commands.testSettingsZulip} />
   {/if}
 </fieldset>
