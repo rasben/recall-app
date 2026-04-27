@@ -140,3 +140,5 @@ jobs:
             gh release upload "$TAG" --repo "$REPO" --clobber "/tmp/assets/${FRIENDLY}"
             gh api "repos/${REPO}/releases/assets/${ASSET_ID}" -X DELETE
           done <<< "$ASSETS"
+
+          gh release edit "$TAG" --repo "$REPO" --draft=false
