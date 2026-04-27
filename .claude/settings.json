@@ -1,15 +1,21 @@
 {
   "permissions": {
     "allow": [
-      "Read(/Users/rasben/code/recall/**)",
-      "Write(/Users/rasben/code/recall/**)",
-      "Bash(cargo doc *)",
-      "Bash(cargo info *)",
       "Bash(cargo check *)",
-      "Bash(cargo build *)",
       "Bash(npm run *)",
-      "Bash(npm install *)",
-      "Bash(timeout * ./target/debug/recall-app)"
+      "Bash(cargo build *)",
+      "Bash(timeout 3 ./target/debug/recall-app)",
+      "Bash(timeout 5 ./target/debug/recall-app)",
+      "Bash(cargo search *)",
+      "Bash(cargo info *)",
+      "Bash(cargo doc *)",
+      "Bash(grep -E \"^d|\\\\.json$|\\\\.config\")",
+      "Bash(cargo test *)",
+      "Bash(cargo clippy *)",
+      "Bash(gh api *)",
+      "Bash(python3 -c ' *)",
+      "Bash(git commit -m ' *)",
+      "Bash(rm /Users/rasben/code/recall/.git/index.lock)"
     ]
   }
 }

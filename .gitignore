@@ -10,3 +10,4 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .zuliprc
 .claude/worktrees
+.claude/settings.local.json
