@@ -153,6 +153,7 @@ These patterns are intentional; follow them when adding settings areas or data s
 ### Tests
 
 - `npm test` — runs all Rust unit + integration tests (wraps `cargo test --lib`).
+- `npm run test:frontend` — runs Vitest unit tests for the Svelte/TypeScript side (config: `vitest.config.ts`). Test files live alongside source as `*.test.ts` under `src/`.
 - Unit tests live as `#[cfg(test)] mod tests { … }` at the bottom of each source file.
 - Integration tests that hit real APIs are skipped automatically when the relevant env vars are absent (see secret names below). They run in CI when secrets are set via GitHub repo Settings → Secrets.
 
