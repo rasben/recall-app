@@ -5,6 +5,7 @@
   import MessageSquare from "@lucide/svelte/icons/message-square";
   import TicketCheck from "@lucide/svelte/icons/ticket-check";
   import Check from "@lucide/svelte/icons/check";
+  import X from "@lucide/svelte/icons/x";
   import type { Component } from "svelte";
   import { t } from "$lib/i18n.svelte";
 
@@ -12,10 +13,12 @@
     currentSource = null,
     doneSources = new Set(),
     enabledSources = [],
+    sourceErrors = new Map(),
   }: {
     currentSource?: string | null;
     doneSources?: Set<string>;
     enabledSources?: string[];
+    sourceErrors?: Map<string, string>;
   } = $props();
 
   const sourceList: { name: string; Icon: Component }[] = [
@@ -54,18 +57,23 @@
   {#if filteredSources.length > 0}
     <div class="grid" style="grid-template-columns: repeat({filteredSources.length}, 1fr)">
       {#each filteredSources as { name, Icon }, i}
-        {@const isDone = doneSources.has(name)}
+        {@const isError = sourceErrors.has(name)}
+        {@const isDone = doneSources.has(name) && !isError}
         {@const isActive = currentSource === name}
         <div
           class="border-2 px-2 py-4 flex flex-col items-center gap-2 transition-colors duration-300
             {i > 0 ? '-ml-[2px]' : ''}
-            {isDone
-              ? 'bg-primary border-foreground text-primary-foreground'
-              : isActive
-                ? 'bg-secondary text-secondary-foreground border-foreground animate-pulse'
-                : 'border-border opacity-35'}"
+            {isError
+              ? 'bg-destructive border-destructive text-destructive-foreground'
+              : isDone
+                ? 'bg-primary border-foreground text-primary-foreground'
+                : isActive
+                  ? 'bg-secondary text-secondary-foreground border-foreground animate-pulse'
+                  : 'border-border opacity-35'}"
         >
-          {#if isDone}
+          {#if isError}
+            <X class="size-5" />
+          {:else if isDone}
             <Check class="size-5" />
           {:else}
             <Icon class="size-5" />

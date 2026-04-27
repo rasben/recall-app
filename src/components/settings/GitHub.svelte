@@ -7,6 +7,7 @@
     import { commands, type SettingsGitHub, type GitHubEvent } from "../../bindings";
     import { t } from "$lib/i18n.svelte";
     import PasswordInput from "../ui/PasswordInput.svelte";
+    import TestConnectionButton from "../ui/TestConnectionButton.svelte";
 
     const eventTypeMap: Record<string, { type: GitHubEvent; labelKey: string }> = {
         pullRequestEvent: { type: "PullRequestEvent", labelKey: "settings.github.event.pull_request" },
@@ -39,13 +40,13 @@
 
     async function toggleEnabled(checked: boolean) {
         const ok = await persist({ enabled: checked });
-        if (!ok) toast.error(t("settings.github.error_enable"));
+        if (!ok) toast.error(t("settings.github.error_enable"), {richColors: true});
     }
 
     async function saveCredentials() {
         const ok = await persist({});
         if (ok) toast.success(t("settings.github.saved"));
-        else toast.error(t("settings.github.error_save"));
+        else toast.error(t("settings.github.error_save"), {richColors: true});
     }
 
     async function toggleEvent(type: GitHubEvent, checked: boolean) {
@@ -54,11 +55,12 @@
             ? (current.includes(type) ? current : [...current, type])
             : current.filter((e) => e !== type);
         const ok = await persist({ enabled_events: next });
-        if (!ok) toast.error(t("settings.github.error_events"));
+        if (!ok) toast.error(t("settings.github.error_events"), {richColors: true});
     }
+
 </script>
 
-<fieldset class="border-2 p-4 mt-6">
+<fieldset class="relative border-2 p-4 mt-6">
     <legend>{t("settings.github.legend")}</legend>
 
     <div class="flex items-center gap-2 mb-4">
@@ -103,5 +105,7 @@
                 </div>
             {/each}
         </div>
+
+        <TestConnectionButton test={commands.testSettingsGithub} />
     {/if}
 </fieldset>

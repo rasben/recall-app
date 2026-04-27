@@ -24,6 +24,32 @@ struct RepoScanCache {
 
 static REPO_SCAN_CACHE: Mutex<Option<RepoScanCache>> = Mutex::new(None);
 
+pub(super) fn test_connection(state: &State<'_, AppState>) -> Result<(), String> {
+    let Some(settings) = get_settings_git(state.clone()) else {
+        return Err("Git is not configured".into());
+    };
+    let root = settings.path;
+    if root.is_empty() {
+        return Err("Scan path is required".into());
+    }
+    let root_path = PathBuf::from(&root);
+    if !root_path.is_dir() {
+        return Err(format!("{root} is not a directory"));
+    }
+    let repos =
+        cached_repo_scan(&root_path).map_err(|e| format!("Failed to scan {root}: {e}"))?;
+    if repos.is_empty() {
+        return Err(format!("No git repositories found under {root}"));
+    }
+    let author = resolve_git_user_name(&repos, &root_path).unwrap_or_default();
+    if author.is_empty() {
+        return Err(
+            "Could not determine git user.name — set it with: git config --global user.name \"Your Name\"".into()
+        );
+    }
+    Ok(())
+}
+
 pub(super) fn events_for_day(
     state: &State<'_, AppState>,
     day: &str,

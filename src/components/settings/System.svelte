@@ -30,7 +30,7 @@
         clearing = false;
 
         if (result.status === "error") {
-            toast.error(t("settings.cache.error"));
+            toast.error(t("settings.cache.error"), {richColors: true});
         } else {
             toast.success(t("settings.cache.cleared"));
             await loadSize();

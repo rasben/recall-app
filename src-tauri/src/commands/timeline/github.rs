@@ -289,6 +289,29 @@ fn parse_github_datetime(s: &str) -> Result<DateTime<Utc>, String> {
         .map_err(|e| format!("Invalid GitHub timestamp {s:?}: {e}"))
 }
 
+pub(super) fn test_connection(state: &State<'_, AppState>) -> Result<(), String> {
+    let Some(settings) = get_settings_github(state.clone()) else {
+        return Err("GitHub is not configured".into());
+    };
+    if settings.username.is_empty() || settings.token.is_empty() {
+        return Err("Username and Personal Access Token are required".into());
+    }
+    let auth = format!("Bearer {}", settings.token);
+    match ureq::get("https://api.github.com/user")
+        .header("Authorization", &auth)
+        .header("Accept", "application/vnd.github+json")
+        .header("X-GitHub-Api-Version", "2022-11-28")
+        .header("User-Agent", "recall-app")
+        .call()
+    {
+        Ok(_) => Ok(()),
+        Err(ureq::Error::StatusCode(status)) => Err(format!(
+            "GitHub API returned HTTP {status} — check your username and token"
+        )),
+        Err(e) => Err(format!("GitHub request failed: {e}")),
+    }
+}
+
 fn rest_api_user_events(
     username: &str,
     token: &str,

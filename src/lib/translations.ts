@@ -39,6 +39,10 @@ const en = {
   "settings.theme.saved": "Theme updated!",
   "settings.theme.error": "Failed to save theme",
 
+  // Test connection (shared)
+  "settings.test_connection": "Test",
+  "settings.test_connection.ok": "Connected",
+
   // Git
   "settings.git.legend": "Local Git commits",
   "settings.git.enable": "Enable local git source",
@@ -192,6 +196,9 @@ const da: Translations = {
   "settings.theme.system": "System",
   "settings.theme.saved": "Tema opdateret!",
   "settings.theme.error": "Kunne ikke gemme tema",
+
+  "settings.test_connection": "Test",
+  "settings.test_connection.ok": "Forbundet",
 
   "settings.git.legend": "Lokale Git-commits",
   "settings.git.enable": "Aktiver lokal git-kilde",
