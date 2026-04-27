@@ -57,7 +57,7 @@ Recall sends one anonymous ping per day to count active installs. The ping conta
 
 ## Security warning
 
-> ⚠️ **Your API tokens are stored in plain text.**
+> ⚠️ **Your API tokens are stored in plain text.** - just like every other app does..
 >
 > GitHub / Jira / Zulip tokens and iCal secret URLs are saved unencrypted in the SQLite file under the app-data directory (e.g. `~/Library/Application Support/com.recall-app.app/db.sqlite` on macOS). Anything running as your user — a malicious npm postinstall script, a rogue VS Code extension, a cloud-synced backup on a stolen laptop — can read them.
 >
