@@ -30,10 +30,6 @@
 | Windows | [Recall-Windows.exe](https://github.com/rasben/recall-app/releases/latest/download/Recall-Windows.exe) · [Recall-Windows.msi](https://github.com/rasben/recall-app/releases/latest/download/Recall-Windows.msi) |
 | Linux | [Recall-Linux.AppImage](https://github.com/rasben/recall-app/releases/latest/download/Recall-Linux.AppImage) · [Recall-Linux.deb](https://github.com/rasben/recall-app/releases/latest/download/Recall-Linux.deb) · [Recall-Linux.rpm](https://github.com/rasben/recall-app/releases/latest/download/Recall-Linux.rpm) |
 
-> **macOS:** Apple is being a twonk. Run this command, whilst we wait to get a certicate from them:
-> 
-> `xattr -cr /Applications/Recall.app`
-
 ## Development
 
 This app has built almost entirely with AI.
