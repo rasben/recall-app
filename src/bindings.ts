@@ -89,6 +89,19 @@ async getTimelineForDay(day: string) : Promise<Result<TimelineEvent[], string>> 
 }
 },
 /**
+ * Drop the cached row for `day` (if any) and re-run the live fetch via
+ * `get_timeline_for_day`. Past days that re-fetch successfully will be
+ * re-cached by the existing flow; today is fetched live and not cached.
+ */
+async refreshTimelineForDay(day: string) : Promise<Result<TimelineEvent[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("refresh_timeline_for_day", { day }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
  * Fetch event counts for every elapsed day of the given calendar month,
  * populating the per-day cache along the way. Uses one range query per
  * source instead of N per-day queries, so a fresh month completes in a

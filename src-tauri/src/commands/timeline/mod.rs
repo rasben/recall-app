@@ -8,6 +8,7 @@ mod zulip;
 use std::collections::HashMap;
 
 use chrono::{Local, NaiveDate};
+use rusqlite::params;
 use serde::Serialize;
 use tauri::{Emitter, State};
 
@@ -99,6 +100,28 @@ pub async fn get_timeline_for_day(
 
         Ok(events)
     })
+}
+
+/// Drop the cached row for `day` (if any) and re-run the live fetch via
+/// `get_timeline_for_day`. Past days that re-fetch successfully will be
+/// re-cached by the existing flow; today is fetched live and not cached.
+#[tauri::command]
+#[specta::specta]
+pub async fn refresh_timeline_for_day(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+    day: String,
+) -> Result<Vec<TimelineEvent>, String> {
+    tokio::task::block_in_place(|| {
+        let conn = state.db.lock().map_err(|_| "Failed to access database")?;
+        conn.execute(
+            "DELETE FROM timeline_day_cache WHERE day = ?1",
+            params![&day],
+        )
+        .map_err(|e| e.to_string())?;
+        Ok::<(), String>(())
+    })?;
+    get_timeline_for_day(app, state, day).await
 }
 
 #[tauri::command]

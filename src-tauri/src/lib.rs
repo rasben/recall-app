@@ -27,6 +27,7 @@ pub fn run() {
         commands::settings_ical::trigger_ical_sync,
         commands::settings_ical::get_ical_sync_status,
         commands::timeline::get_timeline_for_day,
+        commands::timeline::refresh_timeline_for_day,
         commands::timeline::get_day_counts_for_month,
         commands::timeline::test_settings_git,
         commands::timeline::test_settings_github,

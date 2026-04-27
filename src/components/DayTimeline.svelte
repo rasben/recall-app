@@ -66,6 +66,35 @@
     navState.selectedDate = iso;
   }
 
+  async function refreshDay() {
+    if (isLoading) return;
+    const day = selectedDate;
+    doneIds = new Set();
+    doneSources = new Set();
+    sourceErrors = new Map();
+    loadingSource = null;
+    loadError = null;
+    events = [];
+    isLoading = true;
+
+    const result = await commands.refreshTimelineForDay(day);
+    if (selectedDate !== day) return;
+    if (result.status === "ok") {
+      events = result.data;
+      loadError = null;
+      navState.dayCounts[day] = result.data.length;
+      const ids = result.data.map((e) => e.id);
+      const harvest = await commands.getTimelineHarvestDoneForEventIds(ids);
+      if (selectedDate !== day) return;
+      doneIds = harvest.status === "ok" ? new Set(harvest.data) : new Set();
+    } else {
+      loadError = result.error;
+      events = [];
+      doneIds = new Set();
+    }
+    isLoading = false;
+  }
+
   async function toggleDone(id: string) {
     const next = !doneIds.has(id);
     if (next) {
@@ -163,7 +192,14 @@
 </script>
 
 <div class="relative space-y-6">
-  <TimelineDateNav {selectedDate} onShift={shiftDate} onGoToday={goToday} onPick={pickDate} />
+  <TimelineDateNav
+    {selectedDate}
+    onShift={shiftDate}
+    onGoToday={goToday}
+    onPick={pickDate}
+    onRefresh={refreshDay}
+    refreshing={isLoading}
+  />
 
   {#if loadError}
     <p
