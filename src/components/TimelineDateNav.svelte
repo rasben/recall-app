@@ -4,6 +4,7 @@
   import { Calendar } from "$lib/components/ui/calendar/index.js";
   import ChevronLeft from "@lucide/svelte/icons/chevron-left";
   import ChevronRight from "@lucide/svelte/icons/chevron-right";
+  import RefreshCw from "@lucide/svelte/icons/refresh-cw";
   import { parseDate, today, getLocalTimeZone, type DateValue } from "@internationalized/date";
   import { formatDayHeadingParts, todayIso } from "$lib/timeline";
   import { navState } from "$lib/nav-state.svelte";
@@ -17,11 +18,15 @@
     onShift,
     onGoToday,
     onPick,
+    onRefresh,
+    refreshing = false,
   }: {
     selectedDate: string;
     onShift: (days: number) => void;
     onGoToday: () => void;
     onPick: (iso: string) => void;
+    onRefresh: () => void;
+    refreshing?: boolean;
   } = $props();
 
   let headingParts = $derived(formatDayHeadingParts(selectedDate, langLocale()));
@@ -143,6 +148,18 @@
       {t("timeline.today")}
     </Button>
   {/if}
+
+  <Button
+    variant="ghost"
+    size="icon"
+    class="mr-10 ml-auto size-7 text-muted-foreground hover:text-foreground"
+    onclick={onRefresh}
+    disabled={refreshing}
+    aria-label={t("timeline.refresh")}
+    title={t("timeline.refresh")}
+  >
+    <RefreshCw class="size-3.5 {refreshing ? 'animate-spin' : ''}" />
+  </Button>
 </div>
 
 <style>

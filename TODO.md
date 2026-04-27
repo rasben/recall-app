@@ -13,13 +13,6 @@ The whole point of the app is to feed Harvest, but it doesn't actually talk to H
 - Suggested durations / event grouping. Events are points in time; Harvest wants durations. Heuristic: group consecutive events from the same source/repo/ticket into a block, duration = gap until next block, capped at e.g. 90 min. Pairs naturally with Harvest submit.
 - Per-event notes. Free-text field keyed on the event UUID, used as the Harvest entry note when you submit.
 
-## Reliability & data freshness
-
-- Cache freshness for past days. `timeline_day_cache` is write-once for any elapsed day, but yesterday's data isn't really immutable (a JIRA ticket gets reassigned to you, a PR comment lands at 23:55, a calendar event accepted retroactively shows up).
-  - TTL on cached days (e.g. cache valid for 7 days, then refetch in background and update silently), or
-  - "Refresh this day" button on the timeline header, or
-  - Auto-invalidate the most recent N cached days on app launch.
-
 ## Data sources
 
 - Gmail (requires Google OAuth — see AGENTS.md for why this is deferred)
