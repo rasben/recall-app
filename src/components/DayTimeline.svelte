@@ -4,7 +4,7 @@
   import { onMount, onDestroy } from "svelte";
   import { listen } from "@tauri-apps/api/event";
   import { commands } from "../bindings";
-  import { addDaysIso, groupEventsByHour, todayIso, type TimelineEvent } from "$lib/timeline";
+  import { addDaysIso, applyOptimisticToggle, groupEventsByHour, rollbackOptimisticToggle, todayIso, type TimelineEvent } from "$lib/timeline";
   import { navState } from "$lib/nav-state.svelte";
   import TimelineDateNav from "./TimelineDateNav.svelte";
   import TimelineEventRow from "./TimelineEvent.svelte";
@@ -96,22 +96,12 @@
   }
 
   async function toggleDone(id: string) {
-    const next = !doneIds.has(id);
-    if (next) {
-      doneIds.add(id);
-    } else {
-      doneIds.delete(id);
-    }
-    doneIds = new Set(doneIds);
+    const [optimistic, wasAdded] = applyOptimisticToggle(doneIds, id);
+    doneIds = optimistic;
 
-    const result = await commands.setTimelineHarvestDone(id, next);
+    const result = await commands.setTimelineHarvestDone(id, wasAdded);
     if (result.status === "error") {
-      if (next) {
-        doneIds.delete(id);
-      } else {
-        doneIds.add(id);
-      }
-      doneIds = new Set(doneIds);
+      doneIds = rollbackOptimisticToggle(doneIds, id, wasAdded);
     }
   }
 

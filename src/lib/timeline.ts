@@ -34,6 +34,33 @@ export function formatDayHeading(iso: string, locale = "en-US"): string {
   return `${weekday}, ${monthDay}`;
 }
 
+/**
+ * Optimistic toggle: adds id if absent, removes if present.
+ * Returns [new set, true if id was added / false if removed].
+ */
+export function applyOptimisticToggle(
+  doneIds: Set<string>,
+  id: string,
+): [Set<string>, boolean] {
+  const wasAdded = !doneIds.has(id);
+  const copy = new Set(doneIds);
+  if (wasAdded) copy.add(id);
+  else copy.delete(id);
+  return [copy, wasAdded];
+}
+
+/** Undoes the optimistic toggle when the backend call fails. */
+export function rollbackOptimisticToggle(
+  doneIds: Set<string>,
+  id: string,
+  wasAdded: boolean,
+): Set<string> {
+  const copy = new Set(doneIds);
+  if (wasAdded) copy.delete(id);
+  else copy.add(id);
+  return copy;
+}
+
 export function groupEventsByHour(events: TimelineEvent[]): HourGroup[] {
   const groups: HourGroup[] = [];
   let currentHour = "";

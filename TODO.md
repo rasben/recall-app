@@ -35,10 +35,6 @@ The whole point of the app is to feed Harvest, but it doesn't actually talk to H
 
 - Tauri auto-updater. Today: redownload the DMG. Tauri has the `updater` plugin — set it up against the GitHub Releases artifacts already published.
 
-## Quality
-
-- Frontend tests. `npm test` is Rust-only. The Svelte side is now non-trivial (DayTimeline has debounce, prefetch, source-progress events, Harvest-done sync). Vitest + a couple of `@testing-library/svelte` tests around `groupEventsByHour`, the debounce behavior, and `toggleDone` rollback-on-error would prevent the obvious regressions.
-
 ## Bugs
 
 - Using `local git` source on Windows opens a bunch of terminal windows. Makes it look like a virus.
