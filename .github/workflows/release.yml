@@ -110,7 +110,7 @@ jobs:
         run: |
           TAG="${{ github.ref_name }}"
           REPO="${{ github.repository }}"
-          RELEASE_ID=$(gh api "repos/${REPO}/releases/tags/${TAG}" --jq '.id')
+          RELEASE_ID=$(gh api "repos/${REPO}/releases" --jq ".[] | select(.tag_name == \"${TAG}\") | .id")
           ASSETS=$(gh api "repos/${REPO}/releases/${RELEASE_ID}/assets" --jq '.[] | "\(.id) \(.name)"')
 
           mkdir -p /tmp/assets
