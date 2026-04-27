@@ -65,7 +65,6 @@ The whole point of the app is to feed Harvest, but it doesn't actually talk to H
 - Per-source visibility toggle in the timeline header (hide GitHub for a moment without touching settings).
 - Weekly view.
 - "What's missing in Harvest today" inverted view (show un-checked only).
-- Danish localization. `$lib/i18n.svelte` and `t()` are already wired up — shipping `da.json` is a few hours and a nice touch for colleagues at Reload.
 
 ## Fun
 
