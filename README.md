@@ -51,6 +51,10 @@ npm run tauri dev
 - Rust backend
 - SQLite for settings/credentials.
 
+## Telemetry
+
+Recall sends one anonymous ping per day to count active installs. The ping contains only a random UUID generated at first launch — no personal data, no device info, no IP addresses are stored. You can inspect the full implementation in [`src-tauri/src/telemetry.rs`](./src-tauri/src/telemetry.rs) and the server side in [`worker/src/index.js`](./worker/src/index.js).
+
 ## Security warning
 
 > ⚠️ **Your API tokens are stored in plain text.**

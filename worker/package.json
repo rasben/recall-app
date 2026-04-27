@@ -1,0 +1,13 @@
+{
+  "name": "recall-telemetry-worker",
+  "private": true,
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "vitest": "^2.0.0",
+    "wrangler": "^3.0.0"
+  }
+}

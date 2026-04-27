@@ -83,6 +83,16 @@
     border-radius: 999px; color: var(--muted);
   }
 
+  .stats-bar {
+    display: inline-flex; align-items: center; gap: 10px;
+    margin-top: 20px; padding: 10px 18px;
+    border: 1px solid var(--border); border-radius: 999px;
+    font-size: 13px; color: var(--muted);
+  }
+  .stats-bar .count {
+    font-size: 15px; font-weight: 650; color: var(--accent); font-variant-numeric: tabular-nums;
+  }
+
   @media (max-width: 640px) {
     header { flex-direction: column; gap: 16px; }
     .header-text h1 { font-size: 32px; }
@@ -104,6 +114,11 @@
         without losing your mind. Pick a date, Recall pulls your activity from multiple sources
         into one view.
       </p>
+      <div class="stats-bar">
+        <span>Active installs (last 35 days):</span>
+        <span class="count" id="active-count">—</span>
+      </div>
+
       <div class="sources">
         <span class="source-tag">Calendar (iCal)</span>
         <span class="source-tag">GitHub</span>
@@ -150,5 +165,17 @@
   </section>
 
 </main>
+<script>
+  const STATS_URL = "https://recall-telemetry.recall-app.workers.dev/stats";
+
+  fetch(STATS_URL)
+    .then(r => r.ok ? r.json() : null)
+    .then(data => {
+      if (data?.active != null) {
+        document.getElementById("active-count").textContent = data.active;
+      }
+    })
+    .catch(() => {}); // silently hide widget if worker is down
+</script>
 </body>
 </html>
