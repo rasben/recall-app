@@ -26,7 +26,7 @@ jobs:
       - name: Assemble site
         run: |
           mkdir -p _site
-          cp docs/index.html _site/index.html
+          cp -r docs/* _site/
           cp -r design _site/design
           cp -r static _site/static
 
