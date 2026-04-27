@@ -1,0 +1,17 @@
+# Cloudflare Worker config for Recall telemetry
+# Deploy with: npx wrangler deploy
+#
+# First-time setup:
+#   1. npx wrangler login
+#   2. npx wrangler kv namespace create INSTALLS
+#      → copy the id it prints into kv_namespaces below
+#   3. npx wrangler deploy
+#   4. Copy the deployed URL into src-tauri/src/telemetry.rs (PING_URL constant)
+
+name = "recall-telemetry"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[[kv_namespaces]]
+binding = "INSTALLS"
+id = "0a3a9c5687064db3a060304f50a0a4b5"

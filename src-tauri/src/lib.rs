@@ -1,6 +1,7 @@
 mod commands;
 mod db;
 mod state;
+mod telemetry;
 mod timeline;
 
 use state::AppState;
@@ -51,9 +52,11 @@ pub fn run() {
 
             app.manage(AppState {
                 db: Arc::new(Mutex::new(conn)),
-                db_path,
+                db_path: db_path.clone(),
                 ical_syncing: Arc::new(AtomicBool::new(false)),
             });
+
+            telemetry::spawn_ping(db_path);
 
             builder.mount_events(app);
 
