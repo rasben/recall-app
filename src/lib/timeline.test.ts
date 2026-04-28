@@ -44,7 +44,11 @@ describe("groupEventsByHour", () => {
 
   it("does not merge non-consecutive same-hour events", () => {
     // 14:00, 15:00, 14:00 — third event is a new group (not merged with first)
-    const events = [makeEvent("14:00", "a"), makeEvent("15:00", "b"), makeEvent("14:00", "c")];
+    const events = [
+      makeEvent("14:00", "a"),
+      makeEvent("15:00", "b"),
+      makeEvent("14:00", "c"),
+    ];
     const groups = groupEventsByHour(events);
     expect(groups).toHaveLength(3);
     expect(groups[2].items[0].event.id).toBe("c");

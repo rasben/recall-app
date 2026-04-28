@@ -16,6 +16,7 @@ pub enum GitHubEvent {
     PullRequestReviewCommentEvent,
     IssuesEvent,
     IssueCommentEvent,
+    PushEvent,
 }
 
 #[derive(Debug, Deserialize, Serialize, Type)]

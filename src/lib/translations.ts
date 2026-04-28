@@ -73,6 +73,15 @@ const en = {
   "settings.github.event.pr_review_comment": "PR: Review Comment",
   "settings.github.event.issue": "Issue",
   "settings.github.event.issue_comment": "Issue: Comment",
+  "settings.github.event.push": "Push (commits)",
+  "settings.github.event.push_description":
+    "Shows commits you push to GitHub — on any branch, before they are merged. A good alternative to Local Git, especially on Windows where shell-based git scanning can be unreliable.",
+  "settings.github.api_limit_notice":
+    "GitHub's API only returns your ~300 most recent events (last 90 days). Older days may be empty even if you were active.",
+
+  // Git
+  "settings.git.github_notice":
+    "This does not work well on Windows.<br/> Enable the <strong>Push (commits)</strong> event in the GitHub source instead.",
 
   // Jira
   "settings.jira.legend": "Jira",
@@ -229,6 +238,14 @@ const da: Translations = {
   "settings.github.event.pr_review_comment": "PR: Reviewkommentar",
   "settings.github.event.issue": "Issue",
   "settings.github.event.issue_comment": "Issue: Kommentar",
+  "settings.github.event.push": "Push (commits)",
+  "settings.github.event.push_description":
+    "Viser commits du pusher til GitHub — på alle branches, inden de merges. Et godt alternativ til Lokal Git, særligt på Windows, hvor shell-baseret git-scanning kan være upålidelig.",
+  "settings.github.api_limit_notice":
+    "GitHubs API returnerer kun dine ~300 nyeste hændelser (sidste 90 dage). Ældre dage kan være tomme, selvom du var aktiv.",
+
+  "settings.git.github_notice":
+    "Dette fungerer ikke godt på windows. <br/>Brug istedet <strong>Push (commits)</strong>-hændelsen under GitHub-kilden i stedet.",
 
   "settings.jira.legend": "Jira",
   "settings.jira.enable": "Aktiver Jira-kilde",

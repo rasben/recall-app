@@ -201,7 +201,7 @@ async getCachedDayEventCounts() : Promise<Result<{ [key in string]: number }, st
 
 export type CacheSizeResult = { bytes: number; cached_days: number }
 export type ClearCachesResult = { rows_deleted: number }
-export type GitHubEvent = "PullRequestEvent" | "PullRequestReviewEvent" | "PullRequestReviewCommentEvent" | "IssuesEvent" | "IssueCommentEvent"
+export type GitHubEvent = "PullRequestEvent" | "PullRequestReviewEvent" | "PullRequestReviewCommentEvent" | "IssuesEvent" | "IssueCommentEvent" | "PushEvent"
 export type IcalSyncStatus = { syncing: boolean; last_synced_at: number | null; last_error: string | null }
 /**
  * Timeline categories for Jira activity (mapped to REST/changelog rules in the Jira timeline source).
