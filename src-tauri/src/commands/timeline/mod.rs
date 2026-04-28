@@ -148,6 +148,12 @@ pub async fn test_settings_zulip(state: State<'_, AppState>) -> Result<(), Strin
     tokio::task::block_in_place(|| zulip::test_connection(&state))
 }
 
+#[tauri::command]
+#[specta::specta]
+pub async fn test_settings_ical(state: State<'_, AppState>) -> Result<(), String> {
+    tokio::task::block_in_place(|| ical::test_connection(&state))
+}
+
 /// Fetch event counts for every elapsed day of the given calendar month,
 /// populating the per-day cache along the way. Uses one range query per
 /// source instead of N per-day queries, so a fresh month completes in a

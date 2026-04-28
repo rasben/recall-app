@@ -6,6 +6,39 @@ use crate::commands::settings_ical::load_settings_ical;
 use crate::state::AppState;
 use crate::timeline::{sanitize_event_url, TimelineEvent, TimelineEventSource};
 
+pub(super) fn test_connection(state: &State<'_, AppState>) -> Result<(), String> {
+    let settings = load_settings_ical(state);
+    let urls: Vec<String> = settings
+        .urls
+        .into_iter()
+        .map(|u| u.trim().to_string())
+        .filter(|u| !u.is_empty())
+        .collect();
+    if urls.is_empty() {
+        return Err("At least one iCal URL is required".into());
+    }
+    for url in &urls {
+        match ureq::get(url).header("Accept", "text/calendar").call() {
+            Ok(mut r) => {
+                let body = r
+                    .body_mut()
+                    .read_to_string()
+                    .map_err(|e| format!("iCal read failed for {url}: {e}"))?;
+                if !body.contains("BEGIN:VCALENDAR") {
+                    return Err(format!(
+                        "URL did not return an iCal feed (missing BEGIN:VCALENDAR): {url}"
+                    ));
+                }
+            }
+            Err(ureq::Error::StatusCode(status)) => {
+                return Err(format!("iCal URL returned HTTP {status}: {url}"));
+            }
+            Err(e) => return Err(format!("iCal request failed for {url}: {e}")),
+        }
+    }
+    Ok(())
+}
+
 pub(super) fn events_for_day(
     state: &State<'_, AppState>,
     day: &str,

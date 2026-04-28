@@ -7,6 +7,7 @@
   import { Button } from "$lib/components/ui/button/index.js";
   import { commands, type SettingsIcal, type IcalSyncStatus } from "../../bindings";
   import PasswordInput from "../ui/PasswordInput.svelte";
+  import TestConnectionButton from "../ui/TestConnectionButton.svelte";
   import { t } from "$lib/i18n.svelte";
 
   const defaultSettings: SettingsIcal = {
@@ -103,8 +104,12 @@
   }
 </script>
 
-<fieldset class="border-2 p-4 mt-6">
+<fieldset class="relative border-2 p-4 mt-6">
   <legend>{t("settings.calendar.legend")}</legend>
+
+  {#if settings.enabled}
+    <TestConnectionButton test={commands.testSettingsIcal} />
+  {/if}
 
   <div class="flex items-center gap-2 mb-4">
     <Checkbox
