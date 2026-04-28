@@ -11,10 +11,10 @@ The whole point of the app is to feed Harvest, but it doesn't actually talk to H
 
 ## Data sources
 
-- Gmail (requires Google OAuth — see AGENTS.md for why this is deferred)
+- Gmail — likely path is IMAP + Gmail App Password (same paste-a-token UX as JIRA/Zulip), avoiding the Google OAuth burden. Fall back to OAuth if Workspace admins have IMAP/app passwords disabled. See AGENTS.md.
   - Sent emails
   - Read emails
-- Google Drive (requires Google OAuth)
+- Google Drive (requires Google OAuth — no IMAP-style escape hatch)
   - Edited/Created files
   - Read files
 - Zulip — expanded data

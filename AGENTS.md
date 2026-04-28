@@ -25,18 +25,18 @@ Each source provides timestamped activity events that are merged into a day time
 | **Local git** | Commits across all local repos, by your git author name | Shell: `git log --all --since=... --author=...` | ✅ Done |
 | **JIRA** | Tickets you commented on, transitioned, or were assigned to | JIRA API token | ✅ Done |
 | **Zulip** | Messages you **sent** (stream and DMs) | Zulip API key + email | ✅ Done |
-| **Gmail** | Emails you **sent** or **replied to** | Google OAuth (Gmail API) | ⬜ Planned |
+| **Gmail** | Emails you **sent** or **replied to** | IMAP + Gmail App Password (preferred) or Google OAuth | ⬜ Planned |
 | **Google Drive** | Docs/Sheets/Slides you **edited** | Google OAuth (Drive Activity API) | ⬜ Planned |
 
-### Why iCal instead of Google OAuth for Calendar
+### Avoiding Google OAuth where possible
 
-Google Calendar, Gmail, and Drive all require OAuth. OAuth for a desktop app requires the user to create a Google Cloud project, configure a consent screen, and manage client credentials — a significant setup burden that's unreasonable to impose on end users.
+OAuth for a desktop app is heavy: either each user creates their own Google Cloud project (unreasonable setup burden), or we ship one client ID and shepherd it through Google's app-verification process for restricted scopes (otherwise users see an "unverified app" warning and we're capped at 100 testers). Where there's a token-style alternative, prefer it.
 
-For **Calendar** specifically, Google exposes a "Secret address in iCal format" per calendar (a secret URL that acts as the auth token). This gives full read access to the calendar feed with zero Google Cloud setup. We chose this approach for Calendar and accepted its limitations (read-only, one URL per calendar, URL is the secret).
+- **Calendar** uses Google's "Secret address in iCal format" — a per-calendar secret URL that acts as the auth token. Full read access, zero Google Cloud setup. Limitations: read-only, one URL per calendar, URL is the secret.
+- **Gmail** has IMAP. With 2FA enabled, users can generate a 16-char Gmail App Password and we connect to `imap.gmail.com` to read `[Gmail]/Sent Mail`. Same paste-a-token UX as JIRA/Zulip. Caveat: Workspace admins can disable IMAP and/or app passwords org-wide; if that turns out to block real users, we fall back to OAuth.
+- **Google Drive** has no equivalent escape hatch, so it will require OAuth when implemented. That auth complexity is the reason it is deferred.
 
-**Gmail and Drive do not have an equivalent iCal-style escape hatch**, so they will require OAuth when implemented. That auth complexity is the reason they are deferred.
-
-Planned expansions (see `README.md` "To-Do's" for the full list and priorities): Gmail (sent emails), Google Drive (edited files); read/inbound signals for Gmail, Google Drive, and Zulip (currently outbound-only); Zulip message grouping so a burst of messages does not spam the feed.
+Planned expansions (see `TODO.md` for the full list and priorities): Gmail (sent emails), Google Drive (edited files); read/inbound signals for Gmail, Google Drive, and Zulip (currently outbound-only); Zulip message grouping so a burst of messages does not spam the feed.
 
 ---
 
