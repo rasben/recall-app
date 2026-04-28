@@ -33,6 +33,7 @@ pub fn run() {
         commands::timeline::test_settings_github,
         commands::timeline::test_settings_jira,
         commands::timeline::test_settings_zulip,
+        commands::timeline::test_settings_ical,
         commands::harvest_done::get_timeline_harvest_done_for_event_ids,
         commands::harvest_done::set_timeline_harvest_done,
         commands::settings::clear_all_caches,
