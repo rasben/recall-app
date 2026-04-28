@@ -72,10 +72,6 @@ pub(super) fn events_for_range(
     let mut rows: Vec<(NaiveDate, i64, TimelineEvent)> = Vec::new();
 
     for ev in raw_events {
-        if matches!(ev.event_type.as_str(), "PushEvent") {
-            continue;
-        }
-
         let Some(kind) = github_api_event_type(&ev.event_type) else {
             continue;
         };
@@ -130,6 +126,7 @@ fn github_api_event_type(event_type: &str) -> Option<GitHubEvent> {
         "PullRequestReviewCommentEvent" => Some(GitHubEvent::PullRequestReviewCommentEvent),
         "IssuesEvent" => Some(GitHubEvent::IssuesEvent),
         "IssueCommentEvent" => Some(GitHubEvent::IssueCommentEvent),
+        "PushEvent" => Some(GitHubEvent::PushEvent),
         _ => None,
     }
 }
@@ -231,6 +228,42 @@ fn map_github_event(ev: &GhEvent) -> Option<MappedGithub> {
             Some(MappedGithub {
                 title,
                 detail: repo,
+                url,
+            })
+        }
+        "PushEvent" => {
+            let branch = j_str(&ev.payload, &["ref"])
+                .map(|r| r.trim_start_matches("refs/heads/").to_string())
+                .unwrap_or_else(|| "unknown branch".to_string());
+            let size = ev.payload.get("size").and_then(|v| v.as_u64()).unwrap_or(1);
+            let before = j_str(&ev.payload, &["before"]).unwrap_or_default();
+            let head = j_str(&ev.payload, &["head"]).unwrap_or_default();
+            let url = if !before.is_empty() && !head.is_empty() {
+                Some(format!("https://github.com/{repo}/compare/{before}...{head}"))
+            } else {
+                Some(format!("https://github.com/{repo}/tree/{branch}"))
+            };
+            let commit_word = if size == 1 { "commit" } else { "commits" };
+            let messages: Vec<String> = ev
+                .payload
+                .get("commits")
+                .and_then(|v| v.as_array())
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|c| j_str(c, &["message"]))
+                        .map(|m| m.lines().next().unwrap_or("").to_string())
+                        .filter(|m| !m.is_empty())
+                        .collect()
+                })
+                .unwrap_or_default();
+            let detail = if messages.is_empty() {
+                repo
+            } else {
+                format!("{repo} — {}", messages.join("; "))
+            };
+            Some(MappedGithub {
+                title: format!("Pushed {size} {commit_word} to {branch}"),
+                detail,
                 url,
             })
         }
@@ -475,12 +508,16 @@ mod tests {
             github_api_event_type("IssueCommentEvent"),
             Some(GitHubEvent::IssueCommentEvent)
         ));
+        assert!(matches!(
+            github_api_event_type("PushEvent"),
+            Some(GitHubEvent::PushEvent)
+        ));
     }
 
     #[test]
     fn github_api_event_type_unknown() {
-        assert!(github_api_event_type("PushEvent").is_none());
         assert!(github_api_event_type("WatchEvent").is_none());
+        assert!(github_api_event_type("ForkEvent").is_none());
     }
 
     // --- integration (skipped when secrets absent) ---

@@ -9,12 +9,13 @@
     import PasswordInput from "../ui/PasswordInput.svelte";
     import TestConnectionButton from "../ui/TestConnectionButton.svelte";
 
-    const eventTypeMap: Record<string, { type: GitHubEvent; labelKey: string }> = {
+    const eventTypeMap: Record<string, { type: GitHubEvent; labelKey: string; descriptionKey?: string }> = {
         pullRequestEvent: { type: "PullRequestEvent", labelKey: "settings.github.event.pull_request" },
         pullRequestReviewEvent: { type: "PullRequestReviewEvent", labelKey: "settings.github.event.pr_review" },
         pullRequestReviewCommentEvent: { type: "PullRequestReviewCommentEvent", labelKey: "settings.github.event.pr_review_comment" },
         issuesEvent: { type: "IssuesEvent", labelKey: "settings.github.event.issue" },
         issueCommentEvent: { type: "IssueCommentEvent", labelKey: "settings.github.event.issue_comment" },
+        pushEvent: { type: "PushEvent", labelKey: "settings.github.event.push", descriptionKey: "settings.github.event.push_description" },
     };
 
     const defaultSettings: SettingsGitHub = {
@@ -93,15 +94,22 @@
         />
 
         <Label class="mb-2">{t("settings.github.events_label")}</Label>
+        <p class="text-muted-foreground text-sm mb-2">{t("settings.github.api_limit_notice")}</p>
         <div class="flex flex-col gap-2">
-            {#each Object.entries(eventTypeMap) as [, { type, labelKey }]}
-                <div class="flex items-center gap-2">
+            {#each Object.entries(eventTypeMap) as [, { type, labelKey, descriptionKey }]}
+                <div class="flex items-start gap-2">
                     <Checkbox
                         id="github-event-{type}"
                         checked={settings.enabled_events.includes(type)}
                         onCheckedChange={(v) => toggleEvent(type, v === true)}
+                        class="mt-0.5"
                     />
-                    <Label for="github-event-{type}">{t(labelKey as Parameters<typeof t>[0])}</Label>
+                    <div>
+                        <Label for="github-event-{type}">{t(labelKey as Parameters<typeof t>[0])}</Label>
+                        {#if descriptionKey}
+                            <p class="text-muted-foreground text-sm mt-0.5">{t(descriptionKey as Parameters<typeof t>[0])}</p>
+                        {/if}
+                    </div>
                 </div>
             {/each}
         </div>
