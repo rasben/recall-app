@@ -52,8 +52,6 @@
 <fieldset class="relative border-2 p-4 mt-6">
     <legend>{t("settings.git.legend")}</legend>
 
-    <p class="text-muted-foreground text-sm mb-4">{@html t("settings.git.github_notice")}</p>
-
     <div class="flex items-center gap-2 mb-4">
         <Checkbox
             id="git-enabled"
@@ -62,6 +60,8 @@
         />
         <Label for="git-enabled">{t("settings.git.enable")}</Label>
     </div>
+
+    <p class="text-muted-foreground text-sm mb-4">{@html t("settings.git.github_notice")}</p>
 
     {#if settings.enabled}
         <Label for="git-scan-path" class="mb-2">{t("settings.git.path_label")}</Label>
