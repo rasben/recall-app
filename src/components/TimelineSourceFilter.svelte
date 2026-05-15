@@ -4,6 +4,7 @@
   import Calendar from "@lucide/svelte/icons/calendar";
   import MessageSquare from "@lucide/svelte/icons/message-square";
   import TicketCheck from "@lucide/svelte/icons/ticket-check";
+  import Check from "@lucide/svelte/icons/check";
   import type { Component } from "svelte";
   import type { TimelineEventSource } from "$lib/timeline";
   import { navState } from "$lib/nav-state.svelte";
@@ -41,9 +42,18 @@
         aria-pressed={!hidden}
         class="inline-flex items-center gap-1.5 border-2 px-2 py-1 font-head text-[10px] uppercase tracking-widest transition-colors
           {hidden
-            ? 'border-border bg-transparent text-muted-foreground opacity-60 hover:opacity-100'
+            ? 'border-dashed border-border bg-transparent text-muted-foreground line-through hover:text-foreground hover:border-foreground'
             : 'border-foreground bg-foreground text-background'}"
       >
+        <span
+          class="inline-flex size-3.5 items-center justify-center border
+            {hidden ? 'border-border bg-transparent' : 'border-background bg-background text-foreground'}"
+          aria-hidden="true"
+        >
+          {#if !hidden}
+            <Check class="size-2.5 stroke-[3]" />
+          {/if}
+        </span>
         <Icon class="size-3" />
         <span>{label}</span>
       </button>
