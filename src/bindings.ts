@@ -255,7 +255,7 @@ id: string;
 /**
  * Local time `HH:MM` for the selected calendar day.
  */
-time: string;
+time: string; 
 /**
  * UTC unix seconds. Used by the UI to group close-together events
  * (e.g. commits inside a rebase burst) at finer resolution than `time`.
