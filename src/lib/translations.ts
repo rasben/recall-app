@@ -166,6 +166,10 @@ const en = {
   "timeline.loading_month": "Loading…",
   "timeline.less_more_activity": "less → more activity",
   "timeline.open_link": "Open",
+  "timeline.commit_burst": "{count} commits — possible rebase",
+  "timeline.commit_burst_partial_done": "{done}/{count} logged",
+  "timeline.commit_burst_expand": "Show commits",
+  "timeline.commit_burst_collapse": "Hide commits",
   "timeline.logged_in_harvest": "Logged in Harvest",
   "timeline.not_logged_in_harvest": "Not logged in Harvest",
 } as const;
@@ -324,6 +328,10 @@ const da: Translations = {
   "timeline.loading_month": "Indlæser…",
   "timeline.less_more_activity": "mindre → mere aktivitet",
   "timeline.open_link": "Åbn",
+  "timeline.commit_burst": "{count} commits — muligvis en rebase",
+  "timeline.commit_burst_partial_done": "{done}/{count} logget",
+  "timeline.commit_burst_expand": "Vis commits",
+  "timeline.commit_burst_collapse": "Skjul commits",
   "timeline.logged_in_harvest": "Logget i Harvest",
   "timeline.not_logged_in_harvest": "Ikke logget i Harvest",
 };
