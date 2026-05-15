@@ -255,7 +255,12 @@ id: string;
 /**
  * Local time `HH:MM` for the selected calendar day.
  */
-time: string; source: TimelineEventSource; title: string; detail: string | null; url: string | null }
+time: string;
+/**
+ * UTC unix seconds. Used by the UI to group close-together events
+ * (e.g. commits inside a rebase burst) at finer resolution than `time`.
+ */
+timestamp: number; source: TimelineEventSource; title: string; detail: string | null; url: string | null }
 /**
  * Activity source for the day timeline (matches frontend `TimelineEvent` styling keys).
  */

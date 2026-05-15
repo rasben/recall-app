@@ -101,6 +101,7 @@ pub(super) fn events_for_range(
             TimelineEvent {
                 id,
                 time,
+                timestamp: ts,
                 source: TimelineEventSource::Github,
                 title: mapped.title,
                 detail: Some(mapped.detail),
