@@ -16,14 +16,6 @@ use crate::timeline::{sanitize_event_url, TimelineEvent, TimelineEventSource};
 const MAX_SCAN_DEPTH: u32 = 14;
 const REPO_SCAN_TTL: Duration = Duration::from_secs(60);
 
-/// Extra committer-date window past `end_day` we pass to `git log`. We filter
-/// results by **author** date, but `git log --until` filters by **committer**
-/// date — so a commit authored within the range but committed later (e.g.
-/// because it was rebased onto a branch days/weeks afterwards) would otherwise
-/// be missed. 90 days covers typical PR/branch lifetimes; commits rebased
-/// later than this won't appear on the day the work was originally done.
-const REBASE_LOOKAHEAD_DAYS: i64 = 90;
-
 struct RepoScanCache {
     root: PathBuf,
     scanned_at: Instant,
@@ -87,15 +79,8 @@ pub(super) fn events_for_range(
     let next_end = end_day
         .succ_opt()
         .ok_or_else(|| format!("no day after {end_day}"))?;
-    // Pad the committer-date window forward so rebases that happened after
-    // the work-date still surface; see REBASE_LOOKAHEAD_DAYS.
-    let committer_until_day = next_end
-        .checked_add_days(chrono::Days::new(REBASE_LOOKAHEAD_DAYS as u64))
-        .unwrap_or(next_end);
     let since = start_day.and_hms_opt(0, 0, 0).ok_or("Invalid range start")?;
-    let until = committer_until_day
-        .and_hms_opt(0, 0, 0)
-        .ok_or("Invalid range end")?;
+    let until = next_end.and_hms_opt(0, 0, 0).ok_or("Invalid range end")?;
 
     let since_local = Local
         .from_local_datetime(&since)
@@ -141,11 +126,7 @@ pub(super) fn events_for_range(
                     let since_str = since_str.clone();
                     let until_str = until_str.clone();
                     let author = author.clone();
-                    scope.spawn(move || {
-                        git_log_for_repo(
-                            repo, &since_str, &until_str, &author, start_day, end_day,
-                        )
-                    })
+                    scope.spawn(move || git_log_for_repo(repo, &since_str, &until_str, &author))
                 })
                 .collect();
 
@@ -169,8 +150,6 @@ fn git_log_for_repo(
     since_str: &str,
     until_str: &str,
     author: &str,
-    start_day: NaiveDate,
-    end_day: NaiveDate,
 ) -> Result<Vec<(NaiveDate, i64, TimelineEvent)>, String> {
     let repo_name = repo
         .file_name()
@@ -179,10 +158,6 @@ fn git_log_for_repo(
 
     let commit_url_base = repo_commit_url_base(repo);
 
-    // %at is the **author** timestamp — when the commit was originally written.
-    // We deliberately don't use %ct (committer date) because rebasing rewrites
-    // it, which would otherwise dump every rebased commit onto whichever day
-    // you rebased.
     let output = Command::new("git")
         .arg("-C")
         .arg(repo)
@@ -195,7 +170,7 @@ fn git_log_for_repo(
         .arg("--author")
         .arg(author)
         .arg("-z")
-        .arg("--pretty=format:%H%x09%at%x09%s")
+        .arg("--pretty=format:%H%x09%ct%x09%s")
         .output()
         .map_err(|e| format!("Failed to run git in {}: {e}", repo.display()))?;
 
@@ -218,11 +193,6 @@ fn git_log_for_repo(
             continue;
         };
         let day = local_dt.date_naive();
-        // git's --since/--until run against committer date; we filter to the
-        // requested range using the author date we just parsed.
-        if day < start_day || day > end_day {
-            continue;
-        }
         let time = local_dt.format("%H:%M").to_string();
 
         let short = &hash[..7.min(hash.len())];
@@ -648,55 +618,6 @@ mod tests {
         assert!(hash.len() >= 7);
         assert!(*ts > 0);
         assert_eq!(subject, "Add hello");
-
-        let _ = fs::remove_dir_all(&tmp);
-    }
-
-    // --- integration: author-date vs committer-date ---
-
-    /// Simulates a "develop-rebase" scenario: a commit authored months ago but
-    /// committed *today* (which is what a rebase produces). The timeline should
-    /// place it on the day the work was originally done (author date), not on
-    /// the day it was rebased (committer date).
-    #[test]
-    fn git_log_for_repo_uses_author_date_for_filtering() {
-        let tmp = make_tmp("rebase-author-date");
-        init_repo(&tmp, "Recall Tester");
-
-        // Commit with author-date deep in the past and committer-date = "now".
-        // GIT_AUTHOR_DATE pins the author timestamp; GIT_COMMITTER_DATE pins
-        // the committer timestamp. This is exactly what `git rebase` produces.
-        let past_author_iso = "2024-03-15T10:00:00+00:00";
-        fs::write(tmp.join("a.txt"), "a").unwrap();
-        let status = Command::new("git")
-            .arg("-C").arg(&tmp)
-            .args(["add", "a.txt"])
-            .env("GIT_CONFIG_NOSYSTEM", "1")
-            .status().unwrap();
-        assert!(status.success());
-        let status = Command::new("git")
-            .arg("-C").arg(&tmp)
-            .args(["commit", "-m", "Old work, rebased today"])
-            .env("GIT_CONFIG_NOSYSTEM", "1")
-            .env("GIT_AUTHOR_DATE", past_author_iso)
-            // No GIT_COMMITTER_DATE → committer date is "now"
-            .status().unwrap();
-        assert!(status.success());
-
-        let author_day = NaiveDate::from_ymd_opt(2024, 3, 15).unwrap();
-        let wide_since = "2020-01-01 00:00:00";
-        let wide_until = "2099-12-31 23:59:59";
-
-        // Querying the author-date day → must include the rebased commit.
-        let rows = git_log_for_repo(&tmp, wide_since, wide_until, "Recall Tester", author_day, author_day).unwrap();
-        assert_eq!(rows.len(), 1, "commit should appear on its author date");
-        assert_eq!(rows[0].0, author_day);
-
-        // Querying a different past day (no work that day) → must be empty,
-        // even though the commit's committer-date is "now".
-        let unrelated_day = NaiveDate::from_ymd_opt(2024, 3, 14).unwrap();
-        let rows = git_log_for_repo(&tmp, wide_since, wide_until, "Recall Tester", unrelated_day, unrelated_day).unwrap();
-        assert!(rows.is_empty(), "rebased commit must not pollute unrelated days");
 
         let _ = fs::remove_dir_all(&tmp);
     }
