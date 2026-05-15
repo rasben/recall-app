@@ -16,12 +16,6 @@ use crate::timeline::{sanitize_event_url, TimelineEvent, TimelineEventSource};
 const MAX_SCAN_DEPTH: u32 = 14;
 const REPO_SCAN_TTL: Duration = Duration::from_secs(60);
 
-/// Consecutive commits in the same repo whose committer timestamps are within
-/// this window are collapsed into a single timeline row. Picks up two natural
-/// patterns: a developer making a quick second commit after a small fix, and
-/// rebases (where all rewritten commits land microseconds apart).
-const COMMIT_GROUP_WINDOW_SECONDS: i64 = 5;
-
 struct RepoScanCache {
     root: PathBuf,
     scanned_at: Instant,
@@ -189,7 +183,7 @@ fn git_log_for_repo(
         ));
     }
 
-    let mut parsed: Vec<ParsedCommit> = Vec::new();
+    let mut rows: Vec<(NaiveDate, i64, TimelineEvent)> = Vec::new();
     for record in output.stdout.split(|&b| b == 0).filter(|chunk| !chunk.is_empty()) {
         let line = String::from_utf8_lossy(record);
         let Some((hash, ts, subject)) = parse_git_log_record(&line) else {
@@ -198,101 +192,29 @@ fn git_log_for_repo(
         let Some(local_dt) = Local.timestamp_opt(ts, 0).single() else {
             continue;
         };
-        parsed.push(ParsedCommit {
-            hash,
+        let day = local_dt.date_naive();
+        let time = local_dt.format("%H:%M").to_string();
+
+        let short = &hash[..7.min(hash.len())];
+        let id = format!("git:{}:{}", repo.display(), hash);
+        let url = commit_url_base
+            .as_deref()
+            .and_then(|base| sanitize_event_url(&format!("{base}/{hash}")));
+
+        rows.push((
+            day,
             ts,
-            subject,
-            day: local_dt.date_naive(),
-            time: local_dt.format("%H:%M").to_string(),
-        });
+            TimelineEvent {
+                id,
+                time,
+                source: TimelineEventSource::Git,
+                title: subject,
+                detail: Some(format!("{repo_name} — {short}")),
+                url,
+            },
+        ));
     }
-    Ok(collapse_close_commits(parsed, &repo_name, repo, commit_url_base.as_deref()))
-}
-
-struct ParsedCommit {
-    hash: String,
-    ts: i64,
-    subject: String,
-    day: NaiveDate,
-    time: String,
-}
-
-/// Group commits whose committer timestamps land within `COMMIT_GROUP_WINDOW_SECONDS`
-/// of each other into single timeline rows. Each commit only has to be close to
-/// its immediate predecessor, so a slow trickle still collapses if every step
-/// is within the window.
-fn collapse_close_commits(
-    mut commits: Vec<ParsedCommit>,
-    repo_name: &str,
-    repo: &Path,
-    commit_url_base: Option<&str>,
-) -> Vec<(NaiveDate, i64, TimelineEvent)> {
-    commits.sort_by_key(|c| c.ts);
-
-    let mut groups: Vec<Vec<ParsedCommit>> = Vec::new();
-    for c in commits {
-        if let Some(current) = groups.last_mut() {
-            let prev_ts = current.last().expect("group is never empty").ts;
-            if c.ts - prev_ts <= COMMIT_GROUP_WINDOW_SECONDS {
-                current.push(c);
-                continue;
-            }
-        }
-        groups.push(vec![c]);
-    }
-
-    groups
-        .into_iter()
-        .map(|group| {
-            let count = group.len();
-            // Latest commit represents the burst: for a rebase it's the
-            // branch tip; for ad-hoc work it's the most recent thought.
-            let last = group.last().expect("group is never empty");
-            let first = group.first().expect("group is never empty");
-            let short_last = &last.hash[..7.min(last.hash.len())];
-
-            let url = commit_url_base
-                .and_then(|base| sanitize_event_url(&format!("{base}/{}", last.hash)));
-
-            let (id, title, detail) = if count == 1 {
-                (
-                    format!("git:{}:{}", repo.display(), last.hash),
-                    last.subject.clone(),
-                    Some(format!("{repo_name} — {short_last}")),
-                )
-            } else {
-                let short_first = &first.hash[..7.min(first.hash.len())];
-                (
-                    // Stable id keyed on the burst boundaries; survives across
-                    // re-fetches as long as the same commits land together.
-                    format!(
-                        "git:{}:{}..{}+{}",
-                        repo.display(),
-                        first.hash,
-                        last.hash,
-                        count
-                    ),
-                    format!("{} (+{} more)", last.subject, count - 1),
-                    Some(format!(
-                        "{repo_name} — {count} commits, {short_first}…{short_last}"
-                    )),
-                )
-            };
-
-            (
-                last.day,
-                last.ts,
-                TimelineEvent {
-                    id,
-                    time: last.time.clone(),
-                    source: TimelineEventSource::Git,
-                    title,
-                    detail,
-                    url,
-                },
-            )
-        })
-        .collect()
+    Ok(rows)
 }
 
 /// Return the list of git repos under `root`, using a short-lived in-memory
@@ -698,86 +620,5 @@ mod tests {
         assert_eq!(subject, "Add hello");
 
         let _ = fs::remove_dir_all(&tmp);
-    }
-
-    // --- collapse_close_commits ---
-
-    fn pc(hash: &str, ts: i64, subject: &str) -> ParsedCommit {
-        ParsedCommit {
-            hash: hash.to_string(),
-            ts,
-            subject: subject.to_string(),
-            day: NaiveDate::from_ymd_opt(2024, 1, 1).unwrap(),
-            time: "12:00".to_string(),
-        }
-    }
-
-    #[test]
-    fn collapse_leaves_single_commit_alone() {
-        let out = collapse_close_commits(
-            vec![pc("aaaaaaaaaaaa", 1_700_000_000, "Solo")],
-            "repo",
-            Path::new("/tmp/repo"),
-            None,
-        );
-        assert_eq!(out.len(), 1);
-        assert_eq!(out[0].2.title, "Solo");
-        assert_eq!(out[0].2.id, "git:/tmp/repo:aaaaaaaaaaaa");
-    }
-
-    #[test]
-    fn collapse_groups_commits_within_window() {
-        // Three commits all within 5s; should become one row with "(+2 more)"
-        let out = collapse_close_commits(
-            vec![
-                pc("aaaaaaaaaaaa", 1_700_000_000, "First"),
-                pc("bbbbbbbbbbbb", 1_700_000_002, "Second"),
-                pc("cccccccccccc", 1_700_000_005, "Third"),
-            ],
-            "repo",
-            Path::new("/tmp/repo"),
-            None,
-        );
-        assert_eq!(out.len(), 1);
-        assert_eq!(out[0].2.title, "Third (+2 more)");
-        assert!(out[0].2.detail.as_ref().unwrap().contains("3 commits"));
-        assert_eq!(out[0].1, 1_700_000_005, "uses latest ts");
-    }
-
-    #[test]
-    fn collapse_splits_when_gap_exceeds_window() {
-        // Two close, then a 10s gap, then one more.
-        let out = collapse_close_commits(
-            vec![
-                pc("aaaaaaaaaaaa", 1_700_000_000, "A"),
-                pc("bbbbbbbbbbbb", 1_700_000_003, "B"),
-                pc("cccccccccccc", 1_700_000_013, "C"),
-            ],
-            "repo",
-            Path::new("/tmp/repo"),
-            None,
-        );
-        assert_eq!(out.len(), 2);
-        assert_eq!(out[0].2.title, "B (+1 more)");
-        assert_eq!(out[1].2.title, "C");
-    }
-
-    #[test]
-    fn collapse_chains_via_transitive_proximity() {
-        // Each commit is within 5s of the previous; together they span 12s.
-        // The "session" should still collapse to one group.
-        let out = collapse_close_commits(
-            vec![
-                pc("aaaaaaaaaaaa", 1_700_000_000, "A"),
-                pc("bbbbbbbbbbbb", 1_700_000_004, "B"),
-                pc("cccccccccccc", 1_700_000_008, "C"),
-                pc("dddddddddddd", 1_700_000_012, "D"),
-            ],
-            "repo",
-            Path::new("/tmp/repo"),
-            None,
-        );
-        assert_eq!(out.len(), 1);
-        assert_eq!(out[0].2.title, "D (+3 more)");
     }
 }
