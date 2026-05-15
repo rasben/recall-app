@@ -42,7 +42,7 @@
         aria-pressed={!hidden}
         class="inline-flex items-center gap-1.5 border-2 px-2 py-1 font-head text-[10px] uppercase tracking-widest transition-colors
           {hidden
-            ? 'border-dashed border-border bg-transparent text-muted-foreground line-through hover:text-foreground hover:border-foreground'
+            ? 'border-dashed border-border bg-transparent text-muted-foreground hover:text-foreground hover:border-foreground'
             : 'border-foreground bg-foreground text-background'}"
       >
         <span
