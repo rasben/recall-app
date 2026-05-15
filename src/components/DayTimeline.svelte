@@ -4,10 +4,12 @@
   import { onMount, onDestroy } from "svelte";
   import { listen } from "@tauri-apps/api/event";
   import { commands } from "../bindings";
-  import { addDaysIso, applyOptimisticToggle, groupEventsByHour, rollbackOptimisticToggle, todayIso, type TimelineEvent } from "$lib/timeline";
+  import { addDaysIso, applyOptimisticToggle, groupCloseCommits, groupEventsByHour, rollbackOptimisticToggle, todayIso, type TimelineEvent } from "$lib/timeline";
   import { navState } from "$lib/nav-state.svelte";
   import TimelineDateNav from "./TimelineDateNav.svelte";
+  import TimelineSourceFilter from "./TimelineSourceFilter.svelte";
   import TimelineEventRow from "./TimelineEvent.svelte";
+  import TimelineCommitGroup from "./TimelineCommitGroup.svelte";
   import Loading from "./ui/Loading.svelte";
   import MissingSettings from "./ui/MissingSettings.svelte";
   import { t } from "$lib/i18n.svelte";
@@ -149,7 +151,11 @@
     };
   });
 
-  let groupedByHour = $derived(groupEventsByHour(events));
+  let visibleEvents = $derived(
+    events.filter((e) => !navState.hiddenSources.has(e.source)),
+  );
+  let visibleRows = $derived(groupCloseCommits(visibleEvents));
+  let groupedByHour = $derived(groupEventsByHour(visibleRows));
 
   onMount(async () => {
     const today = todayIso();
@@ -211,6 +217,10 @@
     </div>
   {/if}
 
+  {#if !isLoading && settingsLoaded && enabledSources.length > 0 && events.length > 0}
+    <TimelineSourceFilter {enabledSources} />
+  {/if}
+
   <div class="relative">
   {#if settingsLoaded && enabledSources.length === 0}
     <MissingSettings message={t("timeline.no_sources")} />
@@ -221,7 +231,7 @@
       <Loading currentSource={loadingSource} {doneSources} {enabledSources} {sourceErrors} />
     </div>
     <NyanCat />
-  {:else if events.length === 0 && !loadError}
+  {:else if visibleEvents.length === 0 && !loadError}
     <p class="relative text-muted-foreground z-2" in:fade|global={{ duration: 240, easing: cubicOut }}>
       {t("timeline.no_activity")}
     </p>
@@ -235,7 +245,7 @@
             <span class="font-head text-sm text-muted-foreground">{group.hour}</span>
           </div>
           <div class="min-w-0 flex-1 space-y-2">
-            {#each group.items as { event, index } (`${selectedDate}-${event.id}`)}
+            {#each group.items as { row, index } (`${selectedDate}-${row.kind === 'event' ? row.event.id : row.key}`)}
               <div
                 class="relative z-0 will-change-transform has-[.timeline-event-btn:is(:hover,:focus-within)]:z-10 has-[.timeline-event-btn:is(:hover,:focus-within)]:overflow-visible"
                 in:fly|global={{
@@ -245,7 +255,11 @@
                   easing: quintOut,
                 }}
               >
-                <TimelineEventRow {event} done={doneIds.has(event.id)} onToggle={() => toggleDone(event.id)} />
+                {#if row.kind === 'event'}
+                  <TimelineEventRow event={row.event} done={doneIds.has(row.event.id)} onToggle={() => toggleDone(row.event.id)} />
+                {:else}
+                  <TimelineCommitGroup events={row.events} {doneIds} onToggle={toggleDone} />
+                {/if}
               </div>
             {/each}
           </div>

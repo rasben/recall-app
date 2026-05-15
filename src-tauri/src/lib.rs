@@ -9,9 +9,10 @@ use std::sync::{atomic::AtomicBool, Arc, Mutex};
 use tauri::Manager;
 use tauri_specta::Builder;
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    let builder = Builder::<tauri::Wry>::new().commands(tauri_specta::collect_commands![
+/// Builder with every command registered. Extracted so tests can exercise the
+/// specta export the same way the running app does.
+fn make_specta_builder() -> Builder<tauri::Wry> {
+    Builder::<tauri::Wry>::new().commands(tauri_specta::collect_commands![
         commands::settings_ui::set_settings_ui,
         commands::settings_ui::get_settings_ui,
         commands::settings_git::set_settings_git,
@@ -39,14 +40,25 @@ pub fn run() {
         commands::settings::clear_all_caches,
         commands::settings::get_cache_size,
         commands::settings::get_cached_day_event_counts,
-    ]);
+    ])
+}
+
+/// Specta Typescript config used by the export. Map Rust's i64 (e.g.
+/// TimelineEvent.timestamp = unix seconds) to TS `number`; unix seconds fit
+/// far inside Number.MAX_SAFE_INTEGER, so the default BigIntForbidden policy
+/// is unnecessarily strict.
+fn specta_typescript_config() -> specta_typescript::Typescript {
+    specta_typescript::Typescript::default()
+        .bigint(specta_typescript::BigIntExportBehavior::Number)
+}
+
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    let builder = make_specta_builder();
 
     #[cfg(debug_assertions)]
     builder
-        .export(
-            specta_typescript::Typescript::default(),
-            "../src/bindings.ts",
-        )
+        .export(specta_typescript_config(), "../src/bindings.ts")
         .expect("Failed to export typescript bindings");
 
     tauri::Builder::default()
@@ -70,4 +82,25 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The real specta export only runs when the app boots (in `run()`), which
+    /// `cargo test` never does — so issues like `BigIntForbidden` on a new
+    /// `i64` field silently slipped through until a developer ran the app.
+    /// Run it from the test suite too, writing to the same `src/bindings.ts`
+    /// file the dev build would; this doubles as a regen path so tests refresh
+    /// bindings if any command signature changed.
+    #[test]
+    fn typescript_bindings_export_successfully() {
+        // CARGO_MANIFEST_DIR is src-tauri/; bindings live one level up under src/.
+        let bindings_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../src/bindings.ts");
+        make_specta_builder()
+            .export(specta_typescript_config(), &bindings_path)
+            .expect("typescript bindings must export without errors");
+    }
 }

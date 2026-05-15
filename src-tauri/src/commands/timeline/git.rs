@@ -207,6 +207,7 @@ fn git_log_for_repo(
             TimelineEvent {
                 id,
                 time,
+                timestamp: ts,
                 source: TimelineEventSource::Git,
                 title: subject,
                 detail: Some(format!("{repo_name} — {short}")),

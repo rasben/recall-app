@@ -200,6 +200,7 @@ pub(super) fn events_for_range(
             TimelineEvent {
                 id: format!("jira:{}:{}:{}", issue.key, day_naive, action),
                 time,
+                timestamp: ts,
                 source: TimelineEventSource::Jira,
                 title,
                 detail,

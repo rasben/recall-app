@@ -280,6 +280,7 @@ pub(super) fn events_for_range(
             TimelineEvent {
                 id,
                 time,
+                timestamp: earliest_ts,
                 source: TimelineEventSource::Zulip,
                 title,
                 detail: Some(detail),

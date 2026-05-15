@@ -166,6 +166,7 @@ pub(super) fn events_for_range(
                 TimelineEvent {
                     id: format!("calendar:{uid}"),
                     time,
+                    timestamp: dtstart,
                     source: TimelineEventSource::Calendar,
                     title: summary.clone(),
                     detail: detail.clone(),

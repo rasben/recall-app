@@ -40,6 +40,9 @@ pub struct TimelineEvent {
     pub id: String,
     /// Local time `HH:MM` for the selected calendar day.
     pub time: String,
+    /// UTC unix seconds. Used by the UI to group close-together events
+    /// (e.g. commits inside a rebase burst) at finer resolution than `time`.
+    pub timestamp: i64,
     pub source: TimelineEventSource,
     pub title: String,
     pub detail: Option<String>,
