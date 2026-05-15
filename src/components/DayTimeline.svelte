@@ -7,6 +7,7 @@
   import { addDaysIso, applyOptimisticToggle, groupEventsByHour, rollbackOptimisticToggle, todayIso, type TimelineEvent } from "$lib/timeline";
   import { navState } from "$lib/nav-state.svelte";
   import TimelineDateNav from "./TimelineDateNav.svelte";
+  import TimelineSourceFilter from "./TimelineSourceFilter.svelte";
   import TimelineEventRow from "./TimelineEvent.svelte";
   import Loading from "./ui/Loading.svelte";
   import MissingSettings from "./ui/MissingSettings.svelte";
@@ -149,7 +150,10 @@
     };
   });
 
-  let groupedByHour = $derived(groupEventsByHour(events));
+  let visibleEvents = $derived(
+    events.filter((e) => !navState.hiddenSources.has(e.source)),
+  );
+  let groupedByHour = $derived(groupEventsByHour(visibleEvents));
 
   onMount(async () => {
     const today = todayIso();
@@ -211,6 +215,10 @@
     </div>
   {/if}
 
+  {#if !isLoading && settingsLoaded && enabledSources.length > 0 && events.length > 0}
+    <TimelineSourceFilter {enabledSources} />
+  {/if}
+
   <div class="relative">
   {#if settingsLoaded && enabledSources.length === 0}
     <MissingSettings message={t("timeline.no_sources")} />
@@ -221,7 +229,7 @@
       <Loading currentSource={loadingSource} {doneSources} {enabledSources} {sourceErrors} />
     </div>
     <NyanCat />
-  {:else if events.length === 0 && !loadError}
+  {:else if visibleEvents.length === 0 && !loadError}
     <p class="relative text-muted-foreground z-2" in:fade|global={{ duration: 240, easing: cubicOut }}>
       {t("timeline.no_activity")}
     </p>
