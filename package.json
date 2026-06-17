@@ -25,7 +25,7 @@
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@tauri-apps/plugin-opener": "^2",
-    "bits-ui": "^2.18.0"
+    "bits-ui": "^2.18.1"
   },
   "devDependencies": {
     "@lucide/svelte": "^1.8.0",
