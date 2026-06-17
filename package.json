@@ -28,7 +28,7 @@
     "bits-ui": "^2.18.1"
   },
   "devDependencies": {
-    "@lucide/svelte": "^1.8.0",
+    "@lucide/svelte": "^1.16.0",
     "@sveltejs/adapter-static": "^3.0.6",
     "@sveltejs/kit": "^2.60.1",
     "@sveltejs/vite-plugin-svelte": "^7.0.0",
