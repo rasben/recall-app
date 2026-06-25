@@ -1,0 +1,46 @@
+name: Build
+
+# Verifies the app actually compiles — both the SvelteKit frontend and the
+# Rust/Tauri backend. Runs on PRs *and* on pushes to main, so a dependency
+# bump that merges green but breaks the build on main is caught immediately.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - run: npm install
+
+      # Builds the SvelteKit frontend into ./build (Tauri's frontendDist).
+      - name: Build frontend
+        run: npm run build
+
+      # Compiles the full Tauri backend binary.
+      - name: Build Rust backend
+        run: cargo build --manifest-path src-tauri/Cargo.toml --locked
