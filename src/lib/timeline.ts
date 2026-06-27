@@ -1,6 +1,18 @@
-import type { TimelineEvent } from "../bindings";
+import type { TimelineEvent, TimelineEventSource } from "../bindings";
 
 export type { TimelineEvent, TimelineEventSource } from "../bindings";
+
+/** Canonical display label per source — the single source of truth shared by
+ *  the timeline badges, the source filter, and the export. */
+export const SOURCE_LABELS: Record<TimelineEventSource, string> = {
+  git: "Git",
+  github: "GitHub",
+  calendar: "Calendar",
+  gmail: "Gmail",
+  drive: "Drive",
+  jira: "Jira",
+  zulip: "Zulip",
+};
 
 /** A timeline row is either a single event or a tight burst of git commits. */
 export type TimelineRow =
@@ -12,14 +24,23 @@ export type HourGroup = { hour: string; items: IndexedRow[] };
 /** Commits within this many seconds of the previous one collapse into a group. */
 export const COMMIT_GROUP_WINDOW_SECONDS = 5;
 
+/** Format a Date as a local-calendar `YYYY-MM-DD` (never UTC). */
+function toLocalIso(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
 export function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  return toLocalIso(new Date());
 }
 
 export function addDaysIso(iso: string, days: number): string {
-  const d = new Date(iso + "T12:00:00");
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  const [y, m, d] = iso.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + days);
+  return toLocalIso(date);
 }
 
 export function formatDayHeadingParts(
