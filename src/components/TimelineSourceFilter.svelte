@@ -6,18 +6,18 @@
   import TicketCheck from "@lucide/svelte/icons/ticket-check";
   import Check from "@lucide/svelte/icons/check";
   import type { Component } from "svelte";
-  import type { TimelineEventSource } from "$lib/timeline";
+  import { SOURCE_LABELS, type TimelineEventSource } from "$lib/timeline";
   import { navState } from "$lib/nav-state.svelte";
 
   let { enabledSources }: { enabledSources: string[] } = $props();
 
   type Source = { key: TimelineEventSource; label: string; Icon: Component };
   const ALL_SOURCES: Source[] = [
-    { key: "git", label: "Git", Icon: GitCommit },
-    { key: "github", label: "GitHub", Icon: Github },
-    { key: "calendar", label: "Calendar", Icon: Calendar },
-    { key: "jira", label: "Jira", Icon: TicketCheck },
-    { key: "zulip", label: "Zulip", Icon: MessageSquare },
+    { key: "git", label: SOURCE_LABELS.git, Icon: GitCommit },
+    { key: "github", label: SOURCE_LABELS.github, Icon: Github },
+    { key: "calendar", label: SOURCE_LABELS.calendar, Icon: Calendar },
+    { key: "jira", label: SOURCE_LABELS.jira, Icon: TicketCheck },
+    { key: "zulip", label: SOURCE_LABELS.zulip, Icon: MessageSquare },
   ];
 
   let visibleSources = $derived(

@@ -10,21 +10,20 @@
   import { openUrl } from "@tauri-apps/plugin-opener";
   import type { TimelineEvent, TimelineEventSource } from "../bindings";
   import type { Component } from "svelte";
+  import { SOURCE_LABELS } from "$lib/timeline";
   import { t } from "$lib/i18n.svelte";
 
   let { event, done = false, onToggle }: { event: TimelineEvent; done?: boolean; onToggle?: () => void } = $props();
 
-  const sourceConfig: Record<
-    TimelineEventSource,
-    { icon: Component; label: string; color: string }
-  > = {
-    git: { icon: GitCommit, label: "Git", color: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300" },
-    github: { icon: Github, label: "GitHub", color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
-    calendar: { icon: Calendar, label: "Calendar", color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" },
-    gmail: { icon: Mail, label: "Gmail", color: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300" },
-    drive: { icon: FileText, label: "Drive", color: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" },
-    jira: { icon: TicketCheck, label: "JIRA", color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" },
-    zulip: { icon: MessageSquare, label: "Zulip", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300" },
+  // Label comes from the shared SOURCE_LABELS map; the badge CSS upper-cases it.
+  const sourceConfig: Record<TimelineEventSource, { icon: Component; color: string }> = {
+    git: { icon: GitCommit, color: "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300" },
+    github: { icon: Github, color: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
+    calendar: { icon: Calendar, color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" },
+    gmail: { icon: Mail, color: "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300" },
+    drive: { icon: FileText, color: "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" },
+    jira: { icon: TicketCheck, color: "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300" },
+    zulip: { icon: MessageSquare, color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300" },
   };
 
   let config = $derived(sourceConfig[event.source]);
@@ -84,7 +83,7 @@
   <span
     class="absolute right-0 top-0 shrink-0 bg-foreground px-1 py-0.5 font-head text-[8px] uppercase tracking-widest text-background"
   >
-    {config.label}
+    {SOURCE_LABELS[event.source]}
   </span>
 </div>
 
