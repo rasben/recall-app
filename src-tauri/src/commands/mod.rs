@@ -1,5 +1,6 @@
 pub mod harvest_done;
 pub mod settings;
+pub mod settings_export;
 pub mod settings_git;
 pub mod settings_github;
 pub mod settings_ical;

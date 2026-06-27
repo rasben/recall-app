@@ -15,6 +15,8 @@ fn make_specta_builder() -> Builder<tauri::Wry> {
     Builder::<tauri::Wry>::new().commands(tauri_specta::collect_commands![
         commands::settings_ui::set_settings_ui,
         commands::settings_ui::get_settings_ui,
+        commands::settings_export::set_settings_export,
+        commands::settings_export::get_settings_export,
         commands::settings_git::set_settings_git,
         commands::settings_git::get_settings_git,
         commands::settings_github::set_settings_github,
@@ -29,6 +31,7 @@ fn make_specta_builder() -> Builder<tauri::Wry> {
         commands::settings_ical::get_ical_sync_status,
         commands::timeline::get_timeline_for_day,
         commands::timeline::refresh_timeline_for_day,
+        commands::timeline::export_timeline_for_range,
         commands::timeline::get_day_counts_for_month,
         commands::timeline::test_settings_git,
         commands::timeline::test_settings_github,
