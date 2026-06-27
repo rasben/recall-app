@@ -1,6 +1,7 @@
 <script lang="ts">
   import { fade } from "svelte/transition";
-  import { onMount } from "svelte";
+  import { onMount, onDestroy, tick } from "svelte";
+  import { navState } from "$lib/nav-state.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import SettingsIcon from "@lucide/svelte/icons/settings";
   import CloseIcon from "@lucide/svelte/icons/x";
@@ -75,6 +76,44 @@
     welcomed = false;
     settingsOpen = false;
   }
+
+  // Scroll a settings panel into view, re-pinning it briefly: panels above load
+  // their settings asynchronously and grow, pushing this one down, which would
+  // otherwise leave a one-shot scroll short. Cancels any previous in-flight pin
+  // so repeated deep-links can't stack overlapping observers.
+  let cancelScroll: (() => void) | null = null;
+
+  function scrollToSettingsSection(section: string) {
+    cancelScroll?.();
+    let cancelled = false;
+    let ro: ResizeObserver | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    cancelScroll = () => {
+      cancelled = true;
+      ro?.disconnect();
+      if (timer) clearTimeout(timer);
+    };
+    tick().then(() => {
+      if (cancelled) return;
+      const el = document.getElementById(`settings-${section}`);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      ro = new ResizeObserver(() => el.scrollIntoView({ behavior: "auto", block: "start" }));
+      ro.observe(document.body);
+      timer = setTimeout(() => ro?.disconnect(), 800);
+    });
+  }
+
+  onDestroy(() => cancelScroll?.());
+
+  // Let other views (e.g. the export popover) deep-link into a settings panel.
+  $effect(() => {
+    const section = navState.openSettingsSection;
+    if (!section) return;
+    navState.openSettingsSection = null;
+    settingsOpen = true;
+    scrollToSettingsSection(section);
+  });
 </script>
 
 {#if welcomeChecked && !welcomed}

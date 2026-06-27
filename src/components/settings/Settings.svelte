@@ -5,6 +5,7 @@
   import SettingsCalendar from "./Calendar.svelte";
   import SettingsJira from "./Jira.svelte";
   import SettingsZulip from "./Zulip.svelte";
+  import SettingsExport from "./Export.svelte";
   import SettingsSystem from "./System.svelte";
   import { t } from "$lib/i18n.svelte";
 
@@ -21,4 +22,5 @@
 <SettingsJira />
 <SettingsZulip />
 <SettingsCalendar />
+<SettingsExport />
 <SettingsSystem {onShowWelcome} />
