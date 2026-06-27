@@ -51,7 +51,7 @@
   }
 </script>
 
-<fieldset id="settings-export" class="border-2 p-4 mt-6">
+<fieldset class="border-2 p-4 mt-6">
   <legend>{t("settings.export.title")}</legend>
   <p class="mb-3 text-sm text-muted-foreground">{t("settings.export.description")}</p>
 

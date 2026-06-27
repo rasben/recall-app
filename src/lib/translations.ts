@@ -25,6 +25,10 @@ const en = {
 
   // Settings
   "settings.title": "Settings",
+  "settings.tab.general": "General",
+  "settings.tab.sources": "Data sources",
+  "settings.tab.export": "Export",
+  "settings.tab.system": "System",
   "settings.language": "Language",
   "settings.language.error": "Could not set language.",
   "settings.go_to_data":
@@ -239,6 +243,10 @@ const da: Translations = {
   "page.new_version.download": "Hent",
 
   "settings.title": "Indstillinger",
+  "settings.tab.general": "Generelt",
+  "settings.tab.sources": "Datakilder",
+  "settings.tab.export": "Eksport",
+  "settings.tab.system": "System",
   "settings.language": "Sprog",
   "settings.language.error": "Kunne ikke sætte sprog",
   "settings.go_to_data":
