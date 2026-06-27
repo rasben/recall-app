@@ -5,4 +5,7 @@ export const navState = $state({
   dayCounts: {} as Record<string, number>,
   /** Sources the user has toggled off in the timeline view. Session-only — not persisted. */
   hiddenSources: new Set<TimelineEventSource>(),
+  /** When set, the page opens the Settings view and scrolls to the matching
+   *  `#settings-{section}` panel. The page resets it to null once handled. */
+  openSettingsSection: null as string | null,
 });

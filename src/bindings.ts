@@ -16,6 +16,17 @@ async setSettingsUi(settings: SettingsUi) : Promise<Result<null, string>> {
 async getSettingsUi() : Promise<SettingsUi | null> {
     return await TAURI_INVOKE("get_settings_ui");
 },
+async setSettingsExport(settings: SettingsExport) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_settings_export", { settings }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getSettingsExport() : Promise<SettingsExport | null> {
+    return await TAURI_INVOKE("get_settings_export");
+},
 async setSettingsGit(settings: SettingsGit) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("set_settings_git", { settings }) };
@@ -96,6 +107,21 @@ async getTimelineForDay(day: string) : Promise<Result<TimelineEvent[], string>> 
 async refreshTimelineForDay(day: string) : Promise<Result<TimelineEvent[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("refresh_timeline_for_day", { day }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Collect merged timeline events for every day in `[start, end]` (inclusive,
+ * `YYYY-MM-DD`), grouped per day, for the "export for AI" feature. Reuses the
+ * per-day cache for elapsed days and does a single live fetch for the rest
+ * (today and any uncached past day), re-caching the elapsed ones. Empty days
+ * are included so the consumer sees the full coverage of the range.
+ */
+async exportTimelineForRange(start: string, end: string) : Promise<Result<ExportResult, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("export_timeline_for_range", { start, end }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -209,6 +235,30 @@ async getCachedDayEventCounts() : Promise<Result<{ [key in string]: number }, st
 
 export type CacheSizeResult = { bytes: number; cached_days: number }
 export type ClearCachesResult = { rows_deleted: number }
+/**
+ * One day's worth of merged timeline events, used by the export command so the
+ * frontend can group events under their day without re-deriving the date from
+ * each event's local `HH:MM` time.
+ */
+export type ExportDay = { 
+/**
+ * Local calendar day, `YYYY-MM-DD`.
+ */
+date: string; 
+/**
+ * Events on that day, sorted ascending by timestamp.
+ */
+events: TimelineEvent[] }
+/**
+ * Result of an export: the per-day events plus any sources that failed to
+ * fetch. `errors` is empty on a fully successful export.
+ */
+export type ExportResult = { days: ExportDay[]; errors: ExportSourceError[] }
+/**
+ * A source that failed during an export, so the frontend can warn that the
+ * copied result is incomplete rather than presenting it as the full picture.
+ */
+export type ExportSourceError = { source: string; error: string }
 export type GitHubEvent = "PullRequestEvent" | "PullRequestReviewEvent" | "PullRequestReviewCommentEvent" | "IssuesEvent" | "IssueCommentEvent" | "PushEvent"
 export type IcalSyncStatus = { syncing: boolean; last_synced_at: number | null; last_error: string | null }
 /**
@@ -231,6 +281,13 @@ export type JiraEvent =
  * You were @mentioned in an issue field or comment body.
  */
 "Mentioned"
+export type SettingsExport = { 
+/**
+ * User's custom prompt intro for the AI export. An empty string means
+ * "use the app's built-in, language-aware default", which the frontend
+ * resolves against the active UI language.
+ */
+prompt: string }
 export type SettingsGit = { enabled: boolean; path: string }
 export type SettingsGitHub = { enabled: boolean; username: string; token: string; enabled_events: GitHubEvent[] }
 export type SettingsIcal = { enabled?: boolean; urls?: string[]; 

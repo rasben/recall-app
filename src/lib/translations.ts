@@ -25,6 +25,10 @@ const en = {
 
   // Settings
   "settings.title": "Settings",
+  "settings.tab.general": "General",
+  "settings.tab.sources": "Data sources",
+  "settings.tab.export": "Export",
+  "settings.tab.system": "System",
   "settings.language": "Language",
   "settings.language.error": "Could not set language.",
   "settings.go_to_data":
@@ -172,6 +176,47 @@ const en = {
   "timeline.commit_burst_collapse": "Hide commits",
   "timeline.logged_in_harvest": "Logged in Harvest",
   "timeline.not_logged_in_harvest": "Not logged in Harvest",
+
+  "export.button": "Export",
+  "export.title": "Export activity",
+  "export.preset_day": "Selected day",
+  "export.preset_week": "Last 7 days",
+  "export.preset_month": "Last 30 days",
+  "export.start": "Start",
+  "export.end": "End",
+  "export.format": "Format",
+  "export.format_markdown": "Markdown",
+  "export.format_json": "JSON",
+  "export.include_prompt": "Add a prompt intro",
+  "export.prompt_hint":
+    "Prepends an instruction so the copied text works as a ready-made AI prompt. Turn off to copy just the activity data.",
+  "export.edit_prompt": "Edit prompt in settings",
+  "export.partial": "Copied {count} events, but some sources failed: {sources}",
+  "export.md_title": "Activity timeline",
+  "export.md_intro":
+    "Exported from Recall, a personal work-tracking app. Times are local. Each bullet is one tracked activity (commit, PR, calendar event, ticket update, message, …).",
+  "export.md_no_activity": "No tracked activity.",
+  "export.prompt": `First, before doing anything else, ask me whether you should also pull in data from any other sources you can access (such as chat sessions), and wait for my answer before continuing.
+
+Then summarize the activity below per day as an easy-to-read list. It is used to update Harvest time tracking, so:
+- Whenever activity can be tied to a Jira ticket ID (e.g. DDF-123, BUPL-123), group and label it by that ID — the ticket ID is the single most important thing for Harvest, so include it whenever it can be determined.
+- Group the remaining entries by project (e.g. DDF, BUPL).
+- Within each ticket or project, break the work into separate tasks so each can be logged as its own Harvest entry — don't lump everything under one heading.
+- You may combine routine, related items into a single entry (e.g. a batch of Dependabot dependency-update PRs), but keep unrelated work (such as a feature) as its own entry.`,
+  "settings.export.title": "AI export prompt",
+  "settings.export.description":
+    "The intro prepended to a Markdown export when “Add a prompt intro” is on. Leave it as the default to follow the app language, or write your own. Save an empty box to fall back to the default.",
+  "settings.export.save": "Save prompt",
+  "settings.export.revert": "Revert to default",
+  "settings.export.saved": "Prompt saved",
+  "settings.export.error": "Could not save the prompt.",
+
+  "export.copy": "Copy to clipboard",
+  "export.copying": "Preparing…",
+  "export.copied": "Copied {count} events to clipboard",
+  "export.empty": "No activity in this range — nothing to copy.",
+  "export.invalid_range": "Start date must be on or before the end date.",
+  "export.error": "Could not copy export.",
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -198,6 +243,10 @@ const da: Translations = {
   "page.new_version.download": "Hent",
 
   "settings.title": "Indstillinger",
+  "settings.tab.general": "Generelt",
+  "settings.tab.sources": "Datakilder",
+  "settings.tab.export": "Eksport",
+  "settings.tab.system": "System",
   "settings.language": "Sprog",
   "settings.language.error": "Kunne ikke sætte sprog",
   "settings.go_to_data":
@@ -334,6 +383,47 @@ const da: Translations = {
   "timeline.commit_burst_collapse": "Skjul commits",
   "timeline.logged_in_harvest": "Logget i Harvest",
   "timeline.not_logged_in_harvest": "Ikke logget i Harvest",
+
+  "export.button": "Eksportér",
+  "export.title": "Eksportér aktivitet",
+  "export.preset_day": "Valgte dag",
+  "export.preset_week": "Sidste 7 dage",
+  "export.preset_month": "Sidste 30 dage",
+  "export.start": "Start",
+  "export.end": "Slut",
+  "export.format": "Format",
+  "export.format_markdown": "Markdown",
+  "export.format_json": "JSON",
+  "export.include_prompt": "Tilføj en prompt-intro",
+  "export.prompt_hint":
+    "Tilføjer en instruktion, så den kopierede tekst fungerer som en færdig AI-prompt. Slå fra for kun at kopiere aktivitetsdata.",
+  "export.edit_prompt": "Rediger prompt i indstillinger",
+  "export.partial": "Kopierede {count} begivenheder, men nogle kilder fejlede: {sources}",
+  "export.md_title": "Aktivitetstidslinje",
+  "export.md_intro":
+    "Eksporteret fra Recall, en personlig arbejdsregistrerings-app. Tidspunkter er lokale. Hvert punkt er én registreret aktivitet (commit, PR, kalenderbegivenhed, sagsopdatering, besked, …).",
+  "export.md_no_activity": "Ingen registreret aktivitet.",
+  "export.prompt": `Spørg mig først, før du gør noget andet, om du også skal inddrage data fra andre kilder, du har adgang til (såsom chat-sessioner), og vent på mit svar, før du fortsætter.
+
+Opsummér derefter aktiviteten nedenfor per dag som en letlæselig liste. Den bruges til at opdatere Harvest-tidsregistrering, så:
+- Når aktivitet kan knyttes til et Jira-sags-ID (f.eks. DDF-123, BUPL-123), så gruppér og mærk den efter det ID — sags-ID'et er det vigtigste for Harvest, så medtag det, når det kan bestemmes.
+- Gruppér de resterende poster efter projekt (f.eks. DDF, BUPL).
+- Inddel arbejdet inden for hver sag eller hvert projekt i separate opgaver, så hver kan registreres som sin egen Harvest-post — saml ikke det hele under én overskrift.
+- Du må gerne kombinere rutineprægede, relaterede poster i én post (f.eks. en stak Dependabot-opdaterings-PR'er), men hold urelateret arbejde (såsom en feature) som sin egen post.`,
+  "settings.export.title": "AI-eksport-prompt",
+  "settings.export.description":
+    "Introteksten der sættes foran en Markdown-eksport, når “Tilføj en prompt-intro” er slået til. Lad den stå som standard for at følge appens sprog, eller skriv din egen. Gem et tomt felt for at falde tilbage til standarden.",
+  "settings.export.save": "Gem prompt",
+  "settings.export.revert": "Nulstil til standard",
+  "settings.export.saved": "Prompt gemt",
+  "settings.export.error": "Kunne ikke gemme prompten.",
+
+  "export.copy": "Kopiér til udklipsholder",
+  "export.copying": "Forbereder…",
+  "export.copied": "Kopierede {count} begivenheder til udklipsholderen",
+  "export.empty": "Ingen aktivitet i denne periode — intet at kopiere.",
+  "export.invalid_range": "Startdato skal være på eller før slutdatoen.",
+  "export.error": "Kunne ikke kopiere eksporten.",
 };
 
 export const translations: Record<Lang, Translations> = { en, da };

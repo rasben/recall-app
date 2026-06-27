@@ -8,6 +8,7 @@
   import { parseDate, today, getLocalTimeZone, type DateValue } from "@internationalized/date";
   import { formatDayHeadingParts, todayIso } from "$lib/timeline";
   import { navState } from "$lib/nav-state.svelte";
+  import TimelineExport from "./TimelineExport.svelte";
   import { commands } from "../bindings";
   import { t, langLocale } from "$lib/i18n.svelte";
   import { listen, type UnlistenFn } from "@tauri-apps/api/event";
@@ -149,17 +150,21 @@
     </Button>
   {/if}
 
-  <Button
-    variant="ghost"
-    size="icon"
-    class="mr-10 ml-auto size-7 text-muted-foreground hover:text-foreground"
-    onclick={onRefresh}
-    disabled={refreshing}
-    aria-label={t("timeline.refresh")}
-    title={t("timeline.refresh")}
-  >
-    <RefreshCw class="size-3.5 {refreshing ? 'animate-spin' : ''}" />
-  </Button>
+  <div class="mr-10 ml-auto flex items-center">
+    <TimelineExport {selectedDate} />
+
+    <Button
+      variant="ghost"
+      size="icon"
+      class="size-7 text-muted-foreground hover:text-foreground"
+      onclick={onRefresh}
+      disabled={refreshing}
+      aria-label={t("timeline.refresh")}
+      title={t("timeline.refresh")}
+    >
+      <RefreshCw class="size-3.5 {refreshing ? 'animate-spin' : ''}" />
+    </Button>
+  </div>
 </div>
 
 <style>

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { fade } from "svelte/transition";
   import { onMount } from "svelte";
+  import { navState } from "$lib/nav-state.svelte";
   import { Button } from "$lib/components/ui/button/index.js";
   import SettingsIcon from "@lucide/svelte/icons/settings";
   import CloseIcon from "@lucide/svelte/icons/x";
@@ -75,6 +76,13 @@
     welcomed = false;
     settingsOpen = false;
   }
+
+  // Let other views (e.g. the export popover) deep-link into a settings panel:
+  // open the settings view, and the Settings component selects the matching tab
+  // and clears the request.
+  $effect(() => {
+    if (navState.openSettingsSection) settingsOpen = true;
+  });
 </script>
 
 {#if welcomeChecked && !welcomed}
