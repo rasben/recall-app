@@ -194,7 +194,7 @@ pub(super) fn events_for_range(
                 .unwrap_or("unknown")
                 .to_string()
         } else {
-            "__dm__".to_string()
+            format!("__dm__:{}", dm_conversation_key(&msg, &email))
         };
         groups.entry((local_day, key)).or_default().push(msg);
     }
@@ -203,24 +203,33 @@ pub(super) fn events_for_range(
     for ((day_naive, stream_key), mut msgs) in groups {
         msgs.sort_by_key(|m| m.timestamp);
         let earliest_ts = msgs[0].timestamp;
+        let last_ts = msgs[msgs.len() - 1].timestamp;
         let count = msgs.len();
-        let is_dm = stream_key == "__dm__";
+        let is_dm = stream_key.starts_with("__dm__");
 
-        let dt = DateTime::<Utc>::from_timestamp(earliest_ts, 0)
-            .ok_or_else(|| format!("invalid timestamp {earliest_ts}"))?
-            .with_timezone(&Local);
-        let time = dt.format("%H:%M").to_string();
+        let to_local_hhmm = |ts: i64| -> Result<String, String> {
+            Ok(DateTime::<Utc>::from_timestamp(ts, 0)
+                .ok_or_else(|| format!("invalid timestamp {ts}"))?
+                .with_timezone(&Local)
+                .format("%H:%M")
+                .to_string())
+        };
+        let time = to_local_hhmm(earliest_ts)?;
 
-        let noun = if count == 1 { "message" } else { "messages" };
-        let title = if is_dm {
-            format!("Sent {count} direct {noun}")
+        // Presence window across the bucket: when the user was active in this
+        // conversation, NOT time spent — a whole-day bucket can stretch hours
+        // around a handful of messages. Appended at the end so the count and
+        // stream identity survive the one-line clamp.
+        let span = if count > 1 && last_ts != earliest_ts {
+            format!(" ({time}–{})", to_local_hhmm(last_ts)?)
         } else {
-            format!("Sent {count} {noun} in #{stream_key}")
+            String::new()
         };
 
-        // detail: for streams, deduplicated topic names; for DMs, deduplicated
-        // recipient names (excluding the sender).
-        let detail = if is_dm {
+        let noun = if count == 1 { "message" } else { "messages" };
+
+        // For DMs, the conversation partners (deduplicated, excluding the sender).
+        let recipient_names = if is_dm {
             let mut seen_names: Vec<String> = Vec::new();
             for m in &msgs {
                 let Some(recipients) = m.display_recipient.as_array() else {
@@ -242,6 +251,55 @@ pub(super) fn events_for_range(
             }
             seen_names.join(", ")
         } else {
+            String::new()
+        };
+
+        // For streams, the most-discussed topic (earliest message wins ties),
+        // surfaced only when the bucket actually spans more than one real topic.
+        let dominant_topic = if is_dm {
+            None
+        } else {
+            let mut counts: Vec<(&str, usize)> = Vec::new();
+            for m in &msgs {
+                let t = m.subject.as_deref().unwrap_or("(no topic)");
+                match counts.iter_mut().find(|(name, _)| *name == t) {
+                    Some(entry) => entry.1 += 1,
+                    None => counts.push((t, 1)),
+                }
+            }
+            if counts.len() > 1 {
+                let mut best: Option<(&str, usize)> = None;
+                for &(name, c) in &counts {
+                    if best.is_none_or(|(_, bc)| c > bc) {
+                        best = Some((name, c));
+                    }
+                }
+                best.map(|(name, _)| name.to_string())
+                    .filter(|t| t != "(no topic)")
+            } else {
+                None
+            }
+        };
+
+        let mut title = if is_dm {
+            if recipient_names.is_empty() {
+                format!("Sent {count} direct {noun}")
+            } else {
+                format!("Sent {count} direct {noun} to {recipient_names}")
+            }
+        } else {
+            format!("Sent {count} {noun} in #{stream_key}")
+        };
+        if let Some(topic) = &dominant_topic {
+            title.push_str(&format!(" · {topic}"));
+        }
+        title.push_str(&span);
+
+        // detail: streams keep the full deduplicated topic list; DMs now carry
+        // their partners in the title, so they need no detail line.
+        let detail = if is_dm {
+            None
+        } else {
             let mut seen_topics: Vec<&str> = Vec::new();
             for m in &msgs {
                 let t = m.subject.as_deref().unwrap_or("(no topic)");
@@ -249,7 +307,7 @@ pub(super) fn events_for_range(
                     seen_topics.push(t);
                 }
             }
-            seen_topics.join(", ")
+            Some(seen_topics.join(", "))
         };
 
         let first_id = msgs[0].id;
@@ -269,7 +327,8 @@ pub(super) fn events_for_range(
 
         let day_iso = day_naive.format("%Y-%m-%d").to_string();
         let id = if is_dm {
-            format!("zulip:dm:{day_iso}")
+            let conversation_key = stream_key.strip_prefix("__dm__:").unwrap_or("self");
+            format!("zulip:dm:{day_iso}:{conversation_key}")
         } else {
             format!("zulip:stream:{}:{day_iso}", stream_key)
         };
@@ -283,7 +342,7 @@ pub(super) fn events_for_range(
                 timestamp: earliest_ts,
                 source: TimelineEventSource::Zulip,
                 title,
-                detail: Some(detail),
+                detail,
                 url: sanitize_event_url(&msg_url),
             },
         ));
@@ -305,6 +364,32 @@ struct MessagesResponse {
 fn zulip_encode(s: &str) -> String {
     let encoded = urlencoding::encode(s);
     encoded.replace('%', ".").to_lowercase()
+}
+
+/// Stable conversation key for a DM: the other participants' emails, lowercased,
+/// deduplicated, and sorted so the same thread always hashes to the same bucket.
+/// The sender is excluded; a note-to-self (no other participant) becomes "self".
+fn dm_conversation_key(msg: &ZulipMessage, sender_email: &str) -> String {
+    let mut emails: Vec<String> = Vec::new();
+    if let Some(recipients) = msg.display_recipient.as_array() {
+        for r in recipients {
+            let Some(recipient_email) = r.get("email").and_then(|v| v.as_str()) else {
+                continue;
+            };
+            if recipient_email.eq_ignore_ascii_case(sender_email) {
+                continue;
+            }
+            let lower = recipient_email.to_ascii_lowercase();
+            if !emails.contains(&lower) {
+                emails.push(lower);
+            }
+        }
+    }
+    if emails.is_empty() {
+        return "self".to_string();
+    }
+    emails.sort();
+    emails.join(",")
 }
 
 #[derive(Deserialize)]
@@ -341,6 +426,43 @@ mod tests {
     fn zulip_encode_special_chars() {
         // # → %23 → .23
         assert_eq!(zulip_encode("C++"), "c.2b.2b");
+    }
+
+    fn dm_msg(recipients: serde_json::Value) -> ZulipMessage {
+        ZulipMessage {
+            id: 1,
+            timestamp: 0,
+            msg_type: "private".to_string(),
+            subject: None,
+            display_recipient: recipients,
+            stream_id: None,
+        }
+    }
+
+    #[test]
+    fn dm_conversation_key_excludes_sender_and_sorts() {
+        let msg = dm_msg(serde_json::json!([
+            {"email": "me@x.com", "full_name": "Me"},
+            {"email": "Bob@x.com", "full_name": "Bob"},
+            {"email": "alice@x.com", "full_name": "Alice"}
+        ]));
+        // Sender dropped (case-insensitive), rest lowercased and sorted.
+        assert_eq!(dm_conversation_key(&msg, "ME@x.com"), "alice@x.com,bob@x.com");
+    }
+
+    #[test]
+    fn dm_conversation_key_note_to_self() {
+        let msg = dm_msg(serde_json::json!([{"email": "me@x.com", "full_name": "Me"}]));
+        assert_eq!(dm_conversation_key(&msg, "me@x.com"), "self");
+    }
+
+    #[test]
+    fn dm_conversation_key_deduplicates() {
+        let msg = dm_msg(serde_json::json!([
+            {"email": "alice@x.com", "full_name": "Alice"},
+            {"email": "alice@x.com", "full_name": "Alice"}
+        ]));
+        assert_eq!(dm_conversation_key(&msg, "me@x.com"), "alice@x.com");
     }
 
     #[test]

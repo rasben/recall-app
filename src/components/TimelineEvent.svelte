@@ -61,9 +61,19 @@
   <div class="timeline-event-body min-w-0 max-w-full flex-1 pr-10">
     <p class="timeline-clamp-1 text-sm font-medium leading-tight {done ? 'line-through' : ''}">{event.title}</p>
     {#if event.detail}
-      <p class="timeline-clamp-1 mt-0.5 min-w-0 max-w-full text-xs text-muted-foreground">
-        {event.detail}
-      </p>
+      {#if event.source === "calendar"}
+        <!-- Calendar detail is exclusively the event's duration (e.g. "1h 30m") —
+             the only true time signal we have, so give it weight as a mono chip. -->
+        <p class="mt-1">
+          <span class="inline-flex items-center border bg-muted px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums text-foreground">
+            {event.detail}
+          </span>
+        </p>
+      {:else}
+        <p class="timeline-clamp-1 mt-0.5 min-w-0 max-w-full text-xs text-muted-foreground">
+          {event.detail}
+        </p>
+      {/if}
     {/if}
   </div>
 
