@@ -37,7 +37,6 @@ The whole point of the app is to feed Harvest, but it doesn't actually talk to H
 
 ## UX polish
 
-- Per-source visibility toggle in the timeline header (hide GitHub for a moment without touching settings).
 - "What's missing in Harvest today" inverted view (show un-checked only).
 
 ## Fun
