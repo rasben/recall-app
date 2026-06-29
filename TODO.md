@@ -35,10 +35,6 @@ The whole point of the app is to feed Harvest, but it doesn't actually talk to H
 
 - Tauri auto-updater. Today: redownload the DMG. Tauri has the `updater` plugin — set it up against the GitHub Releases artifacts already published.
 
-## Bugs
-
-- Using `local git` source on Windows opens a bunch of terminal windows. Makes it look like a virus.
-
 ## UX polish
 
 - Per-source visibility toggle in the timeline header (hide GitHub for a moment without touching settings).

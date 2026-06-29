@@ -24,6 +24,23 @@ struct RepoScanCache {
 
 static REPO_SCAN_CACHE: Mutex<Option<RepoScanCache>> = Mutex::new(None);
 
+/// Build a `git` command. The app is a GUI process, so on Windows each git
+/// subprocess would otherwise flash up its own console window. CREATE_NO_WINDOW
+/// (0x08000000) suppresses that. No-op on other platforms.
+fn git_command() -> Command {
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        let mut cmd = Command::new("git");
+        cmd.creation_flags(0x0800_0000);
+        cmd
+    }
+    #[cfg(not(windows))]
+    {
+        Command::new("git")
+    }
+}
+
 pub(super) fn test_connection(state: &State<'_, AppState>) -> Result<(), String> {
     let Some(settings) = get_settings_git(state.clone()) else {
         return Err("Git is not configured".into());
@@ -158,7 +175,7 @@ fn git_log_for_repo(
 
     let commit_url_base = repo_commit_url_base(repo);
 
-    let output = Command::new("git")
+    let output = git_command()
         .arg("-C")
         .arg(repo)
         .arg("log")
@@ -304,7 +321,7 @@ fn resolve_git_user_name(repos: &[PathBuf], scan_root: &Path) -> Option<String> 
 }
 
 fn try_git_config_user_name(repo: &Path) -> Option<String> {
-    let output = Command::new("git")
+    let output = git_command()
         .arg("-C")
         .arg(repo)
         .args(["config", "user.name"])
@@ -325,7 +342,7 @@ fn try_git_config_user_name(repo: &Path) -> Option<String> {
 /// derived from the repo's `origin` remote, or `None` if the remote is missing
 /// or not a recognized hosted-git URL (GitHub, GitLab, Bitbucket).
 fn repo_commit_url_base(repo: &Path) -> Option<String> {
-    let output = Command::new("git")
+    let output = git_command()
         .arg("-C")
         .arg(repo)
         .args(["config", "--get", "remote.origin.url"])
