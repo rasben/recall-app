@@ -1,11 +1,24 @@
 import { describe, expect, it } from "vitest";
 import {
   applyOptimisticToggle,
+  extractTicketId,
+  groupByTask,
+  groupByTicket,
   groupCloseCommits,
   groupEventsByHour,
   rollbackOptimisticToggle,
 } from "./timeline";
-import type { TimelineEvent, TimelineRow } from "./timeline";
+import type { TimelineEvent, TimelineEventSource, TimelineRow } from "./timeline";
+
+function makeSourced(
+  source: TimelineEventSource,
+  id: string,
+  title: string,
+  detail: string | null = null,
+  timestamp = 0,
+): TimelineEvent {
+  return { id, time: "10:00", timestamp, source, title, detail, url: null };
+}
 
 function makeEvent(time: string, id = time, timestamp = 0): TimelineEvent {
   return { id, time, timestamp, source: "git", title: "test", detail: null, url: null };
@@ -146,6 +159,154 @@ describe("groupCloseCommits", () => {
     expect(rows[0].kind).toBe("group");
     expect(rows[1].kind).toBe("event");
     expect(rows[2].kind).toBe("event");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// extractTicketId
+// ---------------------------------------------------------------------------
+
+describe("extractTicketId", () => {
+  it("reads the key from a jira event id", () => {
+    const ev = makeSourced("jira", "jira:DDF-339:2026-06-23:Edited", "Edited DDF-339");
+    expect(extractTicketId(ev)).toBe("DDF-339");
+  });
+
+  it("finds an allowlisted prefix in a git commit subject", () => {
+    const ev = makeSourced("git", "git:/r:abc", "Require branch for eventseries. DDF-312");
+    expect(extractTicketId(ev)).toBe("DDF-312");
+  });
+
+  it("matches branch-style ids with a trailing underscore", () => {
+    const ev = makeSourced("github", "github:1", "Pull request #995 merged: branch DDF-339_location-fix");
+    expect(extractTicketId(ev)).toBe("DDF-339");
+  });
+
+  it("ignores tokens whose prefix is not allowlisted", () => {
+    expect(extractTicketId(makeSourced("git", "git:/r:a", "Bump to RFC-3339 and UTF-8"))).toBeNull();
+    expect(extractTicketId(makeSourced("github", "github:2", "Closed PR-123"))).toBeNull();
+  });
+
+  it("falls back to detail when the title has no ticket", () => {
+    const ev = makeSourced("git", "git:/r:a", "Tweak fields", "dpl-web — PLS-178 follow-up");
+    expect(extractTicketId(ev)).toBe("PLS-178");
+  });
+
+  it("returns null when nothing matches", () => {
+    expect(extractTicketId(makeSourced("git", "git:/r:a", "Update dependencies"))).toBeNull();
+  });
+
+  it("accepts extra prefixes discovered at the call site", () => {
+    const ev = makeSourced("git", "git:/r:a", "Fix ABC-7 regression");
+    expect(extractTicketId(ev)).toBeNull();
+    expect(extractTicketId(ev, new Set(["ABC"]))).toBe("ABC-7");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// groupByTicket
+// ---------------------------------------------------------------------------
+
+describe("groupByTicket", () => {
+  it("buckets events sharing a ticket across sources", () => {
+    const events = [
+      makeSourced("git", "git:/r:a", "Merge #983 DDF-312", null, 30),
+      makeSourced("jira", "jira:DDF-312:2026-06-23:Edited", "Edited DDF-312", null, 10),
+      makeSourced("github", "github:9", "Pull request merged: DDF-312_ux", null, 20),
+    ];
+    const { ticketGroups, ungrouped } = groupByTicket(events);
+    expect(ungrouped).toHaveLength(0);
+    expect(ticketGroups).toHaveLength(1);
+    expect(ticketGroups[0].id).toBe("DDF-312");
+    expect(ticketGroups[0].events).toHaveLength(3);
+    expect(ticketGroups[0].firstTs).toBe(10);
+    expect(ticketGroups[0].lastTs).toBe(30);
+  });
+
+  it("auto-extends prefixes from jira keys so non-default projects group", () => {
+    const events = [
+      makeSourced("jira", "jira:ABC-5:2026-06-23:Edited", "Edited ABC-5", null, 10),
+      makeSourced("git", "git:/r:a", "Fix the thing. ABC-5", null, 20),
+    ];
+    const { ticketGroups } = groupByTicket(events);
+    expect(ticketGroups).toHaveLength(1);
+    expect(ticketGroups[0].id).toBe("ABC-5");
+  });
+
+  it("leaves ticket-less events ungrouped", () => {
+    const events = [
+      makeSourced("git", "git:/r:a", "Update dependencies", null, 10),
+      makeSourced("jira", "jira:DDF-1:2026-06-23:Edited", "Edited DDF-1", null, 20),
+    ];
+    const { ticketGroups, ungrouped } = groupByTicket(events);
+    expect(ticketGroups).toHaveLength(1);
+    expect(ungrouped).toHaveLength(1);
+    expect(ungrouped[0].title).toBe("Update dependencies");
+  });
+
+  it("sorts groups by first timestamp", () => {
+    const events = [
+      makeSourced("jira", "jira:DDF-9:2026-06-23:Edited", "Edited DDF-9", null, 100),
+      makeSourced("jira", "jira:PLS-2:2026-06-23:Edited", "Edited PLS-2", null, 50),
+    ];
+    const { ticketGroups } = groupByTicket(events);
+    expect(ticketGroups.map((g) => g.id)).toEqual(["PLS-2", "DDF-9"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// groupByTask
+// ---------------------------------------------------------------------------
+
+describe("groupByTask", () => {
+  it("makes a ticket card from cross-source events", () => {
+    const rows = groupByTask([
+      makeSourced("git", "git:/r:a", "Require branch. DDF-312", null, 20),
+      makeSourced("jira", "jira:DDF-312:2026-06-23:Edited", "Edited DDF-312", null, 10),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].kind).toBe("group");
+    if (rows[0].kind === "group") {
+      expect(rows[0].keyType).toBe("ticket");
+      expect(rows[0].label).toBe("DDF-312");
+      expect(rows[0].events).toHaveLength(2);
+    }
+  });
+
+  it("clusters ticket-less git commits by repo", () => {
+    const rows = groupByTask([
+      makeSourced("git", "git:/repo/recall:a", "Bump deps", "recall — aaaaaaa", 10),
+      makeSourced("git", "git:/repo/recall:b", "Bump more deps", "recall — bbbbbbb", 20),
+    ]);
+    expect(rows).toHaveLength(1);
+    if (rows[0].kind === "group") {
+      expect(rows[0].keyType).toBe("repo");
+      expect(rows[0].label).toBe("recall");
+    }
+  });
+
+  it("clusters ticket-less zulip messages by stream", () => {
+    const rows = groupByTask([
+      makeSourced("zulip", "zulip:stream:lounge:2026-06-23", "Sent 1 message in #lounge", null, 10),
+      makeSourced("zulip", "zulip:stream:lounge:2026-06-23", "Sent 2 messages in #lounge", null, 20),
+    ]);
+    expect(rows).toHaveLength(1);
+    if (rows[0].kind === "group") {
+      expect(rows[0].keyType).toBe("stream");
+      expect(rows[0].label).toBe("#lounge");
+    }
+  });
+
+  it("demotes single-event groups to standalone rows, ordered by start time", () => {
+    const rows = groupByTask([
+      makeSourced("jira", "jira:DDF-9:2026-06-23:Edited", "Edited DDF-9", null, 50),
+      makeSourced("calendar", "calendar:x", "Standup", "20m", 10),
+    ]);
+    expect(rows.every((r) => r.kind === "event")).toBe(true);
+    expect(rows.map((r) => (r.kind === "event" ? r.event.title : ""))).toEqual([
+      "Standup",
+      "Edited DDF-9",
+    ]);
   });
 });
 

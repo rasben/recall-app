@@ -176,6 +176,11 @@ const en = {
   "timeline.commit_burst_collapse": "Hide commits",
   "timeline.logged_in_harvest": "Logged in Harvest",
   "timeline.not_logged_in_harvest": "Not logged in Harvest",
+  "timeline.group_mode": "Group activity by",
+  "timeline.view_by_time": "By time",
+  "timeline.view_by_task": "By task",
+  "timeline.group_expand": "Show details",
+  "timeline.group_collapse": "Hide details",
 
   "export.button": "Export",
   "export.title": "Export activity",
@@ -383,6 +388,11 @@ const da: Translations = {
   "timeline.commit_burst_collapse": "Skjul commits",
   "timeline.logged_in_harvest": "Logget i Harvest",
   "timeline.not_logged_in_harvest": "Ikke logget i Harvest",
+  "timeline.group_mode": "Gruppér aktivitet efter",
+  "timeline.view_by_time": "Efter tid",
+  "timeline.view_by_task": "Efter opgave",
+  "timeline.group_expand": "Vis detaljer",
+  "timeline.group_collapse": "Skjul detaljer",
 
   "export.button": "Eksportér",
   "export.title": "Eksportér aktivitet",

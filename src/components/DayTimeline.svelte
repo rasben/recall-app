@@ -4,12 +4,13 @@
   import { onMount, onDestroy } from "svelte";
   import { listen } from "@tauri-apps/api/event";
   import { commands } from "../bindings";
-  import { addDaysIso, applyOptimisticToggle, groupCloseCommits, groupEventsByHour, rollbackOptimisticToggle, todayIso, type TimelineEvent } from "$lib/timeline";
+  import { addDaysIso, applyOptimisticToggle, groupByTask, groupCloseCommits, groupEventsByHour, rollbackOptimisticToggle, todayIso, type TimelineEvent } from "$lib/timeline";
   import { navState } from "$lib/nav-state.svelte";
   import TimelineDateNav from "./TimelineDateNav.svelte";
   import TimelineSourceFilter from "./TimelineSourceFilter.svelte";
   import TimelineEventRow from "./TimelineEvent.svelte";
   import TimelineCommitGroup from "./TimelineCommitGroup.svelte";
+  import TimelineTicketGroup from "./TimelineTicketGroup.svelte";
   import Loading from "./ui/Loading.svelte";
   import MissingSettings from "./ui/MissingSettings.svelte";
   import { t } from "$lib/i18n.svelte";
@@ -156,6 +157,13 @@
   );
   let visibleRows = $derived(groupCloseCommits(visibleEvents));
   let groupedByHour = $derived(groupEventsByHour(visibleRows));
+  let taskRows = $derived(groupByTask(visibleEvents));
+
+  function modeButtonClass(active: boolean): string {
+    return active
+      ? "border-foreground bg-foreground text-background"
+      : "border-dashed border-border bg-transparent text-muted-foreground hover:text-foreground hover:border-foreground";
+  }
 
   onMount(async () => {
     const today = todayIso();
@@ -218,7 +226,27 @@
   {/if}
 
   {#if !isLoading && settingsLoaded && enabledSources.length > 0 && events.length > 0}
-    <TimelineSourceFilter {enabledSources} />
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+      <div class="flex items-center gap-1.5" role="group" aria-label={t("timeline.group_mode")}>
+        <button
+          type="button"
+          onclick={() => (navState.groupMode = "time")}
+          aria-pressed={navState.groupMode === "time"}
+          class="border-2 px-2 py-1 font-head text-[10px] uppercase tracking-widest transition-colors {modeButtonClass(navState.groupMode === 'time')}"
+        >
+          {t("timeline.view_by_time")}
+        </button>
+        <button
+          type="button"
+          onclick={() => (navState.groupMode = "task")}
+          aria-pressed={navState.groupMode === "task"}
+          class="border-2 px-2 py-1 font-head text-[10px] uppercase tracking-widest transition-colors {modeButtonClass(navState.groupMode === 'task')}"
+        >
+          {t("timeline.view_by_task")}
+        </button>
+      </div>
+      <TimelineSourceFilter {enabledSources} />
+    </div>
   {/if}
 
   <div class="relative">
@@ -237,6 +265,26 @@
     </p>
 
     <Travolta />
+  {:else if navState.groupMode === 'task'}
+    <div class="space-y-2">
+      {#each taskRows as row, index (`${selectedDate}-${row.kind === 'group' ? row.key : row.event.id}`)}
+        <div
+          class="relative z-0 will-change-transform has-[.timeline-event-btn:is(:hover,:focus-within)]:z-10 has-[.timeline-event-btn:is(:hover,:focus-within)]:overflow-visible"
+          in:fly|global={{
+            y: 22,
+            duration: ROW_FLY_MS,
+            delay: ROW_INTRO_BASE_DELAY_MS + Math.min(index * ROW_STAGGER_MS, ROW_STAGGER_CAP_MS),
+            easing: quintOut,
+          }}
+        >
+          {#if row.kind === 'group'}
+            <TimelineTicketGroup label={row.label} keyType={row.keyType} events={row.events} {doneIds} onToggle={toggleDone} />
+          {:else}
+            <TimelineEventRow event={row.event} done={doneIds.has(row.event.id)} onToggle={() => toggleDone(row.event.id)} />
+          {/if}
+        </div>
+      {/each}
+    </div>
   {:else}
     <div class="space-y-6">
       {#each groupedByHour as group (`${selectedDate}-${group.hour}`)}

@@ -174,3 +174,204 @@ export function groupCloseCommits(events: TimelineEvent[]): TimelineRow[] {
   flush();
   return out;
 }
+
+/** Project prefixes recognized in event text by default. `groupByTicket` also
+ *  auto-extends this from the JIRA keys present in the day (JIRA events carry
+ *  the key verbatim), so listing the user's main projects here only matters on
+ *  days that have git/GitHub work but no JIRA activity. */
+export const DEFAULT_TICKET_PREFIXES = ["DDF", "PLS"];
+
+/** A ticket-like token: an uppercase prefix, a hyphen, and a number (e.g.
+ *  "DDF-312"). No trailing boundary so branch-style "DDF-339_location" matches;
+ *  case-sensitive and prefix-gated (below) so "utf-8" / "RFC-3339" don't. */
+const TICKET_TOKEN_RE = /\b([A-Z][A-Z0-9]+)-(\d+)/g;
+
+/** The JIRA key out of a `jira:{KEY}:{day}:{action}` event id, or null. */
+function ticketIdFromJiraId(id: string): string | null {
+  const m = id.match(/^jira:([A-Z][A-Z0-9]+-\d+):/);
+  return m ? m[1] : null;
+}
+
+/**
+ * Extract a ticket id (e.g. "DDF-312") from an event, or null. JIRA events take
+ * it from their id (always reliable). Other sources are scanned in title then
+ * detail, but only tokens whose prefix is in `prefixes` count — that keeps
+ * version strings ("RFC-3339"), PR refs ("PR-123") and the like from matching.
+ */
+export function extractTicketId(
+  ev: TimelineEvent,
+  prefixes: Set<string> = new Set(DEFAULT_TICKET_PREFIXES),
+): string | null {
+  if (ev.source === "jira") {
+    const fromId = ticketIdFromJiraId(ev.id);
+    if (fromId) return fromId;
+  }
+  for (const text of [ev.title, ev.detail ?? ""]) {
+    for (const m of text.matchAll(TICKET_TOKEN_RE)) {
+      if (prefixes.has(m[1])) return `${m[1]}-${m[2]}`;
+    }
+  }
+  return null;
+}
+
+export type TicketGroup = {
+  id: string;
+  events: TimelineEvent[];
+  firstTs: number;
+  lastTs: number;
+};
+
+/**
+ * Bucket events that share a ticket id into cross-source groups, recording each
+ * group's first/last timestamp so a span can be shown. The recognized prefix set
+ * is seeded from {@link DEFAULT_TICKET_PREFIXES} and extended with every JIRA key
+ * in `events`. Events with no ticket id land in `ungrouped`. Groups are sorted by
+ * first timestamp; events within a group by timestamp.
+ */
+export function groupByTicket(events: TimelineEvent[]): {
+  ticketGroups: TicketGroup[];
+  ungrouped: TimelineEvent[];
+} {
+  const prefixes = new Set(DEFAULT_TICKET_PREFIXES);
+  for (const ev of events) {
+    if (ev.source === "jira") {
+      const key = ticketIdFromJiraId(ev.id);
+      if (key) prefixes.add(key.split("-")[0]);
+    }
+  }
+
+  const byId = new Map<string, TimelineEvent[]>();
+  const ungrouped: TimelineEvent[] = [];
+  for (const ev of events) {
+    const id = extractTicketId(ev, prefixes);
+    if (id) {
+      const arr = byId.get(id);
+      if (arr) arr.push(ev);
+      else byId.set(id, [ev]);
+    } else {
+      ungrouped.push(ev);
+    }
+  }
+
+  const ticketGroups: TicketGroup[] = [];
+  for (const [id, evs] of byId) {
+    const sorted = [...evs].sort((a, b) => a.timestamp - b.timestamp);
+    ticketGroups.push({
+      id,
+      events: sorted,
+      firstTs: sorted[0].timestamp,
+      lastTs: sorted[sorted.length - 1].timestamp,
+    });
+  }
+  ticketGroups.sort((a, b) => a.firstTs - b.firstTs);
+  return { ticketGroups, ungrouped };
+}
+
+/** What a task-view card is keyed on, shown so a repo/stream card isn't mistaken
+ *  for a ticket. */
+export type TaskGroupKeyType = "ticket" | "repo" | "stream";
+
+/** A task-view row: either a multi-event group card or a standalone event. */
+export type TaskRow =
+  | {
+      kind: "group";
+      key: string;
+      label: string;
+      keyType: TaskGroupKeyType;
+      events: TimelineEvent[];
+      firstTs: number;
+      lastTs: number;
+    }
+  | { kind: "event"; event: TimelineEvent };
+
+/** Stream name out of a `zulip:stream:{name}:{day}` id (name may contain ':'). */
+function streamNameFromId(id: string): string | null {
+  const m = id.match(/^zulip:stream:(.+):\d{4}-\d{2}-\d{2}$/);
+  return m ? m[1] : null;
+}
+
+function taskRowStartTs(row: TaskRow): number {
+  return row.kind === "group" ? row.firstTs : row.event.timestamp;
+}
+
+/**
+ * Re-shape a day's events around the unit of work. Ticket groups come first
+ * (cross-source, from {@link groupByTicket}); ticket-less events then cluster on
+ * a secondary key — git by repo, Zulip by stream — so nothing scatters. Anything
+ * with no useful key, and any group that would hold a single event, renders as a
+ * standalone row. Rows are ordered by start time.
+ */
+export function groupByTask(events: TimelineEvent[]): TaskRow[] {
+  const { ticketGroups, ungrouped } = groupByTicket(events);
+
+  const groups: Array<Extract<TaskRow, { kind: "group" }>> = ticketGroups.map((g) => ({
+    kind: "group",
+    key: `ticket:${g.id}`,
+    label: g.id,
+    keyType: "ticket",
+    events: g.events,
+    firstTs: g.firstTs,
+    lastTs: g.lastTs,
+  }));
+
+  const secondary = new Map<
+    string,
+    { label: string; keyType: TaskGroupKeyType; events: TimelineEvent[] }
+  >();
+  const loose: TimelineEvent[] = [];
+  for (const ev of ungrouped) {
+    let key: string | null = null;
+    let label = "";
+    let keyType: TaskGroupKeyType = "repo";
+    if (ev.source === "git") {
+      const repoKey = gitRepoKey(ev);
+      if (repoKey) {
+        key = repoKey;
+        // git detail is "{repo_name} — {short}"; the name is the readable label.
+        label = ev.detail?.split(" — ")[0] ?? "repo";
+        keyType = "repo";
+      }
+    } else if (ev.source === "zulip") {
+      const stream = streamNameFromId(ev.id);
+      if (stream) {
+        key = `stream:${stream}`;
+        label = `#${stream}`;
+        keyType = "stream";
+      }
+    }
+    if (key) {
+      const entry = secondary.get(key);
+      if (entry) entry.events.push(ev);
+      else secondary.set(key, { label, keyType, events: [ev] });
+    } else {
+      loose.push(ev);
+    }
+  }
+  for (const [key, entry] of secondary) {
+    if (entry.events.length >= 2) {
+      const sorted = [...entry.events].sort((a, b) => a.timestamp - b.timestamp);
+      groups.push({
+        kind: "group",
+        key,
+        label: entry.label,
+        keyType: entry.keyType,
+        events: sorted,
+        firstTs: sorted[0].timestamp,
+        lastTs: sorted[sorted.length - 1].timestamp,
+      });
+    } else {
+      loose.push(...entry.events);
+    }
+  }
+
+  // A one-event "group" is just noise — demote ticket/secondary singletons.
+  const rows: TaskRow[] = [];
+  for (const g of groups) {
+    if (g.events.length >= 2) rows.push(g);
+    else rows.push({ kind: "event", event: g.events[0] });
+  }
+  for (const ev of loose) rows.push({ kind: "event", event: ev });
+
+  rows.sort((a, b) => taskRowStartTs(a) - taskRowStartTs(b));
+  return rows;
+}
