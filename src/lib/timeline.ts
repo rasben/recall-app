@@ -169,16 +169,24 @@ function gitRepoKey(event: TimelineEvent): string | null {
   return event.id.slice(0, lastColon);
 }
 
+/** A Dependabot merge/bump commit — the noisy, auto-generated kind worth
+ *  collapsing on sight regardless of how spread out in time they are. */
+export function isDependabotCommit(event: TimelineEvent): boolean {
+  return event.source === "git" && /dependabot/i.test(event.title);
+}
+
 /**
- * Collapse runs of git commits in the same repo whose timestamps are within
- * `COMMIT_GROUP_WINDOW_SECONDS` of the previous commit's. A slow trickle still
- * collapses as long as each step is within the window. Non-git events and
- * single commits become `{kind: "event"}` rows.
+ * Collapse runs of git commits in the same repo into one group row. Normal
+ * commits group only when each is within `COMMIT_GROUP_WINDOW_SECONDS` of the
+ * previous (a rebase/push burst); Dependabot commits group across any gap (they
+ * trickle in over minutes but are pure noise), as long as the run stays in the
+ * same repo. Non-git events and lone commits become `{kind: "event"}` rows.
  */
 export function groupCloseCommits(events: TimelineEvent[]): TimelineRow[] {
   const out: TimelineRow[] = [];
   let current: TimelineEvent[] = [];
   let currentRepo: string | null = null;
+  let currentIsDependabot = false;
 
   const flush = () => {
     if (current.length === 0) return;
@@ -195,6 +203,7 @@ export function groupCloseCommits(events: TimelineEvent[]): TimelineRow[] {
     }
     current = [];
     currentRepo = null;
+    currentIsDependabot = false;
   };
 
   for (const event of events) {
@@ -204,20 +213,27 @@ export function groupCloseCommits(events: TimelineEvent[]): TimelineRow[] {
       out.push({ kind: "event", event });
       continue;
     }
+    const isDependabot = isDependabotCommit(event);
     if (current.length === 0) {
       current = [event];
       currentRepo = repoKey;
+      currentIsDependabot = isDependabot;
       continue;
     }
     const prev = current[current.length - 1];
     const sameRepo = repoKey === currentRepo;
-    const closeEnough = event.timestamp - prev.timestamp <= COMMIT_GROUP_WINDOW_SECONDS;
-    if (sameRepo && closeEnough) {
+    // A Dependabot run absorbs any further same-repo Dependabot commit; a normal
+    // burst only absorbs nearby same-repo non-Dependabot commits.
+    const extend = currentIsDependabot
+      ? sameRepo && isDependabot
+      : sameRepo && !isDependabot && event.timestamp - prev.timestamp <= COMMIT_GROUP_WINDOW_SECONDS;
+    if (extend) {
       current.push(event);
     } else {
       flush();
       current = [event];
       currentRepo = repoKey;
+      currentIsDependabot = isDependabot;
     }
   }
   flush();

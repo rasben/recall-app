@@ -197,7 +197,7 @@
   });
 </script>
 
-<div class="relative space-y-6">
+<div class="relative space-y-6 pb-8">
   <TimelineDateNav
     {selectedDate}
     onShift={shiftDate}

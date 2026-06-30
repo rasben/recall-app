@@ -190,6 +190,37 @@ describe("groupCloseCommits", () => {
     if (rows[0].kind === "group") expect(rows[0].events).toHaveLength(4);
   });
 
+  it("collapses same-repo dependabot merges even when minutes apart", () => {
+    const dep = (hash: string, ts: number) =>
+      makeSourced(
+        "git",
+        `git:/repo/dpl-web:${hash}`,
+        `Merge pull request #1 from org/dependabot/npm_and_yarn/${hash}`,
+        null,
+        ts,
+      );
+    const rows = groupCloseCommits([dep("aaaa", 0), dep("bbbb", 60), dep("cccc", 180)]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].kind).toBe("group");
+    if (rows[0].kind === "group") expect(rows[0].events).toHaveLength(3);
+  });
+
+  it("does not merge dependabot commits across different repos", () => {
+    const dep = (repo: string, hash: string, ts: number) =>
+      makeSourced("git", `git:/repo/${repo}:${hash}`, `Merge dependabot/npm/${hash}`, null, ts);
+    const rows = groupCloseCommits([dep("a", "aaaa", 0), dep("b", "bbbb", 30)]);
+    expect(rows).toHaveLength(2);
+    expect(rows.every((r) => r.kind === "event")).toBe(true);
+  });
+
+  it("keeps a lone dependabot commit as a single row", () => {
+    const rows = groupCloseCommits([
+      makeSourced("git", "git:/repo/a:aaaa", "Merge dependabot/npm/x", null, 0),
+    ]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].kind).toBe("event");
+  });
+
   it("flushes the current group when an unrelated event interrupts", () => {
     const events: TimelineEvent[] = [
       makeCommit("/repo/a", "aaaa", "10:00", 1700000000),

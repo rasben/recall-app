@@ -3,7 +3,7 @@
   import { cubicOut } from "svelte/easing";
   import GitCommit from "@lucide/svelte/icons/git-commit";
   import ChevronDown from "@lucide/svelte/icons/chevron-down";
-  import type { TimelineEvent } from "$lib/timeline";
+  import { isDependabotCommit, type TimelineEvent } from "$lib/timeline";
   import TimelineEventRow from "./TimelineEvent.svelte";
   import { t } from "$lib/i18n.svelte";
 
@@ -24,6 +24,7 @@
   let doneCount = $derived(events.filter((e) => doneIds.has(e.id)).length);
   let allDone = $derived(doneCount === count);
   let countStr = $derived(count.toString());
+  let isDependabot = $derived(events.every(isDependabotCommit));
 </script>
 
 <div class="space-y-1">
@@ -43,7 +44,7 @@
 
     <div class="timeline-event-body min-w-0 max-w-full flex-1">
       <p class="timeline-clamp-1 text-sm font-medium italic leading-tight text-muted-foreground {allDone ? 'line-through' : ''}">
-        {t("timeline.commit_burst", { count: countStr })}
+        {isDependabot ? t("timeline.dependabot_burst", { count: countStr }) : t("timeline.commit_burst", { count: countStr })}
       </p>
       {#if doneCount > 0 && !allDone}
         <p class="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
