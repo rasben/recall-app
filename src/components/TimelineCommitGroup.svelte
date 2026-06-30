@@ -35,7 +35,7 @@
     onclick={() => (expanded = !expanded)}
     aria-expanded={expanded}
     aria-label={expanded ? t("timeline.commit_burst_collapse") : t("timeline.commit_burst_expand")}
-    class="timeline-event-btn relative flex w-full min-w-0 max-w-full cursor-pointer items-center gap-3 border-2 border-dashed bg-card py-2 pl-3 pr-2 text-left shadow-sm transition-all hover:border-foreground hover:shadow-none
+    class="timeline-event-btn relative flex w-full min-w-0 max-w-full cursor-pointer items-center gap-3 border-2 border-dashed bg-card py-2 pl-3 pr-2 text-left shadow-sm transition-all hover:translate-x-0.5 hover:translate-y-0.5 hover:border-foreground hover:shadow-none
       {allDone ? 'opacity-50' : ''}"
   >
     <span class="w-10 shrink-0 font-mono text-xs text-muted-foreground">{latest.time}</span>
