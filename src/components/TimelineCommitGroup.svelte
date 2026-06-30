@@ -25,6 +25,8 @@
   let allDone = $derived(doneCount === count);
   let countStr = $derived(count.toString());
   let isDependabot = $derived(events.every(isDependabotCommit));
+  // git detail is "{repo} — {short}"; all commits in a burst share one repo.
+  let repoName = $derived(events[0].detail?.split(" — ")[0] ?? null);
 </script>
 
 <div class="space-y-1">
@@ -45,6 +47,7 @@
     <div class="timeline-event-body min-w-0 max-w-full flex-1">
       <p class="timeline-clamp-1 text-sm font-medium italic leading-tight text-muted-foreground {allDone ? 'line-through' : ''}">
         {isDependabot ? t("timeline.dependabot_burst", { count: countStr }) : t("timeline.commit_burst", { count: countStr })}
+        {#if repoName}<span class="not-italic font-normal text-foreground">· {repoName}</span>{/if}
       </p>
       {#if doneCount > 0 && !allDone}
         <p class="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
