@@ -44,7 +44,7 @@ const en = {
   "settings.theme.error": "Failed to save theme",
 
   // Test connection (shared)
-  "settings.test_connection": "Test",
+  "settings.test_connection": "Test connection",
   "settings.test_connection.ok": "Connected",
 
   // Git
@@ -269,7 +269,7 @@ const da: Translations = {
   "settings.theme.saved": "Tema opdateret!",
   "settings.theme.error": "Kunne ikke gemme tema",
 
-  "settings.test_connection": "Test",
+  "settings.test_connection": "Test forbindelse",
   "settings.test_connection.ok": "Forbundet",
 
   "settings.git.legend": "Lokale Git-commits",
