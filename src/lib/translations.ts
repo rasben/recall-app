@@ -181,6 +181,8 @@ const en = {
   "timeline.view_by_task": "By task",
   "timeline.group_expand": "Show details",
   "timeline.group_collapse": "Hide details",
+  "timeline.group_items": "{count} items",
+  "timeline.open_in_jira": "Open in Jira",
   "timeline.idle": "{duration} break",
 
   "export.button": "Export",
@@ -394,6 +396,8 @@ const da: Translations = {
   "timeline.view_by_task": "Efter opgave",
   "timeline.group_expand": "Vis detaljer",
   "timeline.group_collapse": "Skjul detaljer",
+  "timeline.group_items": "{count} elementer",
+  "timeline.open_in_jira": "Åbn i Jira",
   "timeline.idle": "{duration} pause",
 
   "export.button": "Eksportér",

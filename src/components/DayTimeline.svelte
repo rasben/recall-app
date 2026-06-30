@@ -36,6 +36,7 @@
   let loadingSource = $state<string | null>(null);
   let doneSources = $state(new Set<string>());
   let enabledSources = $state<string[]>([]);
+  let jiraBaseUrl = $state<string | null>(null);
   let settingsLoaded = $state(false);
   /** After first fetch, debounce so rapid day clicks only load the final day. */
   let pastInitialDay = $state(false);
@@ -191,6 +192,7 @@
     if (jira?.enabled) enabled.push("Jira");
     if (zulip?.enabled) enabled.push("Zulip");
     enabledSources = enabled;
+    jiraBaseUrl = jira?.site_url ? jira.site_url.replace(/\/+$/, "") : null;
     settingsLoaded = true;
   });
 </script>
@@ -278,7 +280,7 @@
           }}
         >
           {#if row.kind === 'group'}
-            <TimelineTicketGroup label={row.label} keyType={row.keyType} events={row.events} {doneIds} onToggle={toggleDone} />
+            <TimelineTicketGroup label={row.label} keyType={row.keyType} events={row.events} {doneIds} onToggle={toggleDone} {jiraBaseUrl} />
           {:else}
             <TimelineEventRow event={row.event} done={doneIds.has(row.event.id)} onToggle={() => toggleDone(row.event.id)} />
           {/if}
