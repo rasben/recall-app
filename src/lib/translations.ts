@@ -44,7 +44,7 @@ const en = {
   "settings.theme.error": "Failed to save theme",
 
   // Test connection (shared)
-  "settings.test_connection": "Test",
+  "settings.test_connection": "Test connection",
   "settings.test_connection.ok": "Connected",
 
   // Git
@@ -171,11 +171,20 @@ const en = {
   "timeline.less_more_activity": "less → more activity",
   "timeline.open_link": "Open",
   "timeline.commit_burst": "{count} commits — possible rebase",
+  "timeline.dependabot_burst": "{count} Dependabot updates",
   "timeline.commit_burst_partial_done": "{done}/{count} logged",
   "timeline.commit_burst_expand": "Show commits",
   "timeline.commit_burst_collapse": "Hide commits",
   "timeline.logged_in_harvest": "Logged in Harvest",
   "timeline.not_logged_in_harvest": "Not logged in Harvest",
+  "timeline.group_mode": "Group activity by",
+  "timeline.view_by_time": "By time",
+  "timeline.view_by_task": "By task",
+  "timeline.group_expand": "Show details",
+  "timeline.group_collapse": "Hide details",
+  "timeline.group_items": "{count} items",
+  "timeline.open_in_jira": "Open in Jira",
+  "timeline.idle": "{duration} break",
 
   "export.button": "Export",
   "export.title": "Export activity",
@@ -260,7 +269,7 @@ const da: Translations = {
   "settings.theme.saved": "Tema opdateret!",
   "settings.theme.error": "Kunne ikke gemme tema",
 
-  "settings.test_connection": "Test",
+  "settings.test_connection": "Test forbindelse",
   "settings.test_connection.ok": "Forbundet",
 
   "settings.git.legend": "Lokale Git-commits",
@@ -378,11 +387,20 @@ const da: Translations = {
   "timeline.less_more_activity": "mindre → mere aktivitet",
   "timeline.open_link": "Åbn",
   "timeline.commit_burst": "{count} commits — muligvis en rebase",
+  "timeline.dependabot_burst": "{count} Dependabot-opdateringer",
   "timeline.commit_burst_partial_done": "{done}/{count} logget",
   "timeline.commit_burst_expand": "Vis commits",
   "timeline.commit_burst_collapse": "Skjul commits",
   "timeline.logged_in_harvest": "Logget i Harvest",
   "timeline.not_logged_in_harvest": "Ikke logget i Harvest",
+  "timeline.group_mode": "Gruppér aktivitet efter",
+  "timeline.view_by_time": "Efter tid",
+  "timeline.view_by_task": "Efter opgave",
+  "timeline.group_expand": "Vis detaljer",
+  "timeline.group_collapse": "Skjul detaljer",
+  "timeline.group_items": "{count} elementer",
+  "timeline.open_in_jira": "Åbn i Jira",
+  "timeline.idle": "{duration} pause",
 
   "export.button": "Eksportér",
   "export.title": "Eksportér aktivitet",

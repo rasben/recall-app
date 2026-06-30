@@ -3,7 +3,7 @@
   import { cubicOut } from "svelte/easing";
   import GitCommit from "@lucide/svelte/icons/git-commit";
   import ChevronDown from "@lucide/svelte/icons/chevron-down";
-  import type { TimelineEvent } from "$lib/timeline";
+  import { isDependabotCommit, type TimelineEvent } from "$lib/timeline";
   import TimelineEventRow from "./TimelineEvent.svelte";
   import { t } from "$lib/i18n.svelte";
 
@@ -24,6 +24,9 @@
   let doneCount = $derived(events.filter((e) => doneIds.has(e.id)).length);
   let allDone = $derived(doneCount === count);
   let countStr = $derived(count.toString());
+  let isDependabot = $derived(events.every(isDependabotCommit));
+  // git detail is "{repo} — {short}"; all commits in a burst share one repo.
+  let repoName = $derived(events[0].detail?.split(" — ")[0] ?? null);
 </script>
 
 <div class="space-y-1">
@@ -32,20 +35,19 @@
     onclick={() => (expanded = !expanded)}
     aria-expanded={expanded}
     aria-label={expanded ? t("timeline.commit_burst_collapse") : t("timeline.commit_burst_expand")}
-    class="timeline-event-btn relative flex w-full min-w-0 max-w-full cursor-pointer items-start gap-3 border-2 border-dashed bg-card py-2 pl-3 pr-2 text-left shadow-sm transition-all hover:shadow-none
+    class="timeline-event-btn relative flex w-full min-w-0 max-w-full cursor-pointer items-center gap-3 border-2 border-dashed bg-card py-2 pl-3 pr-2 text-left shadow-sm transition-all hover:translate-x-0.5 hover:translate-y-0.5 hover:border-foreground hover:shadow-none
       {allDone ? 'opacity-50' : ''}"
   >
-    <span class="w-10 shrink-0 pt-0.5 font-mono text-xs text-muted-foreground">{latest.time}</span>
+    <span class="w-10 shrink-0 font-mono text-xs text-muted-foreground">{latest.time}</span>
 
-    <div class="mt-0.5 shrink-0">
-      <span class="inline-flex size-6 items-center justify-center border bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">
-        <GitCommit class="size-3.5" />
-      </span>
-    </div>
+    <span class="inline-flex size-6 shrink-0 items-center justify-center border bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300">
+      <GitCommit class="size-3.5" />
+    </span>
 
-    <div class="timeline-event-body min-w-0 max-w-full flex-1 pr-10">
+    <div class="timeline-event-body min-w-0 max-w-full flex-1">
       <p class="timeline-clamp-1 text-sm font-medium italic leading-tight text-muted-foreground {allDone ? 'line-through' : ''}">
-        {t("timeline.commit_burst", { count: countStr })}
+        {isDependabot ? t("timeline.dependabot_burst", { count: countStr }) : t("timeline.commit_burst", { count: countStr })}
+        {#if repoName}<span class="not-italic font-normal text-foreground">· {repoName}</span>{/if}
       </p>
       {#if doneCount > 0 && !allDone}
         <p class="mt-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -54,15 +56,12 @@
       {/if}
     </div>
 
-    <ChevronDown
-      class="absolute right-7 top-2 size-3.5 text-muted-foreground transition-transform {expanded ? 'rotate-180' : ''}"
-      aria-hidden="true"
-    />
-
     <span
-      class="absolute right-0 top-0 shrink-0 bg-foreground px-1 py-0.5 font-head text-[8px] uppercase tracking-widest text-background"
+      class="inline-flex shrink-0 items-center gap-1 border-2 border-border px-2 py-1 font-head text-[9px] uppercase tracking-widest text-muted-foreground"
+      aria-hidden="true"
     >
-      Git ×{count}
+      {expanded ? t("timeline.commit_burst_collapse") : t("timeline.commit_burst_expand")}
+      <ChevronDown class="size-3 transition-transform {expanded ? 'rotate-180' : ''}" />
     </span>
   </button>
 
