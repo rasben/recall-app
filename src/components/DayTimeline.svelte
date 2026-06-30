@@ -4,7 +4,7 @@
   import { onMount, onDestroy } from "svelte";
   import { listen } from "@tauri-apps/api/event";
   import { commands } from "../bindings";
-  import { addDaysIso, applyOptimisticToggle, groupByTask, groupCloseCommits, groupEventsByHour, rollbackOptimisticToggle, todayIso, type TimelineEvent } from "$lib/timeline";
+  import { addDaysIso, applyOptimisticToggle, formatGapLabel, GAP_IDLE_MINUTES, GAP_MIN_MINUTES, groupByTask, groupCloseCommits, groupEventsByHour, rollbackOptimisticToggle, todayIso, type TimelineEvent } from "$lib/timeline";
   import { navState } from "$lib/nav-state.svelte";
   import TimelineDateNav from "./TimelineDateNav.svelte";
   import TimelineSourceFilter from "./TimelineSourceFilter.svelte";
@@ -293,7 +293,16 @@
             <span class="font-head text-sm text-muted-foreground">{group.hour}</span>
           </div>
           <div class="min-w-0 flex-1 space-y-2">
-            {#each group.items as { row, index } (`${selectedDate}-${row.kind === 'event' ? row.event.id : row.key}`)}
+            {#each group.items as { row, index, gapMinutes } (`${selectedDate}-${row.kind === 'event' ? row.event.id : row.key}`)}
+              {#if gapMinutes !== null && gapMinutes >= GAP_IDLE_MINUTES}
+                <div class="flex items-center gap-2 py-1 text-[10px] uppercase tracking-widest text-muted-foreground">
+                  <span class="h-px flex-1 bg-border"></span>
+                  <span>{t("timeline.idle", { duration: formatGapLabel(gapMinutes) })}</span>
+                  <span class="h-px flex-1 bg-border"></span>
+                </div>
+              {:else if gapMinutes !== null && gapMinutes >= GAP_MIN_MINUTES}
+                <div class="pl-1 text-[10px] text-muted-foreground/70" aria-hidden="true">+{formatGapLabel(gapMinutes)}</div>
+              {/if}
               <div
                 class="relative z-0 will-change-transform has-[.timeline-event-btn:is(:hover,:focus-within)]:z-10 has-[.timeline-event-btn:is(:hover,:focus-within)]:overflow-visible"
                 in:fly|global={{

@@ -18,11 +18,18 @@ export const SOURCE_LABELS: Record<TimelineEventSource, string> = {
 export type TimelineRow =
   | { kind: "event"; event: TimelineEvent }
   | { kind: "group"; events: TimelineEvent[]; key: string };
-export type IndexedRow = { row: TimelineRow; index: number };
+/** `gapMinutes` is the elapsed time since the previous row ended (null for the
+ *  day's first row); used to draw "elapsed" chips and idle dividers. */
+export type IndexedRow = { row: TimelineRow; index: number; gapMinutes: number | null };
 export type HourGroup = { hour: string; items: IndexedRow[] };
 
 /** Commits within this many seconds of the previous one collapse into a group. */
 export const COMMIT_GROUP_WINDOW_SECONDS = 5;
+
+/** Hide elapsed chips below this (sub-task noise). */
+export const GAP_MIN_MINUTES = 3;
+/** Above this an elapsed gap reads as a break, shown as an idle divider. */
+export const GAP_IDLE_MINUTES = 45;
 
 /** Format a Date as a local-calendar `YYYY-MM-DD` (never UTC). */
 function toLocalIso(d: Date): string {
@@ -92,6 +99,9 @@ export function rollbackOptimisticToggle(
 export function groupEventsByHour(rows: TimelineRow[]): HourGroup[] {
   const groups: HourGroup[] = [];
   let currentHour = "";
+  // Tracked across hour boundaries so a gap spanning, say, 10:55 → 11:20 is
+  // measured correctly even though the two rows land in different hour buckets.
+  let prevEndTs: number | null = null;
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     const time = rowTime(row);
@@ -100,13 +110,52 @@ export function groupEventsByHour(rows: TimelineRow[]): HourGroup[] {
       currentHour = hour;
       groups.push({ hour, items: [] });
     }
-    groups[groups.length - 1].items.push({ row, index: i });
+    const gapMinutes =
+      prevEndTs === null
+        ? null
+        : Math.max(0, Math.round((rowStartTimestamp(row) - prevEndTs) / 60));
+    groups[groups.length - 1].items.push({ row, index: i, gapMinutes });
+    prevEndTs = rowEndTimestamp(row);
   }
   return groups;
 }
 
 function rowTime(row: TimelineRow): string {
   return row.kind === "event" ? row.event.time : row.events[row.events.length - 1].time;
+}
+
+function rowStartTimestamp(row: TimelineRow): number {
+  return row.kind === "event" ? row.event.timestamp : row.events[0].timestamp;
+}
+
+/** When a row "ends" for gap purposes. Calendar events carry a real duration in
+ *  `detail`, so their end is start + duration — otherwise the gap after a 1h30m
+ *  meeting would wrongly count the meeting itself as idle time. */
+function rowEndTimestamp(row: TimelineRow): number {
+  if (row.kind === "group") return row.events[row.events.length - 1].timestamp;
+  const ev = row.event;
+  if (ev.source === "calendar") {
+    const minutes = parseDurationToMinutes(ev.detail);
+    if (minutes !== null) return ev.timestamp + minutes * 60;
+  }
+  return ev.timestamp;
+}
+
+/** Parse a calendar duration detail ("20m", "1h", "1h 30m") to minutes, or null. */
+export function parseDurationToMinutes(detail: string | null | undefined): number | null {
+  if (!detail) return null;
+  const m = detail.trim().match(/^(?:(\d+)h)?\s*(?:(\d+)m)?$/);
+  if (!m || (!m[1] && !m[2])) return null;
+  return (m[1] ? parseInt(m[1], 10) : 0) * 60 + (m[2] ? parseInt(m[2], 10) : 0);
+}
+
+/** Compact, neutral elapsed label: "18m", "1h", "2h 5m". */
+export function formatGapLabel(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h && m) return `${h}h ${m}m`;
+  if (h) return `${h}h`;
+  return `${m}m`;
 }
 
 /** Stable key uniquely identifying the "repo" portion of a git event id. */

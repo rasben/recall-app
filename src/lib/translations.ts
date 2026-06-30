@@ -181,6 +181,7 @@ const en = {
   "timeline.view_by_task": "By task",
   "timeline.group_expand": "Show details",
   "timeline.group_collapse": "Hide details",
+  "timeline.idle": "{duration} break",
 
   "export.button": "Export",
   "export.title": "Export activity",
@@ -393,6 +394,7 @@ const da: Translations = {
   "timeline.view_by_task": "Efter opgave",
   "timeline.group_expand": "Vis detaljer",
   "timeline.group_collapse": "Skjul detaljer",
+  "timeline.idle": "{duration} pause",
 
   "export.button": "Eksportér",
   "export.title": "Eksportér aktivitet",

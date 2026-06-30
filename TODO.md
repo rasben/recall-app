@@ -51,10 +51,6 @@ The day timeline is good at "what happened when" but bad at "what did I work on,
 
 **Honesty constraint that shapes all of this:** only calendar events carry a true duration. git/GitHub/JIRA/Zulip are durationless points, so we can surface real calendar durations, cross-source ticket clustering, and presence/elapsed windows — but everything inferred must be labelled a **span/presence window**, never "time spent". A tool whose failure mode is wrong Harvest entries must not invent hours.
 
-### Core improvements (the structural fix for overview + time legibility)
-
-- **Inline gap / idle labels.** Faint `+18m` / `+2h 5m` chips between rows and a visible "idle" divider for gaps > ~45m, so a work cluster's first-to-last span and the lunch gap are legible without mental math — the cheapest *honest* time signal. Gotcha: `groupEventsByHour` discards adjacency, so compute gaps on the flat row list *before* hour-grouping and thread `prevTimestamp` through; special-case the gap *after* a calendar row (it measures from the meeting's start, so it double-counts the meeting unless handled). Label neutrally (`+2h elapsed`, not `2h spent`). Files: `src/lib/timeline.ts`, `src/components/DayTimeline.svelte`. Effort: M.
-
 ### Optional / later
 
 - **Sticky per-day summary header.** A strip between the date nav and the feed: per-source counts, summed meeting time (real, from calendar detail), active span, and tickets-touched. Purely additive, no backend change. Build after ticket extraction lands; hoist the private `sourceConfig` map out of `TimelineEvent.svelte` to reuse the icons/colors; derive the active span from **timestamps**, not `events[0].time` (overnight calendar rows display `00:00`). Effort: M.

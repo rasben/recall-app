@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   applyOptimisticToggle,
   extractTicketId,
+  formatGapLabel,
   groupByTask,
   groupByTicket,
   groupCloseCommits,
   groupEventsByHour,
+  parseDurationToMinutes,
   rollbackOptimisticToggle,
 } from "./timeline";
 import type { TimelineEvent, TimelineEventSource, TimelineRow } from "./timeline";
@@ -70,6 +72,55 @@ describe("groupEventsByHour", () => {
     expect(groups[0].items[0].index).toBe(0);
     expect(groups[0].items[1].index).toBe(1);
     expect(groups[1].items[0].index).toBe(2);
+  });
+});
+
+describe("groupEventsByHour gap tracking", () => {
+  it("reports null gap for the first row and elapsed minutes after", () => {
+    const rows = [
+      ev(makeSourced("git", "a", "x", null, 36000)),
+      ev(makeSourced("git", "b", "y", null, 36000 + 1800)),
+    ];
+    const items = groupEventsByHour(rows).flatMap((g) => g.items);
+    expect(items[0].gapMinutes).toBeNull();
+    expect(items[1].gapMinutes).toBe(30);
+  });
+
+  it("measures the gap from a calendar event's end, not its start", () => {
+    const rows = [
+      ev(makeSourced("calendar", "c", "Meeting", "1h 30m", 0)),
+      ev(makeSourced("git", "g", "commit", null, 5400 + 600)),
+    ];
+    const items = groupEventsByHour(rows).flatMap((g) => g.items);
+    // 6000s start − 5400s (0 + 90m) end = 10 min, not 100.
+    expect(items[1].gapMinutes).toBe(10);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// parseDurationToMinutes / formatGapLabel
+// ---------------------------------------------------------------------------
+
+describe("parseDurationToMinutes", () => {
+  it("parses the calendar detail shapes", () => {
+    expect(parseDurationToMinutes("20m")).toBe(20);
+    expect(parseDurationToMinutes("1h")).toBe(60);
+    expect(parseDurationToMinutes("1h 30m")).toBe(90);
+    expect(parseDurationToMinutes("24h")).toBe(1440);
+  });
+
+  it("returns null for empty or non-duration text", () => {
+    expect(parseDurationToMinutes(null)).toBeNull();
+    expect(parseDurationToMinutes("")).toBeNull();
+    expect(parseDurationToMinutes("soon")).toBeNull();
+  });
+});
+
+describe("formatGapLabel", () => {
+  it("formats minutes compactly", () => {
+    expect(formatGapLabel(18)).toBe("18m");
+    expect(formatGapLabel(60)).toBe("1h");
+    expect(formatGapLabel(125)).toBe("2h 5m");
   });
 });
 
