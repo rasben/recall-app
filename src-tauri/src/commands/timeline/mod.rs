@@ -499,7 +499,7 @@ mod tests {
 
     fn collect(app: &MockApp, wanted: &[NaiveDate]) -> (DayBuckets, SourceErrors, Vec<Emitted>) {
         let emitted: Mutex<Vec<Emitted>> = Mutex::new(Vec::new());
-        let (per_day, errors) = collect_range_events(&state(app), wanted, |source, done, error| {
+        let (per_day, errors, _incomplete) = collect_range_events(&state(app), wanted, |source, done, error| {
             emitted.lock().unwrap().push((source, done, error));
         });
         (per_day, errors, emitted.into_inner().unwrap())
@@ -625,7 +625,7 @@ mod tests {
         let s = state(&app);
         let (a, b) = (d("2024-03-05"), d("2024-03-06"));
         assert_eq!(git::events_for_range(&s, a, b).unwrap().len(), 0);
-        assert_eq!(github::events_for_range(&s, a, b).unwrap().len(), 0);
+        assert_eq!(github::events_for_range(&s, a, b).unwrap().0.len(), 0);
         assert_eq!(ical::events_for_range(&s, a, b).unwrap().len(), 0);
         assert_eq!(jira::events_for_range(&s, a, b).unwrap().len(), 0);
         assert_eq!(zulip::events_for_range(&s, a, b).unwrap().len(), 0);
@@ -672,7 +672,7 @@ mod tests {
         .unwrap();
         let (a, b) = (d("2024-03-05"), d("2024-03-06"));
         assert!(git::events_for_range(&s, a, b).unwrap().is_empty());
-        assert!(github::events_for_range(&s, a, b).unwrap().is_empty());
+        assert!(github::events_for_range(&s, a, b).unwrap().0.is_empty());
         assert!(jira::events_for_range(&s, a, b).unwrap().is_empty());
         assert!(zulip::events_for_range(&s, a, b).unwrap().is_empty());
     }
@@ -693,9 +693,9 @@ mod tests {
             enabled_events: events,
         };
         set_settings_github(s.clone(), github("", vec![GitHubEvent::PullRequestEvent])).unwrap();
-        assert!(github::events_for_range(&s, a, b).unwrap().is_empty());
+        assert!(github::events_for_range(&s, a, b).unwrap().0.is_empty());
         set_settings_github(s.clone(), github("ghp_x", vec![])).unwrap();
-        assert!(github::events_for_range(&s, a, b).unwrap().is_empty(), "no event types opted in");
+        assert!(github::events_for_range(&s, a, b).unwrap().0.is_empty(), "no event types opted in");
 
         let jira = |site_url: &str, email: &str| SettingsJira {
             enabled: true,
