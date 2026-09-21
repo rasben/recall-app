@@ -94,6 +94,7 @@
     <Popover.Trigger
       class="font-head min-w-0 text-xl cursor-pointer border-2 border-transparent px-2 py-0.5 transition hover:border-border hover:bg-accent hover:text-accent-foreground outline-hidden focus-visible:border-border"
       aria-label={t("timeline.pick_date")}
+      title="{t('timeline.pick_date')} · {t('timeline.keyboard_hint')}"
     >
       <span class="block text-muted-foreground xs:inline">{headingParts.weekday}</span>
       <span class="block xs:inline">{headingParts.monthDay}</span>

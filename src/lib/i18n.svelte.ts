@@ -1,4 +1,5 @@
 import { translations, type Lang, type TranslationKey } from "./translations";
+import { langFromNavigator } from "./lang";
 
 function detectLang(): Lang {
   try {
@@ -7,7 +8,8 @@ function detectLang(): Lang {
   } catch {
     // localStorage unavailable
   }
-  return "da";
+  // Nothing saved yet: follow the OS/browser locale (Danish → da, else en).
+  return langFromNavigator(typeof navigator === "undefined" ? undefined : navigator.language);
 }
 
 export const i18n = $state({ lang: detectLang() });

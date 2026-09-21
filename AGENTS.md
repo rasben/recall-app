@@ -62,7 +62,9 @@ Planned expansions (see `TODO.md` for the full list and priorities): Gmail (sent
 - `src/components/ui/` — app-specific UI components: `Loading.svelte` (loading overlay with per-source progress), `MissingSettings.svelte` (shown when no data sources are configured), `PasswordInput.svelte`
 - `src/lib/telemetry.ts` — `track(name)` / `setGauge(name, value)` fire-and-forget wrappers around the telemetry commands, for interactions only the UI sees (navigation, view toggles, export choices, link clicks). Rust-side actions count themselves.
 - `src/lib/utils.ts` — `cn()` helper and utility types
-- `src/routes/` — SvelteKit routes: `+layout.svelte` (e.g. theme from saved UI settings), `+page.svelte` (tab shell), `layout.css` (retro theme)
+- `src/lib/keys.ts` — Pure key-to-action mapping for the timeline shortcuts (←/→ shift the day, `t` jumps to today; ignored while typing, inside an open bits-ui popover, or with a modifier held). `DayTimeline.svelte` binds it on `svelte:window`.
+- `src/lib/view-state.ts` — Pure helpers for the timeline view state that lives in `settings_ui` next to the theme (`group_mode`, `hidden_sources`): parse/validate on load, build a stable patch on save. `src/lib/nav-state.svelte.ts` holds the reactive `navState` plus `loadViewState` / `persistViewState`; `+layout.svelte` loads it at boot and persists it whenever it changes.
+- `src/routes/` — SvelteKit routes: `+layout.svelte` (theme and timeline view state from saved UI settings), `+page.svelte` (tab shell), `layout.css` (retro theme)
 
 **Backend (`src-tauri/`):**
 

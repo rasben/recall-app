@@ -30,25 +30,36 @@
   let config = $derived(sourceConfig[event.source]);
 </script>
 
+<!--
+  The row itself is not interactive. Two real buttons live inside it:
+  - an invisible "open link" button stretched over the whole row (only when the
+    event has a URL), so the primary click is "read more", never "log";
+  - the Harvest mark, layered above the stretched button, which is the only
+    control that toggles the done state.
+  This avoids nesting buttons inside a role="button" row.
+-->
 <div
-  role="button"
-  tabindex="0"
-  onclick={onToggle}
-  onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle?.(); } }}
-  class="timeline-event-btn relative flex w-full min-w-0 max-w-full cursor-pointer items-start gap-3 border-2 bg-card py-2 pl-3 pr-2 text-left shadow-sm transition-all hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none
+  class="timeline-event-btn relative flex w-full min-w-0 max-w-full items-start gap-3 border-2 bg-card py-2 pl-3 pr-2 text-left shadow-sm transition-all hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-none
     {done ? 'opacity-50' : ''}"
 >
-  <span class="w-10 shrink-0 pt-0.5 font-mono text-xs text-muted-foreground">{event.time}</span>
   {#if event.url}
     <button
-            type="button"
-            class="timeline-link-btn absolute bottom-1.5 left-3 w-10 text-center inline-flex items-center gap-1 text-[10px] text-muted-foreground opacity-0 transition-opacity hover:text-foreground"
-            onclick={(e) => { e.stopPropagation(); track(`link.open.${event.source}`); openUrl(event.url!); }}
-            aria-label={t("timeline.open_link")}
+      type="button"
+      class="timeline-open-btn absolute inset-0 z-0 cursor-pointer outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
+      onclick={() => { track(`link.open.${event.source}`); openUrl(event.url!); }}
+      aria-label={t("timeline.open_link_for", { title: event.title })}
+    ></button>
+  {/if}
+
+  <span class="w-10 shrink-0 pt-0.5 font-mono text-xs text-muted-foreground">{event.time}</span>
+  {#if event.url}
+    <span
+      class="timeline-link-hint absolute bottom-1.5 left-3 inline-flex w-10 items-center justify-center gap-1 text-[10px] text-muted-foreground opacity-0 transition-opacity"
+      aria-hidden="true"
     >
       <span>{t("timeline.open_link")}</span>
       <ExternalLink class="size-3" />
-    </button>
+    </span>
   {/if}
   {#if config}
     {@const Icon = config.icon}
@@ -78,19 +89,28 @@
     {/if}
   </div>
 
-  <div class="relative mt-0.5 shrink-0 self-end">
-    <img
-      src="/harvest.svg"
-      alt={done ? t("timeline.logged_in_harvest") : t("timeline.not_logged_in_harvest")}
-      class="block size-3 transition-all {done ? '' : 'opacity-25 grayscale'}"
-    />
-    {#if done}
-      <span
-        class="pointer-events-none absolute left-1 top-1 flex size-3 items-center justify-center text-[9px] leading-none"
-        aria-hidden="true"
-      >✔︎</span>
-    {/if}
-  </div>
+  <button
+    type="button"
+    onclick={onToggle}
+    aria-pressed={done}
+    aria-label={done ? t("timeline.mark_not_logged") : t("timeline.mark_logged")}
+    title={done ? t("timeline.mark_not_logged") : t("timeline.mark_logged")}
+    class="timeline-harvest-btn relative z-10 -mb-1 -mr-0.5 flex size-7 shrink-0 cursor-pointer items-center justify-center self-end border-2 border-transparent transition-colors hover:border-foreground hover:bg-accent focus-visible:border-foreground focus-visible:outline-hidden"
+  >
+    <span class="relative block">
+      <img
+        src="/harvest.svg"
+        alt=""
+        class="block size-3 transition-all {done ? '' : 'opacity-25 grayscale'}"
+      />
+      {#if done}
+        <span
+          class="pointer-events-none absolute left-1 top-1 flex size-3 items-center justify-center text-[9px] leading-none"
+          aria-hidden="true"
+        >✔︎</span>
+      {/if}
+    </span>
+  </button>
   <span
     class="absolute right-0 top-0 shrink-0 bg-foreground px-1 py-0.5 font-head text-[8px] uppercase tracking-widest text-background"
   >
@@ -111,11 +131,12 @@
     overflow: visible;
     text-overflow: clip;
   }
-  .timeline-event-btn:is(:hover, :focus-within) .timeline-event-body {
-    position: relative;
-    z-index: 1;
-  }
-  .timeline-event-btn:is(:hover, :focus-within) .timeline-link-btn {
+  .timeline-event-btn:is(:hover, :focus-within) .timeline-link-hint {
     opacity: 1;
+  }
+  /* The Harvest mark is the one control that logs; make it obvious on hover. */
+  .timeline-harvest-btn:is(:hover, :focus-visible) img {
+    opacity: 1;
+    filter: none;
   }
 </style>

@@ -310,7 +310,18 @@ export type SettingsIcal = { enabled?: boolean; urls?: string[];
  */
 emails?: string[] }
 export type SettingsJira = { enabled: boolean; site_url?: string; email?: string; api_token?: string; enabled_events?: JiraEvent[] }
-export type SettingsUi = { theme: string }
+export type SettingsUi = { theme: string; 
+/**
+ * How the day's events are grouped: `"time"` or `"task"`. Stored as a
+ * plain string (the frontend validates it) so an unknown value can never
+ * make the whole document fail to load.
+ */
+group_mode?: string; 
+/**
+ * Timeline sources the user has toggled off (`TimelineEventSource` keys,
+ * e.g. `"zulip"`). Plain strings for the same reason as `group_mode`.
+ */
+hidden_sources?: string[] }
 export type SettingsZulip = { enabled: boolean; realm_url?: string; email?: string; api_key?: string }
 /**
  * One row on the timeline (all sources normalize to this shape).

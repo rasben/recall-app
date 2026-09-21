@@ -9,7 +9,7 @@
     import {onMount} from "svelte";
     import { setGauge } from "$lib/telemetry";
 
-    let language = $state<string>("da");
+    let language = $state<string>(i18n.lang);
     const langs: Lang[] = ["da", "en"];
 
     onMount(async () => {
