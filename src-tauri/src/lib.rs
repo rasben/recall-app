@@ -2,6 +2,8 @@ mod commands;
 mod db;
 mod state;
 mod telemetry;
+#[cfg(test)]
+mod test_support;
 mod timeline;
 
 use state::AppState;

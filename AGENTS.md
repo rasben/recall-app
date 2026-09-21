@@ -153,9 +153,10 @@ These patterns are intentional; follow them when adding settings areas or data s
 
 ### Tests
 
-- `npm test` — runs all Rust unit + integration tests (wraps `cargo test --lib`). **Prefer this over invoking `cargo test` directly** so we have one canonical test entrypoint.
-- `npm run test:frontend` — runs Vitest unit tests for the Svelte/TypeScript side (config: `vitest.config.ts`). Test files live alongside source as `*.test.ts` under `src/`.
+- `npm test` — runs all Rust unit + integration tests (wraps `cargo test --lib`) and then the Vitest suite. **Prefer this over invoking `cargo test` directly** so we have one canonical test entrypoint.
+- `npm run test:frontend` — runs `svelte-kit sync` and then Vitest for the Svelte/TypeScript side (config: `vitest.config.ts`). Test files live alongside source as `*.test.ts` under `src/`. The config loads `@sveltejs/vite-plugin-svelte`, so tests can import `*.svelte.ts` rune modules (e.g. `i18n.svelte.ts`). The sync step is required because the root `tsconfig.json` extends the generated `.svelte-kit/tsconfig.json` and Vite's TypeScript transform fails with "Tsconfig not found" when it is missing (this predates the plugin).
 - Unit tests live as `#[cfg(test)] mod tests { … }` at the bottom of each source file.
+- **Testing Tauri commands (Rust):** `src-tauri/src/test_support.rs` (compiled only under `cfg(test)`) provides `mock_app()` — a `tauri::test::mock_app()` on the `MockRuntime` managing an `AppState` whose DB is an in-memory SQLite connection with the production schema (`db::init_schema`). Use `state(&app)` to get a `State<'_, AppState>` and call command functions directly; `seed_setting` writes a raw JSON settings document, `event` / `local_ts` build fixtures, `runtime()` gives the multi-thread Tokio runtime that `block_in_place` commands need. Commands taking a `tauri::AppHandle` (`get_timeline_for_day`, `refresh_timeline_for_day`, `get_day_counts_for_month`) are typed to `Wry` and cannot be called with the mock; test the shared helpers they delegate to (`collect_range_events`, `export_timeline_for_range`, `cache::*`) instead. Sources with no settings return `Ok(empty)` without network, and the Git source pointed at a nonexistent directory returns `Err`, which is the deterministic way to exercise the "a failed source blocks caching" paths.
 - Integration tests that hit real APIs are skipped automatically when the relevant env vars are absent (see secret names below). They run in CI when secrets are set via GitHub repo Settings → Secrets.
 
 **Secret names for integration tests:**

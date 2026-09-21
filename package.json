@@ -14,7 +14,7 @@
     "tests": "npm run test",
     "test": "npm run test:rust && npm run test:frontend",
     "test:rust": "cargo test --lib --manifest-path src-tauri/Cargo.toml",
-    "test:frontend": "vitest run",
+    "test:frontend": "svelte-kit sync && vitest run",
     "lint": "npm run check && cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings"
   },
   "license": "MIT",
