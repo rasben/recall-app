@@ -47,6 +47,7 @@ Planned expansions (see `TODO.md` for the full list and priorities): Gmail (sent
 | `src/` | Frontend: SvelteKit routes, components, app shell |
 | `src-tauri/` | Tauri/Rust backend: commands, DB, app state |
 | `static/` | Static assets |
+| `worker/` | Cloudflare Worker that receives the daily telemetry summary into a D1 table (`schema.sql`) and serves `/stats` + `/stats/features`. Own `package.json`; `npm test` there runs Vitest against `node:sqlite` as a D1 stand-in. Deploy steps are in `worker/wrangler.toml`. |
 | `build/` | Vite build output (Tauri uses this as `frontendDist`; git-ignored) |
 
 **Frontend (`src/`):**
@@ -59,6 +60,7 @@ Planned expansions (see `TODO.md` for the full list and priorities): Gmail (sent
 - `src/components/settings/*.svelte` — One panel per settings domain (theme, git, GitHub, Jira, …, export prompt, cache). `Export.svelte` edits the custom AI-export prompt; `src/lib/export-prompt.ts` resolves the effective prompt (empty or matching a built-in default → the active-language default, so it follows the UI language; otherwise the user's custom text).
 - `src/lib/components/ui/` — shadcn-svelte UI primitives (button, card, tabs, select, toggle, sonner, popover, calendar, etc.)
 - `src/components/ui/` — app-specific UI components: `Loading.svelte` (loading overlay with per-source progress), `MissingSettings.svelte` (shown when no data sources are configured), `PasswordInput.svelte`
+- `src/lib/telemetry.ts` — `track(name)` / `setGauge(name, value)` fire-and-forget wrappers around the telemetry commands, for interactions only the UI sees (navigation, view toggles, export choices, link clicks). Rust-side actions count themselves.
 - `src/lib/utils.ts` — `cn()` helper and utility types
 - `src/routes/` — SvelteKit routes: `+layout.svelte` (e.g. theme from saved UI settings), `+page.svelte` (tab shell), `layout.css` (retro theme)
 
@@ -72,7 +74,10 @@ Planned expansions (see `TODO.md` for the full list and priorities): Gmail (sent
 - `src-tauri/src/commands/timeline/cache.rs` — Private helpers for the `timeline_day_cache` SQLite table (`get_cached_day`, `save_cached_day`); not a Tauri command.
 - `src-tauri/src/timeline.rs` — Shared Rust types for timeline rows (`TimelineEvent`, `TimelineEventSource`), not Tauri commands.
 - `src-tauri/src/commands/harvest_done.rs` — Load/save timeline Harvest checkmarks (SQLite rows keyed by UUID v5 of `TimelineEvent.id`)
-- `src-tauri/src/db.rs` — SQLite init (WAL mode enabled for concurrent access); tables: `settings` key-value; `timeline_harvest_done` for per-event Harvest checkmarks; `timeline_day_cache` for previously loaded day timelines; `ical_events` (url, uid, dtstart, summary, event_url) for parsed iCal events; `ical_sync_meta` (last_synced_at, last_error) for sync state. Returns `(Connection, PathBuf)`.
+- `src-tauri/src/telemetry.rs` — Anonymous usage telemetry engine. Counters accumulate in the `telemetry_counters` table via `bump_conn(&conn, key)` (when the caller already holds the DB lock) or `record(&state, key)`; gauges (current state such as `lang`) live in `settings` under `telemetry_gauge_*`. A background thread (`spawn_ping`) counts `app.launch`, then once per calendar day builds the summary (`build_payload`: environment, config snapshot as booleans/buckets, counters) and POSTs it to the Cloudflare Worker, subtracting what was sent afterwards. Honours the opt-out in `settings_telemetry`. Keys are validated by `valid_key` (dotted lowercase identifiers). The README "Telemetry" section is the user-facing contract — keep it in sync with `build_payload`.
+- `src-tauri/src/commands/telemetry.rs` — `telemetry_track(name)` / `telemetry_set_gauge(name, value)` commands for UI-only interactions (see `src/lib/telemetry.ts`).
+- `src-tauri/src/commands/settings_telemetry.rs` — `SettingsTelemetry { enabled }` (default on); disabling also clears `telemetry_counters`.
+- `src-tauri/src/db.rs` — SQLite init (WAL mode enabled for concurrent access); tables: `settings` key-value; `timeline_harvest_done` for per-event Harvest checkmarks; `timeline_day_cache` for previously loaded day timelines; `ical_events` (url, uid, dtstart, summary, event_url) for parsed iCal events; `ical_sync_meta` (last_synced_at, last_error) for sync state; `telemetry_counters` (key, value) for not-yet-sent usage counters. Returns `(Connection, PathBuf)`.
 - `src-tauri/src/state.rs` — `AppState` with `db: Arc<Mutex<Connection>>`, `db_path: PathBuf` (used by background iCal sync to open its own connection), and `ical_syncing: Arc<AtomicBool>`
 - `src-tauri/capabilities/` — Tauri permissions
 - `src-tauri/icons/` — App icons
@@ -93,6 +98,13 @@ These patterns are intentional; follow them when adding settings areas or data s
 
 - Keep the settings tab under `src/components/settings/`. `Settings.svelte` is a thin shell that imports domain panels.
 - Each panel owns its local state, loads the domain struct on mount (e.g. `getSettingsGit()`), and saves with the matching `set*` command. Prefer updating and persisting the **whole struct** for that domain so the Rust and TS models stay aligned.
+
+### Telemetry
+
+- Count **actions and outcomes, never values**. A counter key is a dotted lowercase identifier: `nav.prev`, `export.format.json`, `error.github.auth`. Never interpolate user data (titles, URLs, paths, ids) into a key.
+- Rust-side actions call `crate::telemetry::record(&state, "…")`, or `bump_conn(&conn, "…")` when the DB lock is already held (calling `record` there deadlocks). Settings saves are counted automatically in `save_val` as `settings.save.{domain}`; source fetches are timed and classified in `timeline/mod.rs`.
+- UI-only interactions call `track("…")` from `src/lib/telemetry.ts`. Current state (not a count) goes through `setGauge`.
+- When adding a new counter or payload field, update the README "Telemetry" section (the user-facing list) and, if the payload shape changes, bump `SCHEMA_VERSION` in `telemetry.rs`.
 
 ### Timeline (Rust)
 
@@ -155,6 +167,7 @@ These patterns are intentional; follow them when adding settings areas or data s
 
 - `npm test` — runs all Rust unit + integration tests (wraps `cargo test --lib`) and then the Vitest suite. **Prefer this over invoking `cargo test` directly** so we have one canonical test entrypoint.
 - `npm run test:frontend` — runs `svelte-kit sync` and then Vitest for the Svelte/TypeScript side (config: `vitest.config.ts`). Test files live alongside source as `*.test.ts` under `src/`. The config loads `@sveltejs/vite-plugin-svelte`, so tests can import `*.svelte.ts` rune modules (e.g. `i18n.svelte.ts`). The sync step is required because the root `tsconfig.json` extends the generated `.svelte-kit/tsconfig.json` and Vite's TypeScript transform fails with "Tsconfig not found" when it is missing (this predates the plugin).
+- `cd worker && npm test` — runs the telemetry worker's Vitest suite (not part of the root `npm test`).
 - Unit tests live as `#[cfg(test)] mod tests { … }` at the bottom of each source file.
 - **Testing Tauri commands (Rust):** `src-tauri/src/test_support.rs` (compiled only under `cfg(test)`) provides `mock_app()` — a `tauri::test::mock_app()` on the `MockRuntime` managing an `AppState` whose DB is an in-memory SQLite connection with the production schema (`db::init_schema`). Use `state(&app)` to get a `State<'_, AppState>` and call command functions directly; `seed_setting` writes a raw JSON settings document, `event` / `local_ts` build fixtures, `runtime()` gives the multi-thread Tokio runtime that `block_in_place` commands need. Commands taking a `tauri::AppHandle` (`get_timeline_for_day`, `refresh_timeline_for_day`, `get_day_counts_for_month`) are typed to `Wry` and cannot be called with the mock; test the shared helpers they delegate to (`collect_range_events`, `export_timeline_for_range`, `cache::*`) instead. Sources with no settings return `Ok(empty)` without network, and the Git source pointed at a nonexistent directory returns `Err`, which is the deterministic way to exercise the "a failed source blocks caching" paths.
 - Integration tests that hit real APIs are skipped automatically when the relevant env vars are absent (see secret names below). They run in CI when secrets are set via GitHub repo Settings → Secrets.

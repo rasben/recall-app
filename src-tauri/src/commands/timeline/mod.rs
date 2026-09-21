@@ -6,6 +6,7 @@ mod jira;
 mod zulip;
 
 use std::collections::HashMap;
+use std::time::Instant;
 
 use chrono::{Local, NaiveDate};
 use rusqlite::params;
@@ -13,6 +14,7 @@ use serde::Serialize;
 use tauri::{Emitter, State};
 
 use crate::state::AppState;
+use crate::telemetry;
 use crate::timeline::TimelineEvent;
 
 #[derive(Serialize, Clone)]
@@ -90,40 +92,32 @@ fn collect_range_events<F: Fn(&'static str, bool, Option<String>)>(
             }
         }
     };
-    let fail = |errors: &mut Vec<(&'static str, String)>, source: &'static str, e: String| {
-        emit(source, true, Some(e.clone()));
-        errors.push((source, e));
+    // Run one source: emit progress, time it, and record the outcome as a
+    // duration bucket plus (on failure) a coarse error class — never the text.
+    let mut run = |source: &'static str,
+                   fetch: &dyn Fn() -> Result<Vec<(NaiveDate, i64, TimelineEvent)>, String>| {
+        emit(source, false, None);
+        let started = Instant::now();
+        let result = fetch();
+        telemetry::record_source_timing(state, "range_ms", source, started.elapsed());
+        match result {
+            Ok(r) => {
+                extend(r);
+                emit(source, true, None);
+            }
+            Err(e) => {
+                telemetry::record_source_error(state, source, &e);
+                emit(source, true, Some(e.clone()));
+                errors.push((source, e));
+            }
+        }
     };
 
-    emit("Git", false, None);
-    match git::events_for_range(state, fetch_start, fetch_end) {
-        Ok(r) => { extend(r); emit("Git", true, None); }
-        Err(e) => fail(&mut errors, "Git", e),
-    }
-
-    emit("GitHub", false, None);
-    match github::events_for_range(state, fetch_start, fetch_end) {
-        Ok(r) => { extend(r); emit("GitHub", true, None); }
-        Err(e) => fail(&mut errors, "GitHub", e),
-    }
-
-    emit("Calendar", false, None);
-    match ical::events_for_range(state, fetch_start, fetch_end) {
-        Ok(r) => { extend(r); emit("Calendar", true, None); }
-        Err(e) => fail(&mut errors, "Calendar", e),
-    }
-
-    emit("Jira", false, None);
-    match jira::events_for_range(state, fetch_start, fetch_end) {
-        Ok(r) => { extend(r); emit("Jira", true, None); }
-        Err(e) => fail(&mut errors, "Jira", e),
-    }
-
-    emit("Zulip", false, None);
-    match zulip::events_for_range(state, fetch_start, fetch_end) {
-        Ok(r) => { extend(r); emit("Zulip", true, None); }
-        Err(e) => fail(&mut errors, "Zulip", e),
-    }
+    run("Git", &|| git::events_for_range(state, fetch_start, fetch_end));
+    run("GitHub", &|| github::events_for_range(state, fetch_start, fetch_end));
+    run("Calendar", &|| ical::events_for_range(state, fetch_start, fetch_end));
+    run("Jira", &|| jira::events_for_range(state, fetch_start, fetch_end));
+    run("Zulip", &|| zulip::events_for_range(state, fetch_start, fetch_end));
 
     (per_day, errors)
 }
@@ -151,48 +145,36 @@ pub async fn get_timeline_for_day(
             }
         }
 
-        let loading = |source: &'static str| {
-            let _ = app.emit("timeline:source", SourceProgress { source, done: false, error: None });
-        };
-        let done = |source: &'static str| {
-            let _ = app.emit("timeline:source", SourceProgress { source, done: true, error: None });
-        };
-        let fail = |source: &'static str, err: String| {
-            let _ = app.emit("timeline:source", SourceProgress { source, done: true, error: Some(err) });
-        };
-
         let mut rows: Vec<(i64, TimelineEvent)> = Vec::new();
         let mut any_error = false;
 
-        loading("Git");
-        match git::events_for_day(&state, &day) {
-            Ok(r) => { rows.extend(r); done("Git"); }
-            Err(e) => { any_error = true; fail("Git", e); }
-        }
+        // Run one source: emit progress before/after, time it, and record the
+        // duration bucket, the returned-count bucket, or the error class.
+        let mut run = |source: &'static str,
+                       fetch: &dyn Fn() -> Result<Vec<(i64, TimelineEvent)>, String>| {
+            let _ = app.emit("timeline:source", SourceProgress { source, done: false, error: None });
+            let started = Instant::now();
+            let result = fetch();
+            telemetry::record_source_timing(&state, "load_ms", source, started.elapsed());
+            match result {
+                Ok(r) => {
+                    telemetry::record_source_events(&state, source, r.len());
+                    rows.extend(r);
+                    let _ = app.emit("timeline:source", SourceProgress { source, done: true, error: None });
+                }
+                Err(e) => {
+                    any_error = true;
+                    telemetry::record_source_error(&state, source, &e);
+                    let _ = app.emit("timeline:source", SourceProgress { source, done: true, error: Some(e) });
+                }
+            }
+        };
 
-        loading("GitHub");
-        match github::events_for_day(&state, &day) {
-            Ok(r) => { rows.extend(r); done("GitHub"); }
-            Err(e) => { any_error = true; fail("GitHub", e); }
-        }
-
-        loading("Calendar");
-        match ical::events_for_day(&state, &day) {
-            Ok(r) => { rows.extend(r); done("Calendar"); }
-            Err(e) => { any_error = true; fail("Calendar", e); }
-        }
-
-        loading("Jira");
-        match jira::events_for_day(&state, &day) {
-            Ok(r) => { rows.extend(r); done("Jira"); }
-            Err(e) => { any_error = true; fail("Jira", e); }
-        }
-
-        loading("Zulip");
-        match zulip::events_for_day(&state, &day) {
-            Ok(r) => { rows.extend(r); done("Zulip"); }
-            Err(e) => { any_error = true; fail("Zulip", e); }
-        }
+        run("Git", &|| git::events_for_day(&state, &day));
+        run("GitHub", &|| github::events_for_day(&state, &day));
+        run("Calendar", &|| ical::events_for_day(&state, &day));
+        run("Jira", &|| jira::events_for_day(&state, &day));
+        run("Zulip", &|| zulip::events_for_day(&state, &day));
 
         rows.sort_by_key(|(ts, _)| *ts);
         let events: Vec<TimelineEvent> = rows.into_iter().map(|(_, ev)| ev).collect();
@@ -224,6 +206,7 @@ pub async fn refresh_timeline_for_day(
             params![&day],
         )
         .map_err(|e| e.to_string())?;
+        telemetry::bump_conn(&conn, "nav.refresh");
         Ok::<(), String>(())
     })?;
     get_timeline_for_day(app, state, day).await
@@ -268,6 +251,7 @@ pub async fn export_timeline_for_range(
         if (end_day - start_day).num_days() + 1 > MAX_EXPORT_DAYS {
             return Err(format!("Range too large (max {MAX_EXPORT_DAYS} days)"));
         }
+        telemetry::record(&state, "export.range");
 
         let today = Local::now().date_naive();
 
@@ -325,34 +309,60 @@ pub async fn export_timeline_for_range(
     })
 }
 
+/// Count a "test connection" click per source as ok/fail (outcome only).
+fn record_test(state: &AppState, source: &str, result: &Result<(), String>) {
+    let outcome = if result.is_ok() { "ok" } else { "fail" };
+    telemetry::record(state, &format!("settings.test.{source}.{outcome}"));
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn test_settings_git(state: State<'_, AppState>) -> Result<(), String> {
-    tokio::task::block_in_place(|| git::test_connection(&state))
+    tokio::task::block_in_place(|| {
+        let r = git::test_connection(&state);
+        record_test(&state, "git", &r);
+        r
+    })
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn test_settings_github(state: State<'_, AppState>) -> Result<(), String> {
-    tokio::task::block_in_place(|| github::test_connection(&state))
+    tokio::task::block_in_place(|| {
+        let r = github::test_connection(&state);
+        record_test(&state, "github", &r);
+        r
+    })
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn test_settings_jira(state: State<'_, AppState>) -> Result<(), String> {
-    tokio::task::block_in_place(|| jira::test_connection(&state))
+    tokio::task::block_in_place(|| {
+        let r = jira::test_connection(&state);
+        record_test(&state, "jira", &r);
+        r
+    })
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn test_settings_zulip(state: State<'_, AppState>) -> Result<(), String> {
-    tokio::task::block_in_place(|| zulip::test_connection(&state))
+    tokio::task::block_in_place(|| {
+        let r = zulip::test_connection(&state);
+        record_test(&state, "zulip", &r);
+        r
+    })
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn test_settings_ical(state: State<'_, AppState>) -> Result<(), String> {
-    tokio::task::block_in_place(|| ical::test_connection(&state))
+    tokio::task::block_in_place(|| {
+        let r = ical::test_connection(&state);
+        record_test(&state, "calendar", &r);
+        r
+    })
 }
 
 /// Fetch event counts for every elapsed day of the given calendar month,
@@ -368,6 +378,7 @@ pub async fn get_day_counts_for_month(
     month: u32,
 ) -> Result<HashMap<String, u32>, String> {
     tokio::task::block_in_place(|| {
+        telemetry::record(&state, "nav.month_load");
         let first =
             NaiveDate::from_ymd_opt(year, month, 1).ok_or_else(|| format!("Invalid year/month: {year}-{month}"))?;
         let today = Local::now().date_naive();

@@ -53,7 +53,18 @@ npm run tauri dev
 
 ## Telemetry
 
-Recall sends one anonymous ping per day to count active installs. The ping contains only a random UUID generated at first launch — no personal data, no device info, no IP addresses are stored. You can inspect the full implementation in [`src-tauri/src/telemetry.rs`](./src-tauri/src/telemetry.rs) and the server side in [`worker/src/index.js`](./worker/src/index.js).
+Recall sends **one anonymous usage summary per day** so I can tell whether anyone uses the app and which features matter. You can turn it off under **Settings → System**, which also wipes anything counted locally but not yet sent.
+
+**What is sent, once a day:**
+
+- A random install ID (UUID generated at first launch), the date, app version, OS family and CPU architecture (e.g. `macos/aarch64`), UI language, theme, current grouping mode, and how long ago the app was installed (bucketed: `0to7d`, `8to30d`, …).
+- A configuration snapshot as **booleans and buckets only**: which sources are enabled, which GitHub / Jira event types are opted in, how many calendar URLs are configured (`0`, `1`, `2`, `3plus`), and whether a custom export prompt is set.
+- **Counters** accumulated since the previous summary: launches, days viewed, navigation clicks, grouping-mode switches, source-filter toggles, Harvest check marks, exports (format and preset), outbound link clicks per source, settings saves and test-connection outcomes per source, cache clears, and update-toast interactions.
+- **Health counters**: per-source fetch duration buckets (`lt1s`, `1to3s`, `3to10s`, `gt10s`), per-source event-count buckets per loaded day (`0`, `1to10`, `11to50`, `50plus`), per-source error *classes* (`auth`, `rate_limit`, `network`, `config`, `other`), and calendar sync ok/fail counts.
+
+**What is never sent:** titles, URLs, repository names or paths, ticket keys, usernames, emails, calendar summaries, hostnames, error message text, your timezone, or any timestamp finer than the calendar day. The server does not log IP addresses.
+
+The full implementation is in [`src-tauri/src/telemetry.rs`](./src-tauri/src/telemetry.rs) (the `build_payload` function is exactly what leaves the machine, and a test asserts it contains no settings values) and the server side in [`worker/src/index.js`](./worker/src/index.js).
 
 ## Security warning
 

@@ -6,6 +6,7 @@
   import { commands } from "../bindings";
   import { addDaysIso, applyOptimisticToggle, formatGapLabel, GAP_IDLE_MINUTES, GAP_MIN_MINUTES, groupByTask, groupCloseCommits, groupEventsByHour, rollbackOptimisticToggle, todayIso, type TimelineEvent } from "$lib/timeline";
   import { navState } from "$lib/nav-state.svelte";
+  import { track, setGauge } from "$lib/telemetry";
   import TimelineDateNav from "./TimelineDateNav.svelte";
   import TimelineSourceFilter from "./TimelineSourceFilter.svelte";
   import TimelineEventRow from "./TimelineEvent.svelte";
@@ -59,15 +60,25 @@
   onDestroy(() => unlistenSource?.());
 
   function shiftDate(days: number) {
+    track(days < 0 ? "nav.prev" : "nav.next");
     navState.selectedDate = addDaysIso(navState.selectedDate, days);
   }
 
   function goToday() {
+    track("nav.today");
     navState.selectedDate = todayIso();
   }
 
   function pickDate(iso: string) {
+    track("nav.picker");
     navState.selectedDate = iso;
+  }
+
+  function setGroupMode(mode: "time" | "task") {
+    if (navState.groupMode === mode) return;
+    navState.groupMode = mode;
+    track("group_mode.switch");
+    setGauge("group_mode", mode);
   }
 
   async function refreshDay() {
@@ -124,6 +135,9 @@
 
     let cancelled = false;
     const timeoutId = window.setTimeout(() => {
+      // Counted here (not in Rust) so the startup prefetch below is excluded:
+      // this is a day the user actually looked at.
+      track("timeline.day_view");
       commands.getTimelineForDay(day).then(async (result) => {
         if (cancelled) return;
         if (result.status === "ok") {
@@ -192,6 +206,7 @@
     if (jira?.enabled) enabled.push("Jira");
     if (zulip?.enabled) enabled.push("Zulip");
     enabledSources = enabled;
+    if (enabled.length === 0) track("onboarding.no_sources");
     jiraBaseUrl = jira?.site_url ? jira.site_url.replace(/\/+$/, "") : null;
     settingsLoaded = true;
   });
@@ -232,7 +247,7 @@
       <div class="flex items-center gap-1.5" role="group" aria-label={t("timeline.group_mode")}>
         <button
           type="button"
-          onclick={() => (navState.groupMode = "time")}
+          onclick={() => setGroupMode("time")}
           aria-pressed={navState.groupMode === "time"}
           class="border-2 px-2 py-1 font-head text-[10px] uppercase tracking-widest transition-colors {modeButtonClass(navState.groupMode === 'time')}"
         >
@@ -240,7 +255,7 @@
         </button>
         <button
           type="button"
-          onclick={() => (navState.groupMode = "task")}
+          onclick={() => setGroupMode("task")}
           aria-pressed={navState.groupMode === "task"}
           class="border-2 px-2 py-1 font-head text-[10px] uppercase tracking-widest transition-colors {modeButtonClass(navState.groupMode === 'task')}"
         >

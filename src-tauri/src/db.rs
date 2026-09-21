@@ -84,6 +84,15 @@ pub(crate) fn init_schema(conn: &Connection) -> Result<(), String> {
     )
     .map_err(|e| format!("failed to create ical_sync_meta table: {e}"))?;
 
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS telemetry_counters (
+            key TEXT PRIMARY KEY,
+            value INTEGER NOT NULL DEFAULT 0
+        )",
+        [],
+    )
+    .map_err(|e| format!("failed to create telemetry_counters table: {e}"))?;
+
     // Migrations: ignore errors when columns already exist.
     let _ = conn.execute("ALTER TABLE ical_events ADD COLUMN dtend INTEGER", []);
     let _ = conn.execute(

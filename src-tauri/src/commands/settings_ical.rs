@@ -174,6 +174,11 @@ fn run_sync(
         }
     }
 
+    crate::telemetry::bump_conn(
+        &conn,
+        if last_error.is_some() { "ical.sync_fail" } else { "ical.sync_ok" },
+    );
+
     let ts = now();
     let _ = conn.execute(
         "INSERT OR REPLACE INTO ical_sync_meta (id, last_synced_at, last_error) VALUES (1, ?1, ?2)",
