@@ -1,74 +1,109 @@
 # To-Do's
 
-Roadmap and ideas for Recall. Items aren't strictly ordered — pick what feels useful.
+Roadmap for Recall, in priority order. Pick from the top unless something below has become urgent. Last re-prioritized 2026-09-21.
 
-## Product — close the Harvest loop
+**Where the product stands (2026-09-21):** ~5 active installs (telemetry), one open external issue (#101), no commits since v1.5 on 2026-06-30. The app's pitch is "fill in Harvest", but it never talks to Harvest — today the user reads the timeline and types into Harvest by hand. Everything below is ordered by how much it changes what the user *does*, not what they see.
 
-The whole point of the app is to feed Harvest, but it doesn't actually talk to Harvest yet. The checkmark is a manual "I did this elsewhere" marker.
+**Honesty constraint that shapes all of this:** only calendar events carry a true duration. git/GitHub/JIRA/Zulip are durationless points, so we can surface real calendar durations, cross-source ticket clustering, and presence/elapsed windows — but everything inferred must be labelled a **span/presence window**, never "time spent". A tool whose failure mode is wrong Harvest entries must not invent hours. Any Harvest submit must show the suggested hours as an editable field the user confirms; never auto-submit.
 
-- Cheap version: "Copy as Harvest entry" on each event (formatted note + suggested project/task), or a deep link that opens Harvest with the entry prefilled.
-- Suggested durations / event grouping. Events are points in time; Harvest wants durations. Heuristic: group consecutive events from the same source/repo/ticket into a block, duration = gap until next block, capped at e.g. 90 min. Pairs naturally with Harvest submit.
+---
 
-## Data sources
+## 1. Harvest read — show what's already logged
 
-- Gmail — likely path is IMAP + Gmail App Password (same paste-a-token UX as JIRA/Zulip), avoiding the Google OAuth burden. Fall back to OAuth if Workspace admins have IMAP/app passwords disabled. See AGENTS.md.
-  - Sent emails
-  - Read emails
-- Google Drive (requires Google OAuth — no IMAP-style escape hatch)
-  - Edited/Created files
-  - Read files
-- Zulip — expanded data
-  - Messages you've read
-- Slack. Reload uses Zulip, but client orgs often don't, and many Reload devs are in client Slacks. User-token install is straightforward.
-- Linear. Same trivial PAT auth model as JIRA.
-- Local IDE / editor activity. A small "I had this repo focused for X minutes" signal from VS Code or a generic file-watcher on the repo dir would catch the long stretches of work that produce no commits or comments — the most under-represented category in time tracking.
+The smallest slice with a visible payoff. Harvest API v2 fits the existing paste-a-token pattern exactly: personal access token + account ID, no OAuth.
 
-## Privacy & security
+- New `settings_harvest.rs` + `Harvest.svelte` panel (token, account id, test-connection). Same shape as Jira/Zulip.
+- Fetch the selected day's time entries (`GET /v2/time_entries?from=&to=` with `user_id` = me) and render a strip under the date nav: hours logged, per project.
+- The manual Harvest checkmark becomes derived from what Harvest actually has (keep the manual toggle as an override for now; retire it once the write path lands).
+- The "what's missing in Harvest today" inverted view falls out of this for free: un-logged rows vs. logged hours.
 
-- Move credentials out of plain SQLite into the OS keychain
-  (e.g. `tauri-plugin-stronghold` or the `keyring` crate — macOS Keychain / Windows Credential Manager / Linux Secret Service).
-- Add a screen that shows the last 50 commands / API calls that have been run.
-  - E.g. the terminal commands run by git data sources, or the APIs called by JIRA.
-- "Export & purge all data" button. Pairs naturally with the keychain migration.
+Effort: M.
 
-## Releases & distribution
+## 2. Harvest write — log from a task card
 
-- Tauri auto-updater. Today: redownload the DMG. Tauri has the `updater` plugin — set it up against the GitHub Releases artifacts already published.
+- In the by-task view, each ticket/repo card gets "Log to Harvest". Prefill notes from the ticket ID + event titles; prefill hours from the card's span, **editable**; pick project/task from `GET /v2/users/me/project_assignments`.
+- Remember the ticket-prefix (or repo) → project/task mapping after first use so the second entry is one click.
+- `POST /v2/time_entries` with project, task, spent_date, hours, notes.
+- After a successful post, re-fetch the day's entries (item 1) so the strip and checkmarks update.
 
-## UX polish
+Effort: M–L. Depends on 1.
 
-- "What's missing in Harvest today" inverted view (show un-checked only).
+## 3. Fix GitHub history (issue #101) and stop caching incomplete days
 
-## Fun
+- The public Events API returns at most ~300 events, which for a busy developer is about a week. That is what arnested is seeing in #101. Replace or supplement with the Search API (`author:`, `commenter:`, `involves:` + `created:`/`updated:` date qualifiers) or the GraphQL `contributionsCollection(from, to)` for PRs and reviews. Search gives per-item timestamps; contributionsCollection gives PR/review/issue contributions with `occurredAt` but not comments.
+- Separately: "load month" and export currently cache GitHub-empty days beyond the API horizon as truth, because only *errors* block caching. Until the source is fixed, a day older than the Events horizon must not be cached as complete — either skip caching or mark the row partial.
+- Reply on #101 either way.
 
-- Add more transitions and animations.
-- Add a TUI.
-  - Either a real TUI, or a fake one, making the app easily navigated with the keyboard.
+Effort: M.
 
-## Timeline readability — make a day legible
+## 4. Jira range truncation
 
-The day timeline is good at "what happened when" but bad at "what did I work on, and roughly how long" — which is the whole point for Harvest. Three structural causes: every row is **equal visual weight** (a dependabot merge looks like a shipped feature); events are **points with no duration** except calendar; and work is scattered across sources by **ticket** (e.g. DDF-312 = commits + PR + JIRA + Zulip) but the feed never connects them.
+- `events_for_range` sends `maxResults: 100` with no pagination. A month fetch or export for someone who touched >100 tickets silently drops the rest, and the truncated result is cached. Paginate `search/jql` (`nextPageToken`).
+- Known limitation worth fixing while in there: the event time is the ticket's last `updated` timestamp by *anyone*, not the time of the user's action. The issue changelog endpoint gives per-action timestamps.
 
-**Honesty constraint that shapes all of this:** only calendar events carry a true duration. git/GitHub/JIRA/Zulip are durationless points, so we can surface real calendar durations, cross-source ticket clustering, and presence/elapsed windows — but everything inferred must be labelled a **span/presence window**, never "time spent". A tool whose failure mode is wrong Harvest entries must not invent hours.
+Effort: S–M.
 
-### Optional / later
+## 5. Parallelize sources; prefetch as a range
 
-- **Sticky per-day summary header.** A strip between the date nav and the feed: per-source counts, summed meeting time (real, from calendar detail), active span, and tickets-touched. Purely additive, no backend change. Build after ticket extraction lands; hoist the private `sourceConfig` map out of `TimelineEvent.svelte` to reuse the icons/colors; derive the active span from **timestamps**, not `events[0].time` (overnight calendar rows display `00:00`). Effort: M.
-- **Zulip session-splitting.** Split each stream's day into time-gap sessions (new session when the gap exceeds ~45 min) instead of one whole-day bucket, so morning vs afternoon activity shows separately and the span-in-title becomes meaningful. Makes Zulip rows more numerous on busy days, so pair it with grouping/de-emphasis. Bundle the resulting id change with the DM-per-partner change (see gotcha below). Files: `src-tauri/src/commands/timeline/zulip.rs`. Effort: M.
+- `get_timeline_for_day` runs Git → GitHub → Calendar → Jira → Zulip sequentially. They are independent; run them concurrently (the git module already does this per repo with `thread::scope`). Day load drops to the slowest source.
+- The 6-day prefetch on startup issues six separate full fetches; each GitHub fetch re-downloads the same event pages from newest. Prefetch through the existing `collect_range_events` helper in one pass instead.
 
-### Skip (evaluated, lower-value or infeasible)
+Effort: S–M.
 
-- **Work-only toggle / noise classifier / un-loggable rows / configurable muted streams.** All ride on a brittle keyword/stream-name classifier; false-hiding real work is dangerous for a Harvest tool, and whole sources can already be hidden via the existing source filter.
-- **Source color-rail, denser hour-spine.** Cosmetic; per-*source* coloring fights the cross-*ticket* grouping that's the actual need, and a per-hour event count is the weakest time proxy (distorted by collapsed bursts).
-- **Weekly digest view / "summarize week" export preset.** The data model can't total per-task time, and the default export prompt already produces Harvest-shaped per-day summaries with a one-click 7-day preset — redundant.
-- **Git branch-name ticket backfill (`%D`).** Empirically blank for exactly the merged feature branches it targets; if the task-view "Other" bucket ever gets large, parse the commit *subject* instead.
+## 6. Source registry refactor (do before adding the next source)
 
-### Gotcha for whoever implements the Zulip changes
+Adding a source today touches ~8 places: two dispatch blocks in `timeline/mod.rs`, `MONTH_SOURCES_TOTAL` in `TimelineDateNav.svelte`, the hand-built `enabledSources` list in `DayTimeline.svelte`, the icon map in `TimelineEvent.svelte`, `SOURCE_LABELS`, the Welcome list, and the settings tab.
 
-Changing Zulip event **ids** (DM-per-partner, session-splitting) orphans existing Zulip "done" checkmarks (UUIDv5 keyed on the id string in `harvest_done.rs:15-17`). Acceptable for a solo dev — but bundle all Zulip id changes into **one** change so the ids churn only once.
+- Rust: a small `Source` trait (`name`, `events_for_range`, `test_connection`) + one registry slice; both dispatch blocks iterate it.
+- TS: one shared source descriptor (label, icon, colour) that the badge, filter, Welcome and loading overlay all read.
 
-### If you do only three things
+Effort: M. Pure refactor; pairs with items 1–2 since Harvest is the next source.
 
-1. Calendar duration pill (S) — surface the one true time signal you have.
-2. Ticket extraction + task-view toggle (M) — the 25-row wall becomes ~5 cross-source work cards. The real overview fix.
-3. Zulip span + DM-per-partner + dominant topic (S, one id churn) — fixes the lumping and feeds better titles into the task cards.
+## 7. Credentials into the OS keychain
+
+Plain-text SQLite is acceptable for ~5 users and the README is honest about it. It is a blocker for recommending the app to the rest of Reload. `keyring` crate (macOS Keychain / Windows Credential Manager / Linux Secret Service), with a one-time migration from the `settings` table. Pair with an "Export & purge all data" button.
+
+Effort: M.
+
+## 8. Frontend fixes (small, independent)
+
+- **Row click marks as logged.** Reading is the common action, logging the rare one — the primary click is a footgun. Make the Harvest mark an explicit control; let the row click open the link or expand. (Becomes moot for the checkmark once item 1 lands, but the click target problem stays.)
+- **Default language is Danish** regardless of locale (`detectLang` falls back to `"da"`). Default from `navigator.language`.
+- **Grouping mode and source filter reset every launch.** Persist in `settings_ui`.
+- **Arrow keys** (←/→) for day navigation. Cheap, and covers most of the old "fake TUI" wish.
+- **Sticky per-day summary header.** Hours logged (from item 1), active span, tickets touched, summed meeting time. Derive the span from **timestamps**, not `events[0].time` (overnight calendar rows display `00:00`). Build after item 1.
+
+## 9. Ask the users before building
+
+Plausible, but validate with the actual installs first — none of these should be built on spec.
+
+- **Slack.** Reload uses Zulip, but client orgs often don't. User-token install is straightforward.
+- **Linear.** Same trivial PAT model as JIRA.
+- **Local IDE / editor activity.** Would catch the long stretches of work that produce no commits — the most under-represented category. But it is a new daemon-style component (file watcher / editor extension), and item 2 is worth more than all three of these combined.
+- **Gmail (sent mail via IMAP + App Password).** Weak time signal for a developer. Only if someone asks.
+- **Tauri auto-updater.** The in-app "new version" toast is adequate at this scale.
+
+## Later / optional
+
+- **Zulip session-splitting.** Split each stream's day into time-gap sessions (~45 min) instead of one whole-day bucket. See the id-churn gotcha below. Effort: M.
+
+---
+
+## Killed (evaluated, not doing)
+
+- **Google Drive.** Requires Google OAuth app verification for a five-user app, and edited-document timestamps are a weak time signal. Remove the dead placeholders: `TimelineEventSource::Drive`, the `drive` entry in `sourceConfig`/`SOURCE_LABELS`, and the Welcome "planned" chip.
+- **Zulip "messages you've read".** Reading is not billable work; violates the honesty constraint.
+- **A real TUI.** Arrow-key navigation (item 8) instead.
+- **"Last 50 commands / API calls" screen.** A debug log file covers the need.
+- **Work-only toggle / noise classifier / un-loggable rows / configurable muted streams.** All ride on a brittle keyword classifier; false-hiding real work is dangerous for a Harvest tool, and whole sources can already be hidden via the source filter.
+- **Source colour-rail, denser hour-spine.** Cosmetic; per-*source* colouring fights the cross-*ticket* grouping that's the actual need.
+- **Weekly digest view / "summarize week" export preset.** Revisit only after item 1: with Harvest hours per day, a week view of "logged vs. active span" becomes meaningful. Without it the data model can't total per-task time and the 7-day export preset already covers the summary.
+- **Git branch-name ticket backfill (`%D`).** Empirically blank for exactly the merged feature branches it targets; parse the commit *subject* instead if the task-view "Other" bucket grows.
+- **More animations.** NyanCat/Travolta/waiting GIFs are the app's personality — keep them, don't grow them.
+
+---
+
+## Gotchas
+
+- **Zulip event ids.** Changing Zulip event ids (session-splitting etc.) orphans existing Zulip "done" checkmarks (UUIDv5 keyed on the id string in `harvest_done.rs`). Bundle all Zulip id changes into **one** change so the ids churn only once. Less important once item 1 derives the checkmark from Harvest.
+- **Partial results must not be cached.** Today only *errors* block caching. API horizons (GitHub Events ~300 events) and un-paginated queries (Jira `maxResults: 100`) return successfully with missing data and get cached as complete. Items 3 and 4 fix the sources; any new source must handle this from day one.
