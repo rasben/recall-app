@@ -5,7 +5,7 @@ pub(crate) mod ical;
 mod jira;
 mod zulip;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use chrono::{Local, NaiveDate};
 use rusqlite::params;
@@ -58,6 +58,10 @@ const MAX_EXPORT_DAYS: i64 = 366;
 type DayBuckets = HashMap<NaiveDate, Vec<(i64, TimelineEvent)>>;
 /// `(source name, error message)` for each source that failed during a fetch.
 type SourceErrors = Vec<(&'static str, String)>;
+/// Days for which some source returned successfully but could not deliver
+/// complete data (an API horizon or result cap). Like errors, these block
+/// caching — a partial day cached as truth would never be re-fetched.
+type IncompleteDays = HashSet<NaiveDate>;
 
 /// Fetch every timeline source once over the contiguous range spanning `wanted`
 /// (its first..=last day) and bucket the results by local day. Only days present
@@ -66,19 +70,21 @@ type SourceErrors = Vec<(&'static str, String)>;
 /// and after (done=true, with any error) each source so callers can surface
 /// per-source progress. Returns the per-day buckets plus the `(source, error)`
 /// of every source that failed, so callers can both skip caching partial
-/// results and report the gaps to the user.
+/// results and report the gaps to the user, plus the days any source reported
+/// as incomplete (also not to be cached).
 fn collect_range_events<F: Fn(&'static str, bool, Option<String>)>(
     state: &State<'_, AppState>,
     wanted: &[NaiveDate],
     emit: F,
-) -> (DayBuckets, SourceErrors) {
+) -> (DayBuckets, SourceErrors, IncompleteDays) {
     let mut per_day: HashMap<NaiveDate, Vec<(i64, TimelineEvent)>> = HashMap::new();
     for day in wanted {
         per_day.insert(*day, Vec::new());
     }
     let mut errors: Vec<(&'static str, String)> = Vec::new();
+    let mut incomplete: IncompleteDays = HashSet::new();
     if wanted.is_empty() {
-        return (per_day, errors);
+        return (per_day, errors, incomplete);
     }
     let fetch_start = *wanted.first().unwrap();
     let fetch_end = *wanted.last().unwrap();
@@ -103,7 +109,7 @@ fn collect_range_events<F: Fn(&'static str, bool, Option<String>)>(
 
     emit("GitHub", false, None);
     match github::events_for_range(state, fetch_start, fetch_end) {
-        Ok(r) => { extend(r); emit("GitHub", true, None); }
+        Ok((r, partial)) => { extend(r); incomplete.extend(partial); emit("GitHub", true, None); }
         Err(e) => fail(&mut errors, "GitHub", e),
     }
 
@@ -125,7 +131,7 @@ fn collect_range_events<F: Fn(&'static str, bool, Option<String>)>(
         Err(e) => fail(&mut errors, "Zulip", e),
     }
 
-    (per_day, errors)
+    (per_day, errors, incomplete)
 }
 
 #[tauri::command]
@@ -163,6 +169,7 @@ pub async fn get_timeline_for_day(
 
         let mut rows: Vec<(i64, TimelineEvent)> = Vec::new();
         let mut any_error = false;
+        let mut any_incomplete = false;
 
         loading("Git");
         match git::events_for_day(&state, &day) {
@@ -172,7 +179,7 @@ pub async fn get_timeline_for_day(
 
         loading("GitHub");
         match github::events_for_day(&state, &day) {
-            Ok(r) => { rows.extend(r); done("GitHub"); }
+            Ok((r, partial)) => { rows.extend(r); any_incomplete |= partial; done("GitHub"); }
             Err(e) => { any_error = true; fail("GitHub", e); }
         }
 
@@ -197,9 +204,10 @@ pub async fn get_timeline_for_day(
         rows.sort_by_key(|(ts, _)| *ts);
         let events: Vec<TimelineEvent> = rows.into_iter().map(|(_, ev)| ev).collect();
 
-        // Skip caching if any source failed — partial results must not become
-        // permanent since the missing data would never be re-fetched.
-        if use_cache && !any_error {
+        // Skip caching if any source failed or reported incomplete data —
+        // partial results must not become permanent since the missing data
+        // would never be re-fetched.
+        if use_cache && !any_error && !any_incomplete {
             let _ = cache::save_cached_day(&state, &day, &events);
         }
 
@@ -291,14 +299,14 @@ pub async fn export_timeline_for_range(
 
         // No progress events here: an export is a one-shot copy, and the
         // returned `errors` (not a side-channel event) is what the UI needs.
-        let (mut per_day, errors) = collect_range_events(&state, &uncached, |_, _, _| {});
+        let (mut per_day, errors, incomplete) = collect_range_events(&state, &uncached, |_, _, _| {});
         let any_error = !errors.is_empty();
 
         for day in &uncached {
             let mut rows = per_day.remove(day).unwrap_or_default();
             rows.sort_by_key(|(ts, _)| *ts);
             let events: Vec<TimelineEvent> = rows.into_iter().map(|(_, ev)| ev).collect();
-            if *day < today && !any_error {
+            if *day < today && !any_error && !incomplete.contains(day) {
                 let iso = day.format("%Y-%m-%d").to_string();
                 let _ = cache::save_cached_day(&state, &iso, &events);
             }
@@ -415,7 +423,7 @@ pub async fn get_day_counts_for_month(
         // show a real progress bar on the "load month" button instead of an
         // opaque spinner. Days with no activity still go into the cache (as an
         // empty row) so we don't re-fetch them next time.
-        let (mut per_day, errors) = collect_range_events(&state, &uncached, |source, done, error| {
+        let (mut per_day, errors, incomplete) = collect_range_events(&state, &uncached, |source, done, error| {
             let _ = app.emit("month:source", SourceProgress { source, done, error });
         });
         let any_error = !errors.is_empty();
@@ -426,7 +434,7 @@ pub async fn get_day_counts_for_month(
             rows.sort_by_key(|(ts, _)| *ts);
             let events: Vec<TimelineEvent> = rows.into_iter().map(|(_, ev)| ev).collect();
             counts.insert(iso.clone(), events.len() as u32);
-            if !any_error {
+            if !any_error && !incomplete.contains(&day) {
                 let _ = cache::save_cached_day(&state, &iso, &events);
             }
         }
@@ -491,7 +499,7 @@ mod tests {
 
     fn collect(app: &MockApp, wanted: &[NaiveDate]) -> (DayBuckets, SourceErrors, Vec<Emitted>) {
         let emitted: Mutex<Vec<Emitted>> = Mutex::new(Vec::new());
-        let (per_day, errors) = collect_range_events(&state(app), wanted, |source, done, error| {
+        let (per_day, errors, _incomplete) = collect_range_events(&state(app), wanted, |source, done, error| {
             emitted.lock().unwrap().push((source, done, error));
         });
         (per_day, errors, emitted.into_inner().unwrap())
@@ -617,7 +625,7 @@ mod tests {
         let s = state(&app);
         let (a, b) = (d("2024-03-05"), d("2024-03-06"));
         assert_eq!(git::events_for_range(&s, a, b).unwrap().len(), 0);
-        assert_eq!(github::events_for_range(&s, a, b).unwrap().len(), 0);
+        assert_eq!(github::events_for_range(&s, a, b).unwrap().0.len(), 0);
         assert_eq!(ical::events_for_range(&s, a, b).unwrap().len(), 0);
         assert_eq!(jira::events_for_range(&s, a, b).unwrap().len(), 0);
         assert_eq!(zulip::events_for_range(&s, a, b).unwrap().len(), 0);
@@ -664,7 +672,7 @@ mod tests {
         .unwrap();
         let (a, b) = (d("2024-03-05"), d("2024-03-06"));
         assert!(git::events_for_range(&s, a, b).unwrap().is_empty());
-        assert!(github::events_for_range(&s, a, b).unwrap().is_empty());
+        assert!(github::events_for_range(&s, a, b).unwrap().0.is_empty());
         assert!(jira::events_for_range(&s, a, b).unwrap().is_empty());
         assert!(zulip::events_for_range(&s, a, b).unwrap().is_empty());
     }
@@ -685,9 +693,9 @@ mod tests {
             enabled_events: events,
         };
         set_settings_github(s.clone(), github("", vec![GitHubEvent::PullRequestEvent])).unwrap();
-        assert!(github::events_for_range(&s, a, b).unwrap().is_empty());
+        assert!(github::events_for_range(&s, a, b).unwrap().0.is_empty());
         set_settings_github(s.clone(), github("ghp_x", vec![])).unwrap();
-        assert!(github::events_for_range(&s, a, b).unwrap().is_empty(), "no event types opted in");
+        assert!(github::events_for_range(&s, a, b).unwrap().0.is_empty(), "no event types opted in");
 
         let jira = |site_url: &str, email: &str| SettingsJira {
             enabled: true,

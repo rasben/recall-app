@@ -65,7 +65,7 @@ const en = {
   "settings.github.token": "Personal Access Token (PAT)",
   "settings.github.token_placeholder": "ghp_...",
   "settings.github.token_description":
-    'Create a <a class="underline font-medium text-foreground" href="https://github.com/settings/tokens/new" target="_blank" rel="noreferrer">fine-grained PAT</a>. For public repos, no extra permissions are needed. For private repos, grant read-only access to <strong>Contents</strong>.',
+    'Create a <a class="underline font-medium text-foreground" href="https://github.com/settings/tokens/new" target="_blank" rel="noreferrer">fine-grained PAT</a>. For public repos, no extra permissions are needed. For private repos, grant read-only access to <strong>Contents</strong>, <strong>Issues</strong> and <strong>Pull requests</strong>.',
   "settings.github.events_label": "Events to show",
   "settings.github.no_events": "No events chosen",
   "settings.github.saved": "GitHub settings saved",
@@ -81,7 +81,7 @@ const en = {
   "settings.github.event.push_description":
     "Shows commits you push to GitHub — on any branch, before they are merged. A good alternative to Local Git, especially on Windows where shell-based git scanning can be unreliable.",
   "settings.github.api_limit_notice":
-    "GitHub's API only returns your ~300 most recent events (last 90 days). Older days may be empty even if you were active.",
+    "PRs, issues, comments and reviews are found via GitHub search and work for any date. Pushes come from GitHub's event feed, which only covers your ~300 most recent events (last 90 days); older days fall back to your commits on the default branch.",
 
   // Git
   "settings.git.github_notice":
@@ -288,7 +288,7 @@ const da: Translations = {
   "settings.github.token": "Personal Access Token (PAT)",
   "settings.github.token_placeholder": "ghp_...",
   "settings.github.token_description":
-    'Opret et <a class="underline font-medium text-foreground" href="https://github.com/settings/tokens/new" target="_blank" rel="noreferrer">fine-grained PAT</a>. For offentlige repos kræves ingen ekstra rettigheder. For private repos: giv læseadgang til <strong>Contents</strong>.',
+    'Opret et <a class="underline font-medium text-foreground" href="https://github.com/settings/tokens/new" target="_blank" rel="noreferrer">fine-grained PAT</a>. For offentlige repos kræves ingen ekstra rettigheder. For private repos: giv læseadgang til <strong>Contents</strong>, <strong>Issues</strong> og <strong>Pull requests</strong>.',
   "settings.github.events_label": "Hændelser at vise",
   "settings.github.no_events": "Ingen hændelser valgt",
   "settings.github.saved": "GitHub-indstillinger gemt",
@@ -304,7 +304,7 @@ const da: Translations = {
   "settings.github.event.push_description":
     "Viser commits du pusher til GitHub — på alle branches, inden de merges. Et godt alternativ til Lokal Git, særligt på Windows, hvor shell-baseret git-scanning kan være upålidelig.",
   "settings.github.api_limit_notice":
-    "GitHubs API returnerer kun dine ~300 nyeste hændelser (sidste 90 dage). Ældre dage kan være tomme, selvom du var aktiv.",
+    "PRs, issues, kommentarer og reviews findes via GitHubs søgning og virker for alle datoer. Push-hændelser kommer fra GitHubs event-feed, som kun dækker dine ~300 nyeste hændelser (sidste 90 dage); ældre dage falder tilbage til dine commits på default-branchen.",
 
   "settings.git.github_notice":
     "Dette fungerer ikke godt på windows. <br/>Brug istedet <strong>Push (commits)</strong>-hændelsen under GitHub-kilden i stedet.",

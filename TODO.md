@@ -28,29 +28,21 @@ Effort: M.
 
 Effort: M–L. Depends on 1.
 
-## 3. Fix GitHub history (issue #101) and stop caching incomplete days
-
-- The public Events API returns at most ~300 events, which for a busy developer is about a week. That is what arnested is seeing in #101. Replace or supplement with the Search API (`author:`, `commenter:`, `involves:` + `created:`/`updated:` date qualifiers) or the GraphQL `contributionsCollection(from, to)` for PRs and reviews. Search gives per-item timestamps; contributionsCollection gives PR/review/issue contributions with `occurredAt` but not comments.
-- Separately: "load month" and export currently cache GitHub-empty days beyond the API horizon as truth, because only *errors* block caching. Until the source is fixed, a day older than the Events horizon must not be cached as complete — either skip caching or mark the row partial.
-- Reply on #101 either way.
-
-Effort: M.
-
-## 4. Jira range truncation
+## 3. Jira range truncation
 
 - `events_for_range` sends `maxResults: 100` with no pagination. A month fetch or export for someone who touched >100 tickets silently drops the rest, and the truncated result is cached. Paginate `search/jql` (`nextPageToken`).
 - Known limitation worth fixing while in there: the event time is the ticket's last `updated` timestamp by *anyone*, not the time of the user's action. The issue changelog endpoint gives per-action timestamps.
 
 Effort: S–M.
 
-## 5. Parallelize sources; prefetch as a range
+## 4. Parallelize sources; prefetch as a range
 
 - `get_timeline_for_day` runs Git → GitHub → Calendar → Jira → Zulip sequentially. They are independent; run them concurrently (the git module already does this per repo with `thread::scope`). Day load drops to the slowest source.
-- The 6-day prefetch on startup issues six separate full fetches; each GitHub fetch re-downloads the same event pages from newest. Prefetch through the existing `collect_range_events` helper in one pass instead.
+- The 6-day prefetch on startup issues six separate full fetches; each GitHub fetch re-runs the same search queries against the 30/minute search budget. Prefetch through the existing `collect_range_events` helper in one pass instead.
 
 Effort: S–M.
 
-## 6. Source registry refactor (do before adding the next source)
+## 5. Source registry refactor (do before adding the next source)
 
 Adding a source today touches ~8 places: two dispatch blocks in `timeline/mod.rs`, `MONTH_SOURCES_TOTAL` in `TimelineDateNav.svelte`, the hand-built `enabledSources` list in `DayTimeline.svelte`, the icon map in `TimelineEvent.svelte`, `SOURCE_LABELS`, the Welcome list, and the settings tab.
 
@@ -59,13 +51,13 @@ Adding a source today touches ~8 places: two dispatch blocks in `timeline/mod.rs
 
 Effort: M. Pure refactor; pairs with items 1–2 since Harvest is the next source.
 
-## 7. Credentials into the OS keychain
+## 6. Credentials into the OS keychain
 
 Plain-text SQLite is acceptable for ~5 users and the README is honest about it. It is a blocker for recommending the app to the rest of Reload. `keyring` crate (macOS Keychain / Windows Credential Manager / Linux Secret Service), with a one-time migration from the `settings` table. Pair with an "Export & purge all data" button.
 
 Effort: M.
 
-## 8. Frontend fixes (small, independent)
+## 7. Frontend fixes (small, independent)
 
 - **Row click marks as logged.** Reading is the common action, logging the rare one — the primary click is a footgun. Make the Harvest mark an explicit control; let the row click open the link or expand. (Becomes moot for the checkmark once item 1 lands, but the click target problem stays.)
 - **Default language is Danish** regardless of locale (`detectLang` falls back to `"da"`). Default from `navigator.language`.
@@ -73,7 +65,7 @@ Effort: M.
 - **Arrow keys** (←/→) for day navigation. Cheap, and covers most of the old "fake TUI" wish.
 - **Sticky per-day summary header.** Hours logged (from item 1), active span, tickets touched, summed meeting time. Derive the span from **timestamps**, not `events[0].time` (overnight calendar rows display `00:00`). Build after item 1.
 
-## 9. Ask the users before building
+## 8. Ask the users before building
 
 Plausible, but validate with the actual installs first — none of these should be built on spec.
 
@@ -93,7 +85,7 @@ Plausible, but validate with the actual installs first — none of these should 
 
 - **Google Drive.** Requires Google OAuth app verification for a five-user app, and edited-document timestamps are a weak time signal. Remove the dead placeholders: `TimelineEventSource::Drive`, the `drive` entry in `sourceConfig`/`SOURCE_LABELS`, and the Welcome "planned" chip.
 - **Zulip "messages you've read".** Reading is not billable work; violates the honesty constraint.
-- **A real TUI.** Arrow-key navigation (item 8) instead.
+- **A real TUI.** Arrow-key navigation (item 7) instead.
 - **"Last 50 commands / API calls" screen.** A debug log file covers the need.
 - **Work-only toggle / noise classifier / un-loggable rows / configurable muted streams.** All ride on a brittle keyword classifier; false-hiding real work is dangerous for a Harvest tool, and whole sources can already be hidden via the source filter.
 - **Source colour-rail, denser hour-spine.** Cosmetic; per-*source* colouring fights the cross-*ticket* grouping that's the actual need.
@@ -106,4 +98,4 @@ Plausible, but validate with the actual installs first — none of these should 
 ## Gotchas
 
 - **Zulip event ids.** Changing Zulip event ids (session-splitting etc.) orphans existing Zulip "done" checkmarks (UUIDv5 keyed on the id string in `harvest_done.rs`). Bundle all Zulip id changes into **one** change so the ids churn only once. Less important once item 1 derives the checkmark from Harvest.
-- **Partial results must not be cached.** Today only *errors* block caching. API horizons (GitHub Events ~300 events) and un-paginated queries (Jira `maxResults: 100`) return successfully with missing data and get cached as complete. Items 3 and 4 fix the sources; any new source must handle this from day one.
+- **Partial results must not be cached.** Errors block caching, and so does the *incomplete days* set that `collect_range_events` returns: GitHub reports the days it could not cover (search result cap). Jira's un-paginated `maxResults: 100` (item 3) still returns successfully with missing data and gets cached as complete; any source with a horizon or result cap must report it through that set from day one.
