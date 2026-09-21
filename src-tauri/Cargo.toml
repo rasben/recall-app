@@ -31,3 +31,10 @@ tokio = { version = "1", features = ["rt"] }
 ureq = { version = "3.3", features = ["json"] }
 base64 = "0.22"
 urlencoding = "2"
+
+[dev-dependencies]
+# `test` enables `tauri::test::mock_app()`, so unit tests can build a real
+# `State<'_, AppState>` around an in-memory SQLite DB without a window.
+tauri = { version = "2", features = ["test"] }
+# Commands use `tokio::task::block_in_place`, which needs a multi-thread runtime.
+tokio = { version = "1", features = ["rt-multi-thread"] }
