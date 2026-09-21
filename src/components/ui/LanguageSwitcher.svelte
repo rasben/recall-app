@@ -8,7 +8,7 @@
     import {toast} from "svelte-sonner";
     import {onMount} from "svelte";
 
-    let language = $state<string>("da");
+    let language = $state<string>(i18n.lang);
     const langs: Lang[] = ["da", "en"];
 
     onMount(async () => {
