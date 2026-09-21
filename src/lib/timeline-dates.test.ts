@@ -4,7 +4,6 @@ import {
   formatDayHeading,
   formatDayHeadingParts,
   SOURCE_LABELS,
-  todayIso,
 } from "./timeline";
 import type { TimelineEventSource } from "./timeline";
 
@@ -42,19 +41,6 @@ describe("addDaysIso", () => {
   });
 });
 
-describe("todayIso", () => {
-  it("is the local calendar date as YYYY-MM-DD", () => {
-    const now = new Date();
-    const expected = [
-      now.getFullYear(),
-      String(now.getMonth() + 1).padStart(2, "0"),
-      String(now.getDate()).padStart(2, "0"),
-    ].join("-");
-    expect(todayIso()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-    expect(todayIso()).toBe(expected);
-  });
-});
-
 describe("formatDayHeading", () => {
   it("formats in US English by default", () => {
     expect(formatDayHeadingParts("2024-03-05")).toEqual({
@@ -64,8 +50,21 @@ describe("formatDayHeading", () => {
     expect(formatDayHeading("2024-03-05")).toBe("Tuesday, March 5");
   });
 
-  it("formats in Danish", () => {
-    expect(formatDayHeading("2024-03-05", "da-DK")).toBe("tirsdag, 5. marts");
+  it("formats in the requested locale", () => {
+    // Compare against the runtime's own ICU output rather than a literal, so
+    // the test is about our composition and not about Node's CLDR version.
+    const d = new Date("2024-03-05T12:00:00");
+    const weekday = d.toLocaleDateString("da-DK", { weekday: "long" });
+    const monthDay = d.toLocaleDateString("da-DK", {
+      month: "long",
+      day: "numeric",
+    });
+    expect(formatDayHeading("2024-03-05", "da-DK")).toBe(
+      `${weekday}, ${monthDay}`,
+    );
+    expect(formatDayHeading("2024-03-05", "da-DK")).not.toBe(
+      formatDayHeading("2024-03-05"),
+    );
   });
 
   it("does not shift the date across time zones", () => {

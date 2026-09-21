@@ -33,11 +33,15 @@ describe("t", () => {
 
   it("substitutes {placeholders} from params", () => {
     setLang("en");
+    const title = translations.en["page.new_version.title"];
+    expect(title).toContain("{version}");
     expect(t("page.new_version.title", { version: "1.2.3" })).toBe(
-      "New version available: v1.2.3",
+      title.replaceAll("{version}", "1.2.3"),
     );
+    const hint = translations.en["settings.git.path_hint"];
+    expect(hint).toContain("{path}");
     expect(t("settings.git.path_hint", { path: "/Users/me/code" })).toBe(
-      "Will scan /Users/me/code for git repositories.",
+      hint.replaceAll("{path}", "/Users/me/code"),
     );
   });
 

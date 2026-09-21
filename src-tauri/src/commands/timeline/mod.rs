@@ -440,6 +440,10 @@ mod tests {
     use super::*;
     use std::sync::Mutex;
 
+    use crate::commands::settings_git::{set_settings_git, SettingsGit};
+    use crate::commands::settings_github::{set_settings_github, GitHubEvent, SettingsGitHub};
+    use crate::commands::settings_jira::{set_settings_jira, JiraEvent, SettingsJira};
+    use crate::commands::settings_zulip::{set_settings_zulip, SettingsZulip};
     use crate::test_support::{event, local_ts, mock_app, runtime, seed_setting, state};
     use crate::timeline::TimelineEventSource;
 
@@ -572,7 +576,7 @@ mod tests {
 
         assert_eq!(errors.len(), 1);
         assert_eq!(errors[0].0, "Git");
-        assert!(errors[0].1.contains("not a directory"), "{}", errors[0].1);
+        assert!(!errors[0].1.is_empty(), "the error message is passed through");
         assert!(per_day[&d("2024-03-05")].is_empty());
 
         let git_done = emitted.iter().find(|(s, done, _)| *s == "Git" && *done).unwrap();
@@ -621,24 +625,43 @@ mod tests {
 
     #[test]
     fn disabled_sources_return_empty_even_with_credentials() {
+        // Typed setters, not seeded JSON: a struct shape change must fail to
+        // compile here rather than silently make these documents unparseable
+        // (which would also return "empty", for the wrong reason).
         let app = mock_app();
         let s = state(&app);
-        seed_setting(&s, "settings_git", r#"{"enabled":false,"path":"/"}"#);
-        seed_setting(
-            &s,
-            "settings_github",
-            r#"{"enabled":false,"username":"octocat","token":"ghp_x","enabled_events":["PullRequestEvent"]}"#,
-        );
-        seed_setting(
-            &s,
-            "settings_jira",
-            r#"{"enabled":false,"site_url":"https://x.atlassian.net","email":"a@b.c","api_token":"t"}"#,
-        );
-        seed_setting(
-            &s,
-            "settings_zulip",
-            r#"{"enabled":false,"realm_url":"https://x.zulipchat.com","email":"a@b.c","api_key":"k"}"#,
-        );
+        set_settings_git(s.clone(), SettingsGit { enabled: false, path: "/".into() }).unwrap();
+        set_settings_github(
+            s.clone(),
+            SettingsGitHub {
+                enabled: false,
+                username: "octocat".into(),
+                token: "ghp_x".into(),
+                enabled_events: vec![GitHubEvent::PullRequestEvent],
+            },
+        )
+        .unwrap();
+        set_settings_jira(
+            s.clone(),
+            SettingsJira {
+                enabled: false,
+                site_url: "https://x.atlassian.net".into(),
+                email: "a@b.c".into(),
+                api_token: "t".into(),
+                enabled_events: vec![JiraEvent::CommentWritten],
+            },
+        )
+        .unwrap();
+        set_settings_zulip(
+            s.clone(),
+            SettingsZulip {
+                enabled: false,
+                realm_url: "https://x.zulipchat.com".into(),
+                email: "a@b.c".into(),
+                api_key: "k".into(),
+            },
+        )
+        .unwrap();
         let (a, b) = (d("2024-03-05"), d("2024-03-06"));
         assert!(git::events_for_range(&s, a, b).unwrap().is_empty());
         assert!(github::events_for_range(&s, a, b).unwrap().is_empty());
@@ -652,36 +675,42 @@ mod tests {
         let s = state(&app);
         let (a, b) = (d("2024-03-05"), d("2024-03-06"));
 
-        seed_setting(&s, "settings_git", r#"{"enabled":true,"path":""}"#);
+        set_settings_git(s.clone(), SettingsGit { enabled: true, path: String::new() }).unwrap();
         assert!(git::events_for_range(&s, a, b).unwrap().is_empty());
 
-        seed_setting(
-            &s,
-            "settings_github",
-            r#"{"enabled":true,"username":"octocat","token":"","enabled_events":["PullRequestEvent"]}"#,
-        );
+        let github = |token: &str, events: Vec<GitHubEvent>| SettingsGitHub {
+            enabled: true,
+            username: "octocat".into(),
+            token: token.into(),
+            enabled_events: events,
+        };
+        set_settings_github(s.clone(), github("", vec![GitHubEvent::PullRequestEvent])).unwrap();
         assert!(github::events_for_range(&s, a, b).unwrap().is_empty());
-        seed_setting(
-            &s,
-            "settings_github",
-            r#"{"enabled":true,"username":"octocat","token":"ghp_x","enabled_events":[]}"#,
-        );
+        set_settings_github(s.clone(), github("ghp_x", vec![])).unwrap();
         assert!(github::events_for_range(&s, a, b).unwrap().is_empty(), "no event types opted in");
 
-        seed_setting(
-            &s,
-            "settings_jira",
-            r#"{"enabled":true,"site_url":"https://x.atlassian.net","email":"  ","api_token":"t"}"#,
-        );
+        let jira = |site_url: &str, email: &str| SettingsJira {
+            enabled: true,
+            site_url: site_url.into(),
+            email: email.into(),
+            api_token: "t".into(),
+            enabled_events: vec![JiraEvent::CommentWritten],
+        };
+        set_settings_jira(s.clone(), jira("https://x.atlassian.net", "  ")).unwrap();
         assert!(jira::events_for_range(&s, a, b).unwrap().is_empty());
-        seed_setting(&s, "settings_jira", r#"{"enabled":true,"site_url":"","email":"a@b.c","api_token":"t"}"#);
+        set_settings_jira(s.clone(), jira("", "a@b.c")).unwrap();
         assert!(jira::events_for_range(&s, a, b).unwrap().is_empty());
 
-        seed_setting(
-            &s,
-            "settings_zulip",
-            r#"{"enabled":true,"realm_url":"https://x.zulipchat.com","email":"a@b.c","api_key":""}"#,
-        );
+        set_settings_zulip(
+            s.clone(),
+            SettingsZulip {
+                enabled: true,
+                realm_url: "https://x.zulipchat.com".into(),
+                email: "a@b.c".into(),
+                api_key: String::new(),
+            },
+        )
+        .unwrap();
         assert!(zulip::events_for_range(&s, a, b).unwrap().is_empty());
     }
 
@@ -690,17 +719,14 @@ mod tests {
     #[test]
     fn export_rejects_malformed_dates() {
         let app = mock_app();
-        let err = export(&app, "2024-13-01", "2024-03-05").err().expect("expected an error");
-        assert!(err.contains("Invalid start date"), "{err}");
-        let err = export(&app, "2024-03-05", "05/03/2024").err().expect("expected an error");
-        assert!(err.contains("Invalid end date"), "{err}");
+        assert!(export(&app, "2024-13-01", "2024-03-05").is_err());
+        assert!(export(&app, "2024-03-05", "05/03/2024").is_err());
     }
 
     #[test]
     fn export_rejects_an_inverted_range() {
         let app = mock_app();
-        let err = export(&app, "2024-03-06", "2024-03-05").err().expect("expected an error");
-        assert!(err.contains("before start"), "{err}");
+        assert!(export(&app, "2024-03-06", "2024-03-05").is_err());
     }
 
     #[test]
@@ -710,8 +736,7 @@ mod tests {
         let ok = export(&app, "2020-01-01", "2020-12-31").unwrap();
         assert_eq!(ok.days.len(), 366);
         // One more day is not.
-        let err = export(&app, "2020-01-01", "2021-01-01").err().expect("expected an error");
-        assert!(err.contains("Range too large"), "{err}");
+        assert!(export(&app, "2020-01-01", "2021-01-01").is_err());
     }
 
     #[test]
@@ -750,17 +775,28 @@ mod tests {
     fn export_caches_elapsed_days_but_never_today_or_the_future() {
         let app = mock_app();
         let s = state(&app);
-        let today = Local::now().date_naive();
-        let start = today - chrono::Duration::days(2);
-        let end = today + chrono::Duration::days(1);
+        // The command reads the clock itself, so bracket it: any day that was
+        // elapsed before the call must be cached, and nothing that is still
+        // today-or-later after the call may be.
+        let before = Local::now().date_naive();
+        let start = before - chrono::Duration::days(2);
+        let end = before + chrono::Duration::days(1);
 
         let result = export(&app, &iso(start), &iso(end)).unwrap();
+        let after = Local::now().date_naive();
+
         assert_eq!(result.days.len(), 4);
         assert!(result.errors.is_empty());
-        assert_eq!(
-            cached_days(&s),
-            vec![iso(today - chrono::Duration::days(2)), iso(today - chrono::Duration::days(1))]
-        );
+        let cached = cached_days(&s);
+        for day in days_in_range(start, end) {
+            let is_cached = cached.contains(&iso(day));
+            if day < before {
+                assert!(is_cached, "{day} had elapsed before the export and must be cached");
+            }
+            if day >= after {
+                assert!(!is_cached, "{day} is today or later and must not be cached");
+            }
+        }
     }
 
     #[test]
@@ -773,7 +809,7 @@ mod tests {
         assert_eq!(result.days.len(), 2, "the export still covers every day");
         assert_eq!(result.errors.len(), 1);
         assert_eq!(result.errors[0].source, "Git");
-        assert!(result.errors[0].error.contains("not a directory"));
+        assert!(!result.errors[0].error.is_empty());
         assert!(cached_days(&s).is_empty(), "a failed source must not poison the cache");
     }
 

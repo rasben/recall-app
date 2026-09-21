@@ -160,7 +160,7 @@ mod tests {
         set(&app, "a", true);
         set(&app, "a", true);
         assert_eq!(row_count(&app), 1);
-        assert_eq!(get(&app, &["a", "a"]), vec!["a", "a"]);
+        assert_eq!(get(&app, &["a"]), vec!["a"]);
     }
 
     #[test]

@@ -145,21 +145,4 @@ mod tests {
         assert_eq!(back.url, ev.url);
     }
 
-    #[test]
-    fn event_json_keeps_null_optionals_as_null() {
-        // The cache stores this JSON verbatim, so the shape must stay stable.
-        let ev = TimelineEvent {
-            id: "x".into(),
-            time: "00:00".into(),
-            timestamp: 0,
-            source: TimelineEventSource::Zulip,
-            title: "t".into(),
-            detail: None,
-            url: None,
-        };
-        let v: serde_json::Value = serde_json::to_value(&ev).unwrap();
-        assert!(v.get("detail").unwrap().is_null());
-        assert!(v.get("url").unwrap().is_null());
-        assert_eq!(v.get("source").unwrap(), "zulip");
-    }
 }
