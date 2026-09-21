@@ -139,6 +139,7 @@ mod tests {
                 "ical_events",
                 "ical_sync_meta",
                 "settings",
+                "telemetry_counters",
                 "timeline_day_cache",
                 "timeline_harvest_done",
             ]
@@ -159,7 +160,7 @@ mod tests {
             .query_row("SELECT value FROM settings WHERE key = 'k'", [], |r| r.get(0))
             .unwrap();
         assert_eq!(v, "v");
-        assert_eq!(table_names(&conn).len(), 5);
+        assert_eq!(table_names(&conn).len(), 6);
     }
 
     #[test]
