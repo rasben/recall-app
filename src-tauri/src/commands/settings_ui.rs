@@ -6,10 +6,23 @@ use tauri::State;
 
 const KEY: &str = "settings_ui";
 
+fn default_group_mode() -> String {
+    "time".to_string()
+}
+
 #[derive(Debug, Deserialize, Serialize, Type)]
 #[specta(export = false)]
 pub struct SettingsUi {
     pub theme: String,
+    /// How the day's events are grouped: `"time"` or `"task"`. Stored as a
+    /// plain string (the frontend validates it) so an unknown value can never
+    /// make the whole document fail to load.
+    #[serde(default = "default_group_mode")]
+    pub group_mode: String,
+    /// Timeline sources the user has toggled off (`TimelineEventSource` keys,
+    /// e.g. `"zulip"`). Plain strings for the same reason as `group_mode`.
+    #[serde(default)]
+    pub hidden_sources: Vec<String>,
 }
 
 #[tauri::command]
@@ -32,6 +45,14 @@ mod tests {
     use crate::commands::settings::get_val;
     use crate::test_support::{mock_app, seed_setting, state};
 
+    fn ui(theme: &str) -> SettingsUi {
+        SettingsUi {
+            theme: theme.into(),
+            group_mode: default_group_mode(),
+            hidden_sources: Vec::new(),
+        }
+    }
+
     #[test]
     fn get_is_none_when_nothing_is_saved() {
         let app = mock_app();
@@ -41,7 +62,7 @@ mod tests {
     #[test]
     fn set_then_get_roundtrips() {
         let app = mock_app();
-        set_settings_ui(state(&app), SettingsUi { theme: "dark".into() }).unwrap();
+        set_settings_ui(state(&app), ui("dark")).unwrap();
         let ui = get_settings_ui(state(&app)).expect("settings saved");
         assert_eq!(ui.theme, "dark");
     }
@@ -49,15 +70,15 @@ mod tests {
     #[test]
     fn set_overwrites_the_previous_document() {
         let app = mock_app();
-        set_settings_ui(state(&app), SettingsUi { theme: "dark".into() }).unwrap();
-        set_settings_ui(state(&app), SettingsUi { theme: "light".into() }).unwrap();
+        set_settings_ui(state(&app), ui("dark")).unwrap();
+        set_settings_ui(state(&app), ui("light")).unwrap();
         assert_eq!(get_settings_ui(state(&app)).unwrap().theme, "light");
     }
 
     #[test]
     fn stores_one_json_document_under_the_domain_key() {
         let app = mock_app();
-        set_settings_ui(state(&app), SettingsUi { theme: "system".into() }).unwrap();
+        set_settings_ui(state(&app), ui("system")).unwrap();
         let raw = get_val(&state(&app), KEY).expect("stored under settings_ui");
         let v: serde_json::Value = serde_json::from_str(&raw).unwrap();
         assert!(v.is_object());
@@ -72,6 +93,8 @@ mod tests {
         seed_setting(&state(&app), KEY, r#"{"theme":"light"}"#);
         let ui = get_settings_ui(state(&app)).expect("legacy document must load");
         assert_eq!(ui.theme, "light");
+        assert_eq!(ui.group_mode, "time");
+        assert!(ui.hidden_sources.is_empty());
     }
 
     #[test]
@@ -86,5 +109,19 @@ mod tests {
         let app = mock_app();
         seed_setting(&state(&app), KEY, "not json at all");
         assert!(get_settings_ui(state(&app)).is_none());
+    }
+
+    #[test]
+    fn view_state_round_trips() {
+        let app = mock_app();
+        let saved = SettingsUi {
+            theme: "system".into(),
+            group_mode: "task".into(),
+            hidden_sources: vec!["zulip".into(), "git".into()],
+        };
+        set_settings_ui(state(&app), saved).unwrap();
+        let back = get_settings_ui(state(&app)).expect("settings saved");
+        assert_eq!(back.group_mode, "task");
+        assert_eq!(back.hidden_sources, vec!["zulip", "git"]);
     }
 }
