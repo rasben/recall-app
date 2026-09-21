@@ -368,14 +368,13 @@ fn remote_to_commit_url_base(raw: &str) -> Option<String> {
     } else if let Some(rest) = raw.strip_prefix("ssh://git@") {
         let (host, path) = rest.split_once('/')?;
         (host.to_string(), path.to_string())
-    } else if let Some(rest) = raw.strip_prefix("https://") {
+    } else {
+        let rest = raw.strip_prefix("https://")?;
         let (host, path) = rest.split_once('/')?;
         let host = host.trim_start_matches("www.");
         // Drop any embedded credentials like `user@host`.
         let host = host.rsplit('@').next().unwrap_or(host);
         (host.to_string(), path.to_string())
-    } else {
-        return None;
     };
 
     let path = path.trim_start_matches('/').trim_end_matches('/');
