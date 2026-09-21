@@ -639,3 +639,131 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod command_tests {
+    use super::*;
+    use crate::test_support::{mock_app, seed_setting, state};
+
+    fn count(state: &State<'_, AppState>, table: &str) -> i64 {
+        let conn = state.db.lock().unwrap();
+        conn.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0))
+            .unwrap()
+    }
+
+    #[test]
+    fn load_defaults_to_disabled_when_nothing_is_saved() {
+        let app = mock_app();
+        let s = load_settings_ical(&state(&app));
+        assert!(!s.enabled);
+        assert!(s.urls.is_empty());
+        assert!(s.emails.is_empty());
+        assert!(get_settings_ical(state(&app)).is_none());
+    }
+
+    #[test]
+    fn load_defaults_when_the_document_is_corrupt() {
+        let app = mock_app();
+        seed_setting(&state(&app), KEY, "{broken");
+        assert!(!load_settings_ical(&state(&app)).enabled);
+        assert!(get_settings_ical(state(&app)).is_none());
+    }
+
+    #[test]
+    fn a_partial_document_fills_in_missing_fields() {
+        let app = mock_app();
+        seed_setting(&state(&app), KEY, r#"{"enabled":true}"#);
+        let s = load_settings_ical(&state(&app));
+        assert!(s.enabled);
+        assert!(s.urls.is_empty());
+        assert!(s.emails.is_empty());
+    }
+
+    #[test]
+    fn sync_status_defaults_without_a_meta_row() {
+        let app = mock_app();
+        let status = get_ical_sync_status(state(&app));
+        assert!(!status.syncing);
+        assert_eq!(status.last_synced_at, None);
+        assert_eq!(status.last_error, None);
+    }
+
+    #[test]
+    fn sync_status_reads_the_meta_row_and_the_in_flight_flag() {
+        let app = mock_app();
+        let s = state(&app);
+        {
+            let conn = s.db.lock().unwrap();
+            conn.execute(
+                "INSERT INTO ical_sync_meta (id, last_synced_at, last_error) VALUES (1, 1700000000000, 'boom')",
+                [],
+            )
+            .unwrap();
+        }
+        s.ical_syncing.store(true, Ordering::Relaxed);
+        let status = get_ical_sync_status(state(&app));
+        assert!(status.syncing);
+        assert_eq!(status.last_synced_at, Some(1_700_000_000_000.0));
+        assert_eq!(status.last_error.as_deref(), Some("boom"));
+    }
+
+    #[test]
+    fn set_saves_the_document_and_clears_caches_when_urls_change() {
+        let app = mock_app();
+        let s = state(&app);
+        {
+            let conn = s.db.lock().unwrap();
+            conn.execute(
+                "INSERT INTO timeline_day_cache (day, events_json, updated_at) VALUES ('2024-03-05', '[]', 1)",
+                [],
+            )
+            .unwrap();
+            conn.execute(
+                "INSERT INTO ical_events (url, uid, dtstart, summary) VALUES ('old', 'u', 1, 's')",
+                [],
+            )
+            .unwrap();
+        }
+
+        // Disabled, so no background sync is started (which would hit the network).
+        set_settings_ical(
+            state(&app),
+            SettingsIcal {
+                enabled: false,
+                urls: vec!["https://cal.example/feed.ics".into()],
+                emails: vec!["me@example.com".into()],
+            },
+        )
+        .unwrap();
+
+        let saved = get_settings_ical(state(&app)).expect("saved");
+        assert!(!saved.enabled);
+        assert_eq!(saved.urls, vec!["https://cal.example/feed.ics"]);
+        assert_eq!(saved.emails, vec!["me@example.com"]);
+        assert_eq!(count(&s, "timeline_day_cache"), 0, "day cache cleared on URL change");
+        assert_eq!(count(&s, "ical_events"), 0, "stale feed rows cleared on URL change");
+        assert!(!s.ical_syncing.load(Ordering::Relaxed));
+    }
+
+    #[test]
+    fn set_with_unchanged_urls_keeps_caches() {
+        let app = mock_app();
+        let s = state(&app);
+        seed_setting(&s, KEY, r#"{"enabled":false,"urls":["https://a"],"emails":[]}"#);
+        {
+            let conn = s.db.lock().unwrap();
+            conn.execute(
+                "INSERT INTO timeline_day_cache (day, events_json, updated_at) VALUES ('2024-03-05', '[]', 1)",
+                [],
+            )
+            .unwrap();
+        }
+        set_settings_ical(
+            state(&app),
+            SettingsIcal { enabled: false, urls: vec!["https://a".into()], emails: vec!["x@y".into()] },
+        )
+        .unwrap();
+        assert_eq!(count(&s, "timeline_day_cache"), 1);
+        assert_eq!(get_settings_ical(state(&app)).unwrap().emails, vec!["x@y"]);
+    }
+}

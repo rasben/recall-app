@@ -434,3 +434,375 @@ pub async fn get_day_counts_for_month(
         Ok(counts)
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Mutex;
+
+    use crate::test_support::{event, local_ts, mock_app, runtime, seed_setting, state};
+    use crate::timeline::TimelineEventSource;
+
+    type MockApp = tauri::App<tauri::test::MockRuntime>;
+    type Emitted = (&'static str, bool, Option<String>);
+
+    const SOURCES: [&str; 5] = ["Git", "GitHub", "Calendar", "Jira", "Zulip"];
+
+    fn d(s: &str) -> NaiveDate {
+        NaiveDate::parse_from_str(s, "%Y-%m-%d").unwrap()
+    }
+
+    fn iso(d: NaiveDate) -> String {
+        d.format("%Y-%m-%d").to_string()
+    }
+
+    /// Point the Git source at a directory that does not exist: a
+    /// deterministic, network-free way to make one source fail.
+    fn break_git(state: &State<'_, AppState>) {
+        let path = std::env::temp_dir().join(format!("recall-missing-{}", uuid::Uuid::new_v4()));
+        seed_setting(
+            state,
+            "settings_git",
+            &format!(r#"{{"enabled":true,"path":{}}}"#, serde_json::to_string(&path).unwrap()),
+        );
+    }
+
+    fn enable_calendar(state: &State<'_, AppState>) {
+        seed_setting(
+            state,
+            crate::commands::settings_ical::KEY,
+            r#"{"enabled":true,"urls":["https://cal.example/feed.ics"],"emails":[]}"#,
+        );
+    }
+
+    fn insert_calendar_event(state: &State<'_, AppState>, uid: &str, day: NaiveDate, hh: u32, mm: u32) {
+        let conn = state.db.lock().unwrap();
+        conn.execute(
+            "INSERT INTO ical_events (url, uid, dtstart, dtend, summary, event_url, declined)
+             VALUES ('https://cal.example/feed.ics', ?1, ?2, NULL, ?3, NULL, 0)",
+            params![uid, local_ts(day, hh, mm), format!("Event {uid}")],
+        )
+        .unwrap();
+    }
+
+    fn collect(app: &MockApp, wanted: &[NaiveDate]) -> (DayBuckets, SourceErrors, Vec<Emitted>) {
+        let emitted: Mutex<Vec<Emitted>> = Mutex::new(Vec::new());
+        let (per_day, errors) = collect_range_events(&state(app), wanted, |source, done, error| {
+            emitted.lock().unwrap().push((source, done, error));
+        });
+        (per_day, errors, emitted.into_inner().unwrap())
+    }
+
+    fn export(app: &MockApp, start: &str, end: &str) -> Result<ExportResult, String> {
+        runtime().block_on(export_timeline_for_range(state(app), start.to_string(), end.to_string()))
+    }
+
+    fn cached_days(state: &State<'_, AppState>) -> Vec<String> {
+        let conn = state.db.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT day FROM timeline_day_cache ORDER BY day").unwrap();
+        stmt.query_map([], |r| r.get(0)).unwrap().map(|r| r.unwrap()).collect()
+    }
+
+    // ── days_in_range ───────────────────────────────────────────────────────
+
+    #[test]
+    fn days_in_range_single_day() {
+        assert_eq!(days_in_range(d("2024-03-05"), d("2024-03-05")), vec![d("2024-03-05")]);
+    }
+
+    #[test]
+    fn days_in_range_is_inclusive_ascending_and_crosses_month_ends() {
+        let days = days_in_range(d("2024-02-27"), d("2024-03-02"));
+        assert_eq!(
+            days.iter().map(|x| iso(*x)).collect::<Vec<_>>(),
+            vec!["2024-02-27", "2024-02-28", "2024-02-29", "2024-03-01", "2024-03-02"]
+        );
+    }
+
+    #[test]
+    fn days_in_range_inverted_yields_only_the_start() {
+        assert_eq!(days_in_range(d("2024-03-05"), d("2024-03-01")), vec![d("2024-03-05")]);
+    }
+
+    // ── collect_range_events ────────────────────────────────────────────────
+
+    #[test]
+    fn collect_with_no_wanted_days_does_nothing() {
+        let app = mock_app();
+        let (per_day, errors, emitted) = collect(&app, &[]);
+        assert!(per_day.is_empty());
+        assert!(errors.is_empty());
+        assert!(emitted.is_empty(), "no source should be touched for an empty range");
+    }
+
+    #[test]
+    fn collect_with_no_sources_configured_yields_an_empty_bucket_per_wanted_day() {
+        let app = mock_app();
+        let wanted = [d("2024-03-05"), d("2024-03-07")];
+        let (per_day, errors, _) = collect(&app, &wanted);
+        assert!(errors.is_empty());
+        let mut keys: Vec<_> = per_day.keys().copied().collect();
+        keys.sort();
+        assert_eq!(keys, wanted.to_vec(), "only wanted days get a bucket, gaps do not");
+        assert!(per_day.values().all(|v| v.is_empty()));
+    }
+
+    #[test]
+    fn collect_emits_loading_then_done_for_every_source() {
+        let app = mock_app();
+        let (_, _, emitted) = collect(&app, &[d("2024-03-05")]);
+        assert_eq!(emitted.len(), SOURCES.len() * 2);
+        for source in SOURCES {
+            let loading = emitted.iter().position(|(s, done, _)| *s == source && !done);
+            let done = emitted.iter().position(|(s, done, _)| *s == source && *done);
+            let (loading, done) = (
+                loading.unwrap_or_else(|| panic!("{source} never reported loading")),
+                done.unwrap_or_else(|| panic!("{source} never reported done")),
+            );
+            assert!(loading < done, "{source}: loading must precede done");
+            assert_eq!(emitted[done].2, None, "{source}: no error expected");
+        }
+    }
+
+    #[test]
+    fn collect_reports_a_failing_source_and_keeps_the_others() {
+        let app = mock_app();
+        break_git(&state(&app));
+        let (per_day, errors, emitted) = collect(&app, &[d("2024-03-05")]);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].0, "Git");
+        assert!(errors[0].1.contains("not a directory"), "{}", errors[0].1);
+        assert!(per_day[&d("2024-03-05")].is_empty());
+
+        let git_done = emitted.iter().find(|(s, done, _)| *s == "Git" && *done).unwrap();
+        assert_eq!(git_done.2.as_deref(), Some(errors[0].1.as_str()));
+        for source in SOURCES.iter().filter(|s| **s != "Git") {
+            let done = emitted.iter().find(|(s, done, _)| s == source && *done).unwrap();
+            assert_eq!(done.2, None, "{source} should still succeed");
+        }
+    }
+
+    #[test]
+    fn collect_buckets_calendar_events_by_local_day_and_drops_unwanted_days() {
+        let app = mock_app();
+        let s = state(&app);
+        enable_calendar(&s);
+        insert_calendar_event(&s, "a", d("2024-03-05"), 10, 0);
+        insert_calendar_event(&s, "b", d("2024-03-06"), 11, 0); // inside the span, not wanted
+        insert_calendar_event(&s, "c", d("2024-03-07"), 12, 0);
+        insert_calendar_event(&s, "d", d("2024-03-08"), 9, 0); // outside the span
+
+        let (per_day, errors, _) = collect(&app, &[d("2024-03-05"), d("2024-03-07")]);
+        assert!(errors.is_empty());
+        assert_eq!(per_day.len(), 2);
+        let ids = |day: &str| -> Vec<String> {
+            per_day[&d(day)].iter().map(|(_, ev)| ev.id.clone()).collect()
+        };
+        assert_eq!(ids("2024-03-05"), vec!["calendar:a"]);
+        assert_eq!(ids("2024-03-07"), vec!["calendar:c"]);
+        assert_eq!(per_day[&d("2024-03-05")][0].0, local_ts(d("2024-03-05"), 10, 0));
+        assert_eq!(per_day[&d("2024-03-05")][0].1.source, TimelineEventSource::Calendar);
+    }
+
+    // ── sources without configuration are no-ops (and never touch the network) ──
+
+    #[test]
+    fn every_source_returns_empty_when_it_has_no_settings() {
+        let app = mock_app();
+        let s = state(&app);
+        let (a, b) = (d("2024-03-05"), d("2024-03-06"));
+        assert_eq!(git::events_for_range(&s, a, b).unwrap().len(), 0);
+        assert_eq!(github::events_for_range(&s, a, b).unwrap().len(), 0);
+        assert_eq!(ical::events_for_range(&s, a, b).unwrap().len(), 0);
+        assert_eq!(jira::events_for_range(&s, a, b).unwrap().len(), 0);
+        assert_eq!(zulip::events_for_range(&s, a, b).unwrap().len(), 0);
+    }
+
+    #[test]
+    fn disabled_sources_return_empty_even_with_credentials() {
+        let app = mock_app();
+        let s = state(&app);
+        seed_setting(&s, "settings_git", r#"{"enabled":false,"path":"/"}"#);
+        seed_setting(
+            &s,
+            "settings_github",
+            r#"{"enabled":false,"username":"octocat","token":"ghp_x","enabled_events":["PullRequestEvent"]}"#,
+        );
+        seed_setting(
+            &s,
+            "settings_jira",
+            r#"{"enabled":false,"site_url":"https://x.atlassian.net","email":"a@b.c","api_token":"t"}"#,
+        );
+        seed_setting(
+            &s,
+            "settings_zulip",
+            r#"{"enabled":false,"realm_url":"https://x.zulipchat.com","email":"a@b.c","api_key":"k"}"#,
+        );
+        let (a, b) = (d("2024-03-05"), d("2024-03-06"));
+        assert!(git::events_for_range(&s, a, b).unwrap().is_empty());
+        assert!(github::events_for_range(&s, a, b).unwrap().is_empty());
+        assert!(jira::events_for_range(&s, a, b).unwrap().is_empty());
+        assert!(zulip::events_for_range(&s, a, b).unwrap().is_empty());
+    }
+
+    #[test]
+    fn enabled_sources_with_incomplete_credentials_return_empty() {
+        let app = mock_app();
+        let s = state(&app);
+        let (a, b) = (d("2024-03-05"), d("2024-03-06"));
+
+        seed_setting(&s, "settings_git", r#"{"enabled":true,"path":""}"#);
+        assert!(git::events_for_range(&s, a, b).unwrap().is_empty());
+
+        seed_setting(
+            &s,
+            "settings_github",
+            r#"{"enabled":true,"username":"octocat","token":"","enabled_events":["PullRequestEvent"]}"#,
+        );
+        assert!(github::events_for_range(&s, a, b).unwrap().is_empty());
+        seed_setting(
+            &s,
+            "settings_github",
+            r#"{"enabled":true,"username":"octocat","token":"ghp_x","enabled_events":[]}"#,
+        );
+        assert!(github::events_for_range(&s, a, b).unwrap().is_empty(), "no event types opted in");
+
+        seed_setting(
+            &s,
+            "settings_jira",
+            r#"{"enabled":true,"site_url":"https://x.atlassian.net","email":"  ","api_token":"t"}"#,
+        );
+        assert!(jira::events_for_range(&s, a, b).unwrap().is_empty());
+        seed_setting(&s, "settings_jira", r#"{"enabled":true,"site_url":"","email":"a@b.c","api_token":"t"}"#);
+        assert!(jira::events_for_range(&s, a, b).unwrap().is_empty());
+
+        seed_setting(
+            &s,
+            "settings_zulip",
+            r#"{"enabled":true,"realm_url":"https://x.zulipchat.com","email":"a@b.c","api_key":""}"#,
+        );
+        assert!(zulip::events_for_range(&s, a, b).unwrap().is_empty());
+    }
+
+    // ── export_timeline_for_range ───────────────────────────────────────────
+
+    #[test]
+    fn export_rejects_malformed_dates() {
+        let app = mock_app();
+        let err = export(&app, "2024-13-01", "2024-03-05").err().expect("expected an error");
+        assert!(err.contains("Invalid start date"), "{err}");
+        let err = export(&app, "2024-03-05", "05/03/2024").err().expect("expected an error");
+        assert!(err.contains("Invalid end date"), "{err}");
+    }
+
+    #[test]
+    fn export_rejects_an_inverted_range() {
+        let app = mock_app();
+        let err = export(&app, "2024-03-06", "2024-03-05").err().expect("expected an error");
+        assert!(err.contains("before start"), "{err}");
+    }
+
+    #[test]
+    fn export_enforces_the_maximum_span() {
+        let app = mock_app();
+        // 2020-01-01 ..= 2020-12-31 is 366 days (leap year): allowed.
+        let ok = export(&app, "2020-01-01", "2020-12-31").unwrap();
+        assert_eq!(ok.days.len(), 366);
+        // One more day is not.
+        let err = export(&app, "2020-01-01", "2021-01-01").err().expect("expected an error");
+        assert!(err.contains("Range too large"), "{err}");
+    }
+
+    #[test]
+    fn export_covers_every_day_in_order_including_empty_ones() {
+        let app = mock_app();
+        let result = export(&app, "2020-02-27", "2020-03-02").unwrap();
+        assert!(result.errors.is_empty());
+        assert_eq!(
+            result.days.iter().map(|x| x.date.as_str()).collect::<Vec<_>>(),
+            vec!["2020-02-27", "2020-02-28", "2020-02-29", "2020-03-01", "2020-03-02"]
+        );
+        assert!(result.days.iter().all(|x| x.events.is_empty()));
+    }
+
+    #[test]
+    fn export_returns_cached_events_verbatim_for_elapsed_days() {
+        let app = mock_app();
+        let s = state(&app);
+        // Cached out of order on purpose: the cache is trusted as-is.
+        let late = event("git:/r:late", local_ts(d("2020-05-05"), 16, 0), TimelineEventSource::Git);
+        let early = event("jira:X-1:2020-05-05:Commented", local_ts(d("2020-05-05"), 9, 0), TimelineEventSource::Jira);
+        cache::save_cached_day(&s, "2020-05-05", &[late.clone(), early.clone()]).unwrap();
+
+        let result = export(&app, "2020-05-04", "2020-05-06").unwrap();
+        assert!(result.errors.is_empty());
+        assert_eq!(result.days.len(), 3);
+        assert!(result.days[0].events.is_empty());
+        assert_eq!(
+            result.days[1].events.iter().map(|e| e.id.as_str()).collect::<Vec<_>>(),
+            vec![late.id.as_str(), early.id.as_str()]
+        );
+        assert!(result.days[2].events.is_empty());
+    }
+
+    #[test]
+    fn export_caches_elapsed_days_but_never_today_or_the_future() {
+        let app = mock_app();
+        let s = state(&app);
+        let today = Local::now().date_naive();
+        let start = today - chrono::Duration::days(2);
+        let end = today + chrono::Duration::days(1);
+
+        let result = export(&app, &iso(start), &iso(end)).unwrap();
+        assert_eq!(result.days.len(), 4);
+        assert!(result.errors.is_empty());
+        assert_eq!(
+            cached_days(&s),
+            vec![iso(today - chrono::Duration::days(2)), iso(today - chrono::Duration::days(1))]
+        );
+    }
+
+    #[test]
+    fn export_reports_source_errors_and_does_not_cache_partial_days() {
+        let app = mock_app();
+        let s = state(&app);
+        break_git(&s);
+
+        let result = export(&app, "2020-05-05", "2020-05-06").unwrap();
+        assert_eq!(result.days.len(), 2, "the export still covers every day");
+        assert_eq!(result.errors.len(), 1);
+        assert_eq!(result.errors[0].source, "Git");
+        assert!(result.errors[0].error.contains("not a directory"));
+        assert!(cached_days(&s).is_empty(), "a failed source must not poison the cache");
+    }
+
+    #[test]
+    fn export_merges_live_calendar_events_sorted_and_caches_them() {
+        let app = mock_app();
+        let s = state(&app);
+        enable_calendar(&s);
+        insert_calendar_event(&s, "pm", d("2020-05-05"), 14, 0);
+        insert_calendar_event(&s, "am", d("2020-05-05"), 9, 0);
+        insert_calendar_event(&s, "next", d("2020-05-06"), 10, 0);
+
+        let first = export(&app, "2020-05-05", "2020-05-06").unwrap();
+        assert!(first.errors.is_empty());
+        assert_eq!(
+            first.days[0].events.iter().map(|e| e.id.as_str()).collect::<Vec<_>>(),
+            vec!["calendar:am", "calendar:pm"]
+        );
+        assert_eq!(first.days[0].events[0].time, "09:00");
+        assert_eq!(first.days[1].events.len(), 1);
+        assert_eq!(cached_days(&s), vec!["2020-05-05", "2020-05-06"]);
+
+        // Wipe the live table: a second export must be served from the cache.
+        s.db.lock().unwrap().execute("DELETE FROM ical_events", []).unwrap();
+        let second = export(&app, "2020-05-05", "2020-05-06").unwrap();
+        assert_eq!(
+            second.days[0].events.iter().map(|e| e.id.as_str()).collect::<Vec<_>>(),
+            vec!["calendar:am", "calendar:pm"]
+        );
+        assert_eq!(second.days[1].events.len(), 1);
+    }
+}

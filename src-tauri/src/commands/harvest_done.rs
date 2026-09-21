@@ -84,3 +84,122 @@ pub fn set_timeline_harvest_done(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_support::{mock_app, state};
+
+    fn get(app: &tauri::App<tauri::test::MockRuntime>, ids: &[&str]) -> Vec<String> {
+        get_timeline_harvest_done_for_event_ids(
+            state(app),
+            ids.iter().map(|s| s.to_string()).collect(),
+        )
+        .unwrap()
+    }
+
+    fn set(app: &tauri::App<tauri::test::MockRuntime>, id: &str, done: bool) {
+        set_timeline_harvest_done(state(app), id.to_string(), done).unwrap();
+    }
+
+    fn row_count(app: &tauri::App<tauri::test::MockRuntime>) -> i64 {
+        let s = state(app);
+        let conn = s.db.lock().unwrap();
+        conn.query_row("SELECT COUNT(*) FROM timeline_harvest_done", [], |r| r.get(0))
+            .unwrap()
+    }
+
+    #[test]
+    fn row_uuid_is_deterministic_and_distinct_per_event_id() {
+        assert_eq!(row_uuid_for_event_id("git:/r:abc"), row_uuid_for_event_id("git:/r:abc"));
+        assert_ne!(row_uuid_for_event_id("git:/r:abc"), row_uuid_for_event_id("git:/r:abd"));
+    }
+
+    #[test]
+    fn row_uuid_is_a_version_5_uuid() {
+        let parsed = Uuid::parse_str(&row_uuid_for_event_id("zulip:stream:x:2024-01-01")).unwrap();
+        assert_eq!(parsed.get_version_num(), 5);
+    }
+
+    #[test]
+    fn row_uuid_is_stable_across_releases() {
+        // Rows on disk are keyed by this value; changing the namespace or the
+        // hashing would orphan every existing checkmark.
+        assert_eq!(
+            row_uuid_for_event_id("git:/Users/me/code/recall:abc123"),
+            Uuid::new_v5(&HARVEST_DONE_NS, b"git:/Users/me/code/recall:abc123").to_string()
+        );
+    }
+
+    #[test]
+    fn empty_input_returns_empty() {
+        let app = mock_app();
+        assert!(get(&app, &[]).is_empty());
+    }
+
+    #[test]
+    fn unmarked_ids_are_not_returned() {
+        let app = mock_app();
+        assert!(get(&app, &["a", "b"]).is_empty());
+    }
+
+    #[test]
+    fn marked_ids_come_back_in_input_order_and_only_those_asked_for() {
+        let app = mock_app();
+        set(&app, "b", true);
+        set(&app, "c", true);
+        set(&app, "z", true);
+        assert_eq!(get(&app, &["a", "b", "c", "d"]), vec!["b", "c"]);
+        assert_eq!(get(&app, &["c", "a", "b"]), vec!["c", "b"]);
+        assert_eq!(get(&app, &["a"]), Vec::<String>::new());
+    }
+
+    #[test]
+    fn marking_twice_is_idempotent() {
+        let app = mock_app();
+        set(&app, "a", true);
+        set(&app, "a", true);
+        assert_eq!(row_count(&app), 1);
+        assert_eq!(get(&app, &["a", "a"]), vec!["a", "a"]);
+    }
+
+    #[test]
+    fn unmarking_removes_the_row() {
+        let app = mock_app();
+        set(&app, "a", true);
+        set(&app, "b", true);
+        set(&app, "a", false);
+        assert_eq!(get(&app, &["a", "b"]), vec!["b"]);
+        assert_eq!(row_count(&app), 1);
+    }
+
+    #[test]
+    fn unmarking_something_never_marked_is_ok() {
+        let app = mock_app();
+        set(&app, "ghost", false);
+        assert_eq!(row_count(&app), 0);
+    }
+
+    #[test]
+    fn rows_are_stored_under_the_hashed_id_not_the_raw_event_id() {
+        let app = mock_app();
+        set(&app, "git:/x:abc", true);
+        let s = state(&app);
+        let conn = s.db.lock().unwrap();
+        let stored: String = conn
+            .query_row("SELECT id FROM timeline_harvest_done", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(stored, row_uuid_for_event_id("git:/x:abc"));
+        assert_ne!(stored, "git:/x:abc");
+    }
+
+    #[test]
+    fn ids_with_quotes_commas_and_unicode_are_handled() {
+        let app = mock_app();
+        let ids = ["it's", "a,b", "jira:DDF-1:2024-01-01:Kommentér", "x\"y"];
+        for id in ids {
+            set(&app, id, true);
+        }
+        assert_eq!(get(&app, &ids), ids.iter().map(|s| s.to_string()).collect::<Vec<_>>());
+    }
+}
