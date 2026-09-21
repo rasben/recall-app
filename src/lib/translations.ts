@@ -124,6 +124,23 @@ const en = {
   "settings.zulip.error_api_key": "Could not save API key",
   "settings.zulip.saved_api_key": "API key saved",
 
+  // Harvest
+  "settings.harvest.legend": "Harvest",
+  "settings.harvest.enable": "Enable Harvest (show what is already logged)",
+  "settings.harvest.token": "Personal access token",
+  "settings.harvest.token_placeholder": "Paste your Harvest token…",
+  "settings.harvest.token_description":
+    "Create a personal access token at <strong>id.getharvest.com/developers</strong>. Recall only reads your time entries; it never writes to Harvest.",
+  "settings.harvest.account_id": "Account ID",
+  "settings.harvest.account_id_placeholder": "e.g. 1234567",
+  "settings.harvest.account_id_description":
+    "The numeric account ID shown next to your token on the developers page.",
+  "settings.harvest.error_save": "Could not save Harvest settings",
+  "settings.harvest.error_token": "Could not save access token",
+  "settings.harvest.saved_token": "Access token saved",
+  "settings.harvest.error_account_id": "Could not save account ID",
+  "settings.harvest.saved_account_id": "Account ID saved",
+
   // Calendar
   "settings.calendar.legend": "Calendar",
   "settings.calendar.enable": "Enable Calendar",
@@ -185,6 +202,11 @@ const en = {
   "timeline.group_items": "{count} items",
   "timeline.open_in_jira": "Open in Jira",
   "timeline.idle": "{duration} break",
+  "timeline.harvest.title": "Logged in Harvest",
+  "timeline.harvest.empty": "Nothing logged in Harvest for this day yet.",
+  "timeline.harvest.running": "running",
+  "timeline.harvest.open": "Open this day in Harvest",
+  "timeline.harvest.error": "Could not load Harvest entries: {error}",
 
   "export.button": "Export",
   "export.title": "Export activity",
@@ -344,6 +366,22 @@ const da: Translations = {
   "settings.zulip.error_api_key": "Kunne ikke gemme API-nøgle",
   "settings.zulip.saved_api_key": "API-nøgle gemt",
 
+  "settings.harvest.legend": "Harvest",
+  "settings.harvest.enable": "Aktiver Harvest (vis hvad der allerede er registreret)",
+  "settings.harvest.token": "Personligt adgangstoken",
+  "settings.harvest.token_placeholder": "Indsæt dit Harvest-token…",
+  "settings.harvest.token_description":
+    "Opret et personligt adgangstoken på <strong>id.getharvest.com/developers</strong>. Recall læser kun dine tidsregistreringer; det skriver aldrig til Harvest.",
+  "settings.harvest.account_id": "Konto-ID",
+  "settings.harvest.account_id_placeholder": "f.eks. 1234567",
+  "settings.harvest.account_id_description":
+    "Det numeriske konto-ID, der vises ved siden af dit token på developers-siden.",
+  "settings.harvest.error_save": "Kunne ikke gemme Harvest-indstillinger",
+  "settings.harvest.error_token": "Kunne ikke gemme adgangstoken",
+  "settings.harvest.saved_token": "Adgangstoken gemt",
+  "settings.harvest.error_account_id": "Kunne ikke gemme konto-ID",
+  "settings.harvest.saved_account_id": "Konto-ID gemt",
+
   "settings.calendar.legend": "Kalender",
   "settings.calendar.enable": "Aktiver Kalender",
   "settings.calendar.ical_url": "iCal URL",
@@ -401,6 +439,11 @@ const da: Translations = {
   "timeline.group_items": "{count} elementer",
   "timeline.open_in_jira": "Åbn i Jira",
   "timeline.idle": "{duration} pause",
+  "timeline.harvest.title": "Registreret i Harvest",
+  "timeline.harvest.empty": "Intet registreret i Harvest for denne dag endnu.",
+  "timeline.harvest.running": "kører",
+  "timeline.harvest.open": "Åbn denne dag i Harvest",
+  "timeline.harvest.error": "Kunne ikke hente Harvest-registreringer: {error}",
 
   "export.button": "Eksportér",
   "export.title": "Eksportér aktivitet",

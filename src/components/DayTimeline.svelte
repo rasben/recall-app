@@ -3,10 +3,11 @@
   import { cubicOut, quintOut } from "svelte/easing";
   import { onMount, onDestroy } from "svelte";
   import { listen } from "@tauri-apps/api/event";
-  import { commands } from "../bindings";
+  import { commands, type HarvestTimeEntry } from "../bindings";
   import { addDaysIso, applyOptimisticToggle, formatGapLabel, GAP_IDLE_MINUTES, GAP_MIN_MINUTES, groupByTask, groupCloseCommits, groupEventsByHour, rollbackOptimisticToggle, todayIso, type TimelineEvent } from "$lib/timeline";
   import { navState } from "$lib/nav-state.svelte";
   import TimelineDateNav from "./TimelineDateNav.svelte";
+  import HarvestStrip from "./HarvestStrip.svelte";
   import TimelineSourceFilter from "./TimelineSourceFilter.svelte";
   import TimelineEventRow from "./TimelineEvent.svelte";
   import TimelineCommitGroup from "./TimelineCommitGroup.svelte";
@@ -37,6 +38,10 @@
   let doneSources = $state(new Set<string>());
   let enabledSources = $state<string[]>([]);
   let jiraBaseUrl = $state<string | null>(null);
+  let harvestEnabled = $state(false);
+  let harvestEntries = $state<HarvestTimeEntry[]>([]);
+  let harvestError = $state<string | null>(null);
+  let harvestLoading = $state(false);
   let settingsLoaded = $state(false);
   /** After first fetch, debounce so rapid day clicks only load the final day. */
   let pastInitialDay = $state(false);
@@ -70,9 +75,30 @@
     navState.selectedDate = iso;
   }
 
+  /** Harvest is fetched live and independently of the feed, so it can never block the timeline. */
+  async function loadHarvest(day: string) {
+    if (!harvestEnabled) return;
+    harvestLoading = true;
+    const result = await commands.getHarvestEntriesForDay(day);
+    if (selectedDate !== day) return;
+    if (result.status === "ok") {
+      harvestEntries = result.data;
+      harvestError = null;
+    } else {
+      harvestEntries = [];
+      harvestError = result.error;
+    }
+    harvestLoading = false;
+  }
+
+  $effect(() => {
+    void loadHarvest(selectedDate);
+  });
+
   async function refreshDay() {
     if (isLoading) return;
     const day = selectedDate;
+    void loadHarvest(day);
     doneIds = new Set();
     doneSources = new Set();
     sourceErrors = new Map();
@@ -178,13 +204,15 @@
       Object.assign(navState.dayCounts, countsResult.data);
     }
 
-    const [git, github, ical, jira, zulip] = await Promise.all([
+    const [git, github, ical, jira, zulip, harvest] = await Promise.all([
       commands.getSettingsGit(),
       commands.getSettingsGithub(),
       commands.getSettingsIcal(),
       commands.getSettingsJira(),
       commands.getSettingsZulip(),
+      commands.getSettingsHarvest(),
     ]);
+    harvestEnabled = harvest?.enabled ?? false;
     const enabled: string[] = [];
     if (git?.enabled) enabled.push("Git");
     if (github?.enabled) enabled.push("GitHub");
@@ -206,6 +234,10 @@
     onRefresh={refreshDay}
     refreshing={isLoading}
   />
+
+  {#if harvestEnabled}
+    <HarvestStrip entries={harvestEntries} error={harvestError} loading={harvestLoading} />
+  {/if}
 
   {#if loadError}
     <p

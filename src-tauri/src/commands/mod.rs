@@ -1,8 +1,10 @@
+pub mod harvest;
 pub mod harvest_done;
 pub mod settings;
 pub mod settings_export;
 pub mod settings_git;
 pub mod settings_github;
+pub mod settings_harvest;
 pub mod settings_ical;
 pub mod settings_jira;
 pub mod settings_ui;

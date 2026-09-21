@@ -5,7 +5,9 @@
   A desktop app that builds a timeline of your prior workdays so you can fill in Harvest losing your mind.<br/><br/>
   Pick a date, and Recall pulls your activity from multiple sources into one view.<br/><br/>
 
-  **Calendar**, **GitHub**, **Local git commits**, **JIRA**, **Zulip**, and more planned.
+  **Calendar**, **GitHub**, **Local git commits**, **JIRA**, **Zulip**, and more planned.<br/><br/>
+
+  Connect **Harvest** (personal access token + account ID) and Recall also shows what you have already logged for that day — total hours and one line per entry — right above the timeline. Read-only for now.
       </td>
       <td align="top" width="35%">
         <img src="static/poster.jpg" height="300px" width="auto"/>
@@ -59,7 +61,7 @@ Recall sends one anonymous ping per day to count active installs. The ping conta
 
 > ⚠️ **Your API tokens are stored in plain text.** - just like every other app does..
 >
-> GitHub / Jira / Zulip tokens and iCal secret URLs are saved unencrypted in the SQLite file under the app-data directory (e.g. `~/Library/Application Support/com.recall-app.app/db.sqlite` on macOS). Anything running as your user — a malicious npm postinstall script, a rogue VS Code extension, a cloud-synced backup on a stolen laptop — can read them.
+> GitHub / Jira / Zulip / Harvest tokens and iCal secret URLs are saved unencrypted in the SQLite file under the app-data directory (e.g. `~/Library/Application Support/com.recall-app.app/db.sqlite` on macOS). Anything running as your user — a malicious npm postinstall script, a rogue VS Code extension, a cloud-synced backup on a stolen laptop — can read them.
 >
 > If that matters to you, use tokens with the narrowest scope you can, and treat them as rotatable.
 
