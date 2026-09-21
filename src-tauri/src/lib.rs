@@ -35,6 +35,7 @@ fn make_specta_builder() -> Builder<tauri::Wry> {
         commands::timeline::refresh_timeline_for_day,
         commands::timeline::export_timeline_for_range,
         commands::timeline::get_day_counts_for_month,
+        commands::timeline::prefetch_days,
         commands::timeline::test_settings_git,
         commands::timeline::test_settings_github,
         commands::timeline::test_settings_jira,

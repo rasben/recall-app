@@ -168,10 +168,13 @@
 
   onMount(async () => {
     const today = todayIso();
-    for (let i = 1; i <= PREFETCH_DAYS; i++) {
-      const day = addDaysIso(today, -i);
-      window.setTimeout(() => commands.getTimelineForDay(day), i * PREFETCH_STAGGER_MS);
-    }
+    // Warm the cache for the last PREFETCH_DAYS days in one range fetch, so each
+    // source is queried once for the whole span instead of once per day. Kicked
+    // off after a short delay so today's own load gets the network first.
+    window.setTimeout(
+      () => commands.prefetchDays(addDaysIso(today, -PREFETCH_DAYS), addDaysIso(today, -1)),
+      PREFETCH_STAGGER_MS,
+    );
 
     const countsResult = await commands.getCachedDayEventCounts();
     if (countsResult.status === "ok") {
