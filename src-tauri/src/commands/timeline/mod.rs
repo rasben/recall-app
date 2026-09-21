@@ -6,6 +6,7 @@ mod jira;
 mod zulip;
 
 use std::collections::HashMap;
+use std::time::Instant;
 
 use chrono::{Local, NaiveDate};
 use rusqlite::params;
@@ -13,6 +14,7 @@ use serde::Serialize;
 use tauri::{Emitter, State};
 
 use crate::state::AppState;
+use crate::telemetry;
 use crate::timeline::TimelineEvent;
 
 #[derive(Serialize, Clone)]
@@ -97,9 +99,17 @@ fn collect_range_events<F: Fn(&'static str, bool, Option<String>) + Sync>(
     let fail = |errors: &mut Vec<(&'static str, String)>, source: &'static str, e: String| {
         errors.push((source, e));
     };
-    // Runs on the source's own thread: report done/error the moment that
-    // source finishes, not when the whole batch is joined.
-    let finish = |source: &'static str, r: RangeResult| {
+    // Runs on the source's own thread: time the fetch, record the outcome as a
+    // duration bucket plus (on failure) a coarse error class — never the text —
+    // and report done/error the moment that source finishes, not when the whole
+    // batch is joined.
+    let run = |source: &'static str, fetch: &dyn Fn() -> RangeResult| -> RangeResult {
+        let started = Instant::now();
+        let r = fetch();
+        telemetry::record_source_timing(state, "range_ms", source, started.elapsed());
+        if let Err(e) = &r {
+            telemetry::record_source_error(state, source, e);
+        }
         emit(source, true, r.as_ref().err().cloned());
         r
     };
@@ -114,11 +124,11 @@ fn collect_range_events<F: Fn(&'static str, bool, Option<String>) + Sync>(
     // `thread::scope` pattern git.rs uses per repo): the range takes as long
     // as the slowest source instead of the sum of all five.
     let (git, github, calendar, jira, zulip) = std::thread::scope(|scope| {
-        let git = scope.spawn(|| finish("Git", git::events_for_range(state, fetch_start, fetch_end)));
-        let github = scope.spawn(|| finish("GitHub", github::events_for_range(state, fetch_start, fetch_end)));
-        let calendar = scope.spawn(|| finish("Calendar", ical::events_for_range(state, fetch_start, fetch_end)));
-        let jira = scope.spawn(|| finish("Jira", jira::events_for_range(state, fetch_start, fetch_end)));
-        let zulip = scope.spawn(|| finish("Zulip", zulip::events_for_range(state, fetch_start, fetch_end)));
+        let git = scope.spawn(|| run("Git", &|| git::events_for_range(state, fetch_start, fetch_end)));
+        let github = scope.spawn(|| run("GitHub", &|| github::events_for_range(state, fetch_start, fetch_end)));
+        let calendar = scope.spawn(|| run("Calendar", &|| ical::events_for_range(state, fetch_start, fetch_end)));
+        let jira = scope.spawn(|| run("Jira", &|| jira::events_for_range(state, fetch_start, fetch_end)));
+        let zulip = scope.spawn(|| run("Zulip", &|| zulip::events_for_range(state, fetch_start, fetch_end)));
         (join_source(git), join_source(github), join_source(calendar), join_source(jira), join_source(zulip))
     });
 
@@ -191,12 +201,23 @@ pub async fn get_timeline_for_day(
             let _ = app.emit("timeline:source", SourceProgress { source, done: true, error: Some(err) });
         };
 
-        // Runs on the source's own thread: report done/error the moment that
-        // source finishes, not when the whole batch is joined.
-        let finish = |source: &'static str, r: DayResult| {
+        // Runs on the source's own thread: time the fetch, record the duration
+        // bucket, the returned-count bucket or the error class (never the
+        // message text), and report done/error the moment that source
+        // finishes, not when the whole batch is joined.
+        let run = |source: &'static str, fetch: &dyn Fn() -> DayResult| -> DayResult {
+            let started = Instant::now();
+            let r = fetch();
+            telemetry::record_source_timing(&state, "load_ms", source, started.elapsed());
             match &r {
-                Ok(_) => done(source),
-                Err(e) => fail(source, e.clone()),
+                Ok(rows) => {
+                    telemetry::record_source_events(&state, source, rows.len());
+                    done(source);
+                }
+                Err(e) => {
+                    telemetry::record_source_error(&state, source, e);
+                    fail(source, e.clone());
+                }
             }
             r
         };
@@ -214,11 +235,11 @@ pub async fn get_timeline_for_day(
         // `thread::scope` pattern git.rs uses per repo): the day loads in the
         // time of the slowest source instead of the sum of all five.
         let (git, github, calendar, jira, zulip) = std::thread::scope(|scope| {
-            let git = scope.spawn(|| finish("Git", git::events_for_day(&state, &day)));
-            let github = scope.spawn(|| finish("GitHub", github::events_for_day(&state, &day)));
-            let calendar = scope.spawn(|| finish("Calendar", ical::events_for_day(&state, &day)));
-            let jira = scope.spawn(|| finish("Jira", jira::events_for_day(&state, &day)));
-            let zulip = scope.spawn(|| finish("Zulip", zulip::events_for_day(&state, &day)));
+            let git = scope.spawn(|| run("Git", &|| git::events_for_day(&state, &day)));
+            let github = scope.spawn(|| run("GitHub", &|| github::events_for_day(&state, &day)));
+            let calendar = scope.spawn(|| run("Calendar", &|| ical::events_for_day(&state, &day)));
+            let jira = scope.spawn(|| run("Jira", &|| jira::events_for_day(&state, &day)));
+            let zulip = scope.spawn(|| run("Zulip", &|| zulip::events_for_day(&state, &day)));
             (join_source(git), join_source(github), join_source(calendar), join_source(jira), join_source(zulip))
         });
 
@@ -277,6 +298,7 @@ pub async fn refresh_timeline_for_day(
             params![&day],
         )
         .map_err(|e| e.to_string())?;
+        telemetry::bump_conn(&conn, "nav.refresh");
         Ok::<(), String>(())
     })?;
     get_timeline_for_day(app, state, day).await
@@ -321,6 +343,7 @@ pub async fn export_timeline_for_range(
         if (end_day - start_day).num_days() + 1 > MAX_EXPORT_DAYS {
             return Err(format!("Range too large (max {MAX_EXPORT_DAYS} days)"));
         }
+        telemetry::record(&state, "export.range");
 
         let today = Local::now().date_naive();
 
@@ -428,34 +451,60 @@ pub async fn prefetch_days(
     })
 }
 
+/// Count a "test connection" click per source as ok/fail (outcome only).
+fn record_test(state: &AppState, source: &str, result: &Result<(), String>) {
+    let outcome = if result.is_ok() { "ok" } else { "fail" };
+    telemetry::record(state, &format!("settings.test.{source}.{outcome}"));
+}
+
 #[tauri::command]
 #[specta::specta]
 pub async fn test_settings_git(state: State<'_, AppState>) -> Result<(), String> {
-    tokio::task::block_in_place(|| git::test_connection(&state))
+    tokio::task::block_in_place(|| {
+        let r = git::test_connection(&state);
+        record_test(&state, "git", &r);
+        r
+    })
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn test_settings_github(state: State<'_, AppState>) -> Result<(), String> {
-    tokio::task::block_in_place(|| github::test_connection(&state))
+    tokio::task::block_in_place(|| {
+        let r = github::test_connection(&state);
+        record_test(&state, "github", &r);
+        r
+    })
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn test_settings_jira(state: State<'_, AppState>) -> Result<(), String> {
-    tokio::task::block_in_place(|| jira::test_connection(&state))
+    tokio::task::block_in_place(|| {
+        let r = jira::test_connection(&state);
+        record_test(&state, "jira", &r);
+        r
+    })
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn test_settings_zulip(state: State<'_, AppState>) -> Result<(), String> {
-    tokio::task::block_in_place(|| zulip::test_connection(&state))
+    tokio::task::block_in_place(|| {
+        let r = zulip::test_connection(&state);
+        record_test(&state, "zulip", &r);
+        r
+    })
 }
 
 #[tauri::command]
 #[specta::specta]
 pub async fn test_settings_ical(state: State<'_, AppState>) -> Result<(), String> {
-    tokio::task::block_in_place(|| ical::test_connection(&state))
+    tokio::task::block_in_place(|| {
+        let r = ical::test_connection(&state);
+        record_test(&state, "calendar", &r);
+        r
+    })
 }
 
 /// Fetch event counts for every elapsed day of the given calendar month,
@@ -471,6 +520,7 @@ pub async fn get_day_counts_for_month(
     month: u32,
 ) -> Result<HashMap<String, u32>, String> {
     tokio::task::block_in_place(|| {
+        telemetry::record(&state, "nav.month_load");
         let first =
             NaiveDate::from_ymd_opt(year, month, 1).ok_or_else(|| format!("Invalid year/month: {year}-{month}"))?;
         let today = Local::now().date_naive();

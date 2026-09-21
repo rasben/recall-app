@@ -7,6 +7,7 @@
   import ChevronDown from "@lucide/svelte/icons/chevron-down";
   import ExternalLink from "@lucide/svelte/icons/external-link";
   import { openUrl } from "@tauri-apps/plugin-opener";
+  import { track } from "$lib/telemetry";
   import type { Component } from "svelte";
   import type { TaskGroupKeyType, TimelineEvent } from "$lib/timeline";
   import TimelineEventRow from "./TimelineEvent.svelte";
@@ -61,21 +62,22 @@
 </script>
 
 <div class="space-y-1">
+  <!--
+    The header is a plain row; the expand toggle is an invisible button stretched
+    over it, and the Jira link sits above that layer. No button nests in a button.
+  -->
   <div
-    role="button"
-    tabindex="0"
-    onclick={toggle}
-    onkeydown={(e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        toggle();
-      }
-    }}
-    aria-expanded={expanded}
-    aria-label={expanded ? t("timeline.group_collapse") : t("timeline.group_expand")}
-    class="timeline-event-btn relative flex w-full min-w-0 max-w-full cursor-pointer items-center gap-3 border-2 border-dashed bg-card py-2 pl-3 pr-2 text-left shadow-sm transition-all hover:translate-x-0.5 hover:translate-y-0.5 hover:border-foreground hover:shadow-none
+    class="timeline-event-btn relative flex w-full min-w-0 max-w-full items-center gap-3 border-2 border-dashed bg-card py-2 pl-3 pr-2 text-left shadow-sm transition-all hover:translate-x-0.5 hover:translate-y-0.5 hover:border-foreground hover:shadow-none
       {allDone ? 'opacity-50' : ''}"
   >
+    <button
+      type="button"
+      onclick={toggle}
+      aria-expanded={expanded}
+      aria-label={expanded ? t("timeline.group_collapse") : t("timeline.group_expand")}
+      class="absolute inset-0 z-0 cursor-pointer outline-hidden focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-foreground"
+    ></button>
+
     <span class="w-10 shrink-0 font-mono text-xs text-muted-foreground">{span}</span>
 
     <span class="inline-flex size-6 shrink-0 items-center justify-center border {config[keyType].color}">
@@ -96,10 +98,12 @@
     {#if ticketUrl}
       <button
         type="button"
-        class="inline-flex shrink-0 items-center gap-1 border-2 border-border px-2 py-1 font-head text-[9px] uppercase tracking-widest text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
-        onclick={(e) => {
-          e.stopPropagation();
-          if (ticketUrl) openUrl(ticketUrl);
+        class="relative z-10 inline-flex shrink-0 items-center gap-1 border-2 border-border px-2 py-1 font-head text-[9px] uppercase tracking-widest text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
+        onclick={() => {
+          if (ticketUrl) {
+            track("link.open.jira");
+            openUrl(ticketUrl);
+          }
         }}
         aria-label={t("timeline.open_in_jira")}
       >

@@ -7,16 +7,21 @@
     import { onMount } from "svelte";
     import { t } from "$lib/i18n.svelte";
     import LanguageSwitcher from "../ui/LanguageSwitcher.svelte";
+    import { DEFAULT_SETTINGS_UI } from "$lib/view-state";
 
-    let settings = $state<SettingsUi>({ theme: "system" });
+    let settings = $state<SettingsUi>({ ...DEFAULT_SETTINGS_UI });
 
     onMount(async () => {
-        settings = await commands.getSettingsUi() ?? { theme: "system" };
+        settings = await commands.getSettingsUi() ?? { ...DEFAULT_SETTINGS_UI };
     });
 
     async function setTheme(value: string) {
         settings.theme = value;
         applyTheme(value);
+        // Re-read before writing: the timeline view also persists its own
+        // fields (grouping mode, hidden sources) into this document.
+        const current = await commands.getSettingsUi();
+        settings = { ...(current ?? settings), theme: value };
         const result = await commands.setSettingsUi(settings);
         if (result.status === "error") {
             toast.error(t("settings.theme.error"), {richColors: true});
