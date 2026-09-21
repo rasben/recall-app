@@ -7,4 +7,5 @@ pub mod settings_ical;
 pub mod settings_jira;
 pub mod settings_ui;
 pub mod settings_zulip;
+pub mod telemetry;
 pub mod timeline;

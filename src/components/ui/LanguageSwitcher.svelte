@@ -7,6 +7,7 @@
     import {commands, type SettingsUi} from "../../bindings";
     import {toast} from "svelte-sonner";
     import {onMount} from "svelte";
+    import { setGauge } from "$lib/telemetry";
 
     let language = $state<string>(i18n.lang);
     const langs: Lang[] = ["da", "en"];
@@ -19,6 +20,7 @@
         let result = false;
 
         result = setLang(<"en" | "da">value)
+        if (result) setGauge("lang", value);
 
         if (!result) {
             language = i18n.lang;

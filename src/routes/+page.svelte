@@ -9,7 +9,8 @@
   import Main from "../components/Main.svelte";
   import Welcome from "../components/Welcome.svelte";
   import { commands } from "../bindings";
-  import { t } from "$lib/i18n.svelte";
+  import { track, setGauge } from "$lib/telemetry";
+  import { i18n, t } from "$lib/i18n.svelte";
   import { getVersion } from "@tauri-apps/api/app";
   import { openUrl } from "@tauri-apps/plugin-opener";
   import { toast } from "svelte-sonner";
@@ -37,12 +38,16 @@
       const release = await response.json();
       const latestTag = release.tag_name?.replace(/^v/, "");
       if (latestTag && isNewerVersion(latestTag, currentVersion)) {
+        track("update.toast_shown");
         toast.message(t("page.new_version.title", { version: latestTag }), {
           closeButton: true,
           description: t("page.new_version.description", { current: currentVersion }),
           action: {
             label: t("page.new_version.download"),
-            onClick: () => openUrl(release.html_url),
+            onClick: () => {
+              track("update.download_click");
+              openUrl(release.html_url);
+            },
           },
           duration: 20000,
         });
@@ -55,6 +60,9 @@
   onMount(async () => {
     welcomed = !!localStorage.getItem("recall:welcomed");
     welcomeChecked = true;
+    if (!welcomed) track("welcome.shown");
+    // Language lives in localStorage, so the backend learns it from here.
+    setGauge("lang", i18n.lang);
 
     const status = await commands.getIcalSyncStatus();
     const oneHourAgo = Date.now() - 60 * 60 * 1000;
@@ -66,6 +74,7 @@
   });
 
   function markWelcomed(openSettings = false) {
+    track("welcome.get_started");
     localStorage.setItem("recall:welcomed", "1");
     welcomed = true;
     if (openSettings) settingsOpen = true;
@@ -82,6 +91,10 @@
   // and clears the request.
   $effect(() => {
     if (navState.openSettingsSection) settingsOpen = true;
+  });
+
+  $effect(() => {
+    if (settingsOpen) track("settings.opened");
   });
 </script>
 

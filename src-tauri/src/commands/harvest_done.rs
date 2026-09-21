@@ -81,6 +81,7 @@ pub fn set_timeline_harvest_done(
         )
         .map_err(|e| e.to_string())?;
     }
+    crate::telemetry::bump_conn(&conn, if done { "harvest.mark" } else { "harvest.unmark" });
 
     Ok(())
 }

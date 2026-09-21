@@ -23,6 +23,12 @@ pub(crate) fn save_val(state: &State<'_, AppState>, key: &str, value: &str) -> R
     )
     .map_err(|e| e.to_string())?;
 
+    // Every settings domain is stored under one `settings_{domain}` key, so
+    // this is the single place that counts "user saved {domain} settings".
+    if let Some(domain) = key.strip_prefix("settings_") {
+        crate::telemetry::bump_conn(&conn, &format!("settings.save.{domain}"));
+    }
+
     Ok(())
 }
 
@@ -88,6 +94,7 @@ pub fn clear_all_caches(state: State<'_, AppState>) -> Result<ClearCachesResult,
     rows_deleted += conn
         .execute("DELETE FROM ical_events", [])
         .map_err(|e| e.to_string())? as u32;
+    crate::telemetry::bump_conn(&conn, "cache.clear");
     Ok(ClearCachesResult { rows_deleted })
 }
 

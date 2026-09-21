@@ -7,6 +7,7 @@
   import ChevronDown from "@lucide/svelte/icons/chevron-down";
   import ExternalLink from "@lucide/svelte/icons/external-link";
   import { openUrl } from "@tauri-apps/plugin-opener";
+  import { track } from "$lib/telemetry";
   import type { Component } from "svelte";
   import type { TaskGroupKeyType, TimelineEvent } from "$lib/timeline";
   import TimelineEventRow from "./TimelineEvent.svelte";
@@ -99,7 +100,10 @@
         type="button"
         class="relative z-10 inline-flex shrink-0 items-center gap-1 border-2 border-border px-2 py-1 font-head text-[9px] uppercase tracking-widest text-muted-foreground transition-colors hover:border-foreground hover:text-foreground"
         onclick={() => {
-          if (ticketUrl) openUrl(ticketUrl);
+          if (ticketUrl) {
+            track("link.open.jira");
+            openUrl(ticketUrl);
+          }
         }}
         aria-label={t("timeline.open_in_jira")}
       >

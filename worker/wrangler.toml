@@ -1,17 +1,23 @@
 # Cloudflare Worker config for Recall telemetry
-# Deploy with: npx wrangler deploy
+# Deploy with: npm run deploy   (= npx wrangler deploy)
 #
-# First-time setup:
+# First-time setup (D1 replaces the old KV install counter):
 #   1. npx wrangler login
-#   2. npx wrangler kv namespace create INSTALLS
-#      → copy the id it prints into kv_namespaces below
-#   3. npx wrangler deploy
-#   4. Copy the deployed URL into src-tauri/src/telemetry.rs (PING_URL constant)
+#   2. npx wrangler d1 create recall-telemetry
+#      → copy the database_id it prints into [[d1_databases]] below
+#   3. npm run db:init            (creates the `pings` table from schema.sql)
+#   4. npm run deploy
+#   5. The deployed URL is already in src-tauri/src/telemetry.rs (PING_URL);
+#      update it there if the worker name or account subdomain changes.
+#
+# Local development:
+#   npm run db:init:local && npx wrangler dev
 
 name = "recall-telemetry"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
 
-[[kv_namespaces]]
-binding = "INSTALLS"
-id = "0a3a9c5687064db3a060304f50a0a4b5"
+[[d1_databases]]
+binding = "DB"
+database_name = "recall-telemetry"
+database_id = "204af553-42e0-4076-b0f0-de4dec9df3fb"
