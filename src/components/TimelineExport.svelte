@@ -12,6 +12,7 @@
   import { navState } from "$lib/nav-state.svelte";
   import { addDaysIso, todayIso } from "$lib/timeline";
   import { toJson, toMarkdown } from "$lib/export";
+  import { track } from "$lib/telemetry";
   import { resolveExportPrompt } from "$lib/export-prompt";
   import { t, langLocale } from "$lib/i18n.svelte";
 
@@ -96,6 +97,10 @@
             })
           : toJson(days, start, end);
       await navigator.clipboard.writeText(text);
+      track("export.copy");
+      track(`export.format.${format}`);
+      track(`export.preset.${activePreset === null ? "custom" : `${activePreset}d`}`);
+      if (format === "markdown" && includePrompt) track("export.with_prompt");
       // A source that errored still yields a copyable export from the others —
       // warn so the result isn't mistaken for a complete picture.
       if (errors.length > 0) {

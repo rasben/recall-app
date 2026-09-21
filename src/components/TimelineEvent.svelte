@@ -11,6 +11,7 @@
   import type { TimelineEvent, TimelineEventSource } from "../bindings";
   import type { Component } from "svelte";
   import { SOURCE_LABELS } from "$lib/timeline";
+  import { track } from "$lib/telemetry";
   import { t } from "$lib/i18n.svelte";
 
   let { event, done = false, onToggle }: { event: TimelineEvent; done?: boolean; onToggle?: () => void } = $props();
@@ -42,7 +43,7 @@
     <button
             type="button"
             class="timeline-link-btn absolute bottom-1.5 left-3 w-10 text-center inline-flex items-center gap-1 text-[10px] text-muted-foreground opacity-0 transition-opacity hover:text-foreground"
-            onclick={(e) => { e.stopPropagation(); openUrl(event.url!); }}
+            onclick={(e) => { e.stopPropagation(); track(`link.open.${event.source}`); openUrl(event.url!); }}
             aria-label={t("timeline.open_link")}
     >
       <span>{t("timeline.open_link")}</span>

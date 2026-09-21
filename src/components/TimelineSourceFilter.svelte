@@ -8,6 +8,7 @@
   import type { Component } from "svelte";
   import { SOURCE_LABELS, type TimelineEventSource } from "$lib/timeline";
   import { navState } from "$lib/nav-state.svelte";
+  import { track } from "$lib/telemetry";
 
   let { enabledSources }: { enabledSources: string[] } = $props();
 
@@ -25,6 +26,7 @@
   );
 
   function toggle(key: TimelineEventSource) {
+    track(`filter.toggle.${key}`);
     const next = new Set(navState.hiddenSources);
     if (next.has(key)) next.delete(key);
     else next.add(key);

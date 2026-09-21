@@ -4,7 +4,9 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "db:init": "wrangler d1 execute recall-telemetry --remote --file=./schema.sql",
+    "db:init:local": "wrangler d1 execute recall-telemetry --local --file=./schema.sql"
   },
   "devDependencies": {
     "vitest": "^4.1.5",

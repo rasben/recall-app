@@ -84,6 +84,15 @@ pub(crate) fn init_schema(conn: &Connection) -> Result<(), String> {
     )
     .map_err(|e| format!("failed to create ical_sync_meta table: {e}"))?;
 
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS telemetry_counters (
+            key TEXT PRIMARY KEY,
+            value INTEGER NOT NULL DEFAULT 0
+        )",
+        [],
+    )
+    .map_err(|e| format!("failed to create telemetry_counters table: {e}"))?;
+
     // Migrations: ignore errors when columns already exist.
     let _ = conn.execute("ALTER TABLE ical_events ADD COLUMN dtend INTEGER", []);
     let _ = conn.execute(
@@ -130,6 +139,7 @@ mod tests {
                 "ical_events",
                 "ical_sync_meta",
                 "settings",
+                "telemetry_counters",
                 "timeline_day_cache",
                 "timeline_harvest_done",
             ]
@@ -150,7 +160,7 @@ mod tests {
             .query_row("SELECT value FROM settings WHERE key = 'k'", [], |r| r.get(0))
             .unwrap();
         assert_eq!(v, "v");
-        assert_eq!(table_names(&conn).len(), 5);
+        assert_eq!(table_names(&conn).len(), 6);
     }
 
     #[test]

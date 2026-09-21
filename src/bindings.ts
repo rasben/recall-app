@@ -220,6 +220,19 @@ async getCachedDayEventCounts() : Promise<Result<{ [key in string]: number }, st
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+/**
+ * Increment the counter `name` (e.g. `nav.prev`). Fire-and-forget; invalid
+ * names are dropped silently.
+ */
+async telemetryTrack(name: string) : Promise<void> {
+    await TAURI_INVOKE("telemetry_track", { name });
+},
+/**
+ * Set a gauge (current state, not a count), e.g. `lang = "da"`.
+ */
+async telemetrySetGauge(name: string, value: string) : Promise<void> {
+    await TAURI_INVOKE("telemetry_set_gauge", { name, value });
 }
 }
 
