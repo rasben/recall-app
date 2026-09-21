@@ -6,6 +6,7 @@
   import { commands } from "../bindings";
   import { addDaysIso, applyOptimisticToggle, formatGapLabel, GAP_IDLE_MINUTES, GAP_MIN_MINUTES, groupByTask, groupCloseCommits, groupEventsByHour, rollbackOptimisticToggle, todayIso, type TimelineEvent } from "$lib/timeline";
   import { navState } from "$lib/nav-state.svelte";
+  import { dayNavActionForEvent } from "$lib/keys";
   import TimelineDateNav from "./TimelineDateNav.svelte";
   import TimelineSourceFilter from "./TimelineSourceFilter.svelte";
   import TimelineEventRow from "./TimelineEvent.svelte";
@@ -68,6 +69,17 @@
 
   function pickDate(iso: string) {
     navState.selectedDate = iso;
+  }
+
+  /** ←/→ shift the day, t jumps to today — unless focus is in a field or an
+   *  open popover (the date picker uses the arrows itself). */
+  function handleKeydown(e: KeyboardEvent) {
+    const action = dayNavActionForEvent(e, selectedDate === todayIso());
+    if (!action) return;
+    e.preventDefault();
+    if (action === "prev") shiftDate(-1);
+    else if (action === "next") shiftDate(1);
+    else goToday();
   }
 
   async function refreshDay() {
@@ -196,6 +208,8 @@
     settingsLoaded = true;
   });
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 <div class="relative space-y-6 pb-8">
   <TimelineDateNav
