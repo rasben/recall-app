@@ -6,6 +6,7 @@
   import SettingsCalendar from "./Calendar.svelte";
   import SettingsJira from "./Jira.svelte";
   import SettingsZulip from "./Zulip.svelte";
+  import SettingsHarvest from "./Harvest.svelte";
   import SettingsExport from "./Export.svelte";
   import SettingsSystem from "./System.svelte";
   import { navState } from "$lib/nav-state.svelte";
@@ -54,6 +55,7 @@
     <SettingsJira />
     <SettingsZulip />
     <SettingsCalendar />
+    <SettingsHarvest />
   </Tabs.Content>
 
   <Tabs.Content value="export" class={contentClass}>

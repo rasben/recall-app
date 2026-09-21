@@ -91,6 +91,41 @@ async triggerIcalSync() : Promise<void> {
 async getIcalSyncStatus() : Promise<IcalSyncStatus> {
     return await TAURI_INVOKE("get_ical_sync_status");
 },
+async setSettingsHarvest(settings: SettingsHarvest) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("set_settings_harvest", { settings }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getSettingsHarvest() : Promise<SettingsHarvest | null> {
+    return await TAURI_INVOKE("get_settings_harvest");
+},
+/**
+ * Verify the saved token + account id by calling `GET /v2/users/me`.
+ */
+async testSettingsHarvest() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("test_settings_harvest") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * The authenticated user's Harvest time entries for `day` (`YYYY-MM-DD`),
+ * oldest first. Returns an empty list when Harvest is disabled or has no
+ * credentials, so the frontend can call it unconditionally.
+ */
+async getHarvestEntriesForDay(day: string) : Promise<Result<HarvestTimeEntry[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_harvest_entries_for_day", { day }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async getTimelineForDay(day: string) : Promise<Result<TimelineEvent[], string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("get_timeline_for_day", { day }) };
@@ -260,6 +295,20 @@ export type ExportResult = { days: ExportDay[]; errors: ExportSourceError[] }
  */
 export type ExportSourceError = { source: string; error: string }
 export type GitHubEvent = "PullRequestEvent" | "PullRequestReviewEvent" | "PullRequestReviewCommentEvent" | "IssuesEvent" | "IssueCommentEvent" | "PushEvent"
+/**
+ * One Harvest time entry as shown in the timeline's Harvest strip.
+ */
+export type HarvestTimeEntry = { id: number; 
+/**
+ * Decimal hours as tracked (Harvest also has `rounded_hours`; we show
+ * what the user actually entered).
+ */
+hours: number; notes: string | null; project: string; client: string; task: string; is_running: boolean; 
+/**
+ * The Harvest web page for this user's day, when the account's web
+ * domain could be resolved. Harvest has no documented per-entry deep link.
+ */
+url: string | null }
 export type IcalSyncStatus = { syncing: boolean; last_synced_at: number | null; last_error: string | null }
 /**
  * Timeline categories for Jira activity (mapped to REST/changelog rules in the Jira timeline source).
@@ -290,6 +339,11 @@ export type SettingsExport = {
 prompt: string }
 export type SettingsGit = { enabled: boolean; path: string }
 export type SettingsGitHub = { enabled: boolean; username: string; token: string; enabled_events: GitHubEvent[] }
+/**
+ * Harvest API v2 credentials: a personal access token plus the numeric
+ * account id it belongs to (both from https://id.getharvest.com/developers).
+ */
+export type SettingsHarvest = { enabled: boolean; access_token?: string; account_id?: string }
 export type SettingsIcal = { enabled?: boolean; urls?: string[]; 
 /**
  * User's email addresses used to identify ATTENDEE entries and filter declined events.
