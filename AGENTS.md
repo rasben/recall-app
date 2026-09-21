@@ -186,6 +186,30 @@ These patterns are intentional; follow them when adding settings areas or data s
 | `RECALL_TEST_ZULIP_EMAIL` | Zulip API integration test |
 | `RECALL_TEST_ZULIP_API_KEY` | Zulip API integration test |
 
+### CI
+
+Workflows live in `.github/workflows/`:
+
+| Workflow | Trigger | Does |
+|----------|---------|------|
+| `lint.yml` | PR to `main` | `npm run check` + `cargo clippy -- -D warnings` |
+| `test.yml` | PR to `main` | `npm run check` + `npm test`, with the integration secrets above |
+| `dependabot-auto-merge.yml` | PR to `main` by `dependabot[bot]` | Enables GitHub auto-merge on the PR |
+| `pages.yml` | push to `main` | Publishes `docs/`, `design/`, `static/` to GitHub Pages |
+| `release.yml` | push of a `v*` tag | Builds and publishes the desktop bundles |
+
+`lint` and `test` are **required status checks** on `main`. Auto-merge only
+honours required checks, so a new workflow that should gate merges has to be
+added to branch protection as well as to `.github/workflows/`.
+
+**Dependabot auto-merge:** every Dependabot PR — patch, minor and major — is
+queued for auto-merge as soon as it opens, and GitHub merges it only once
+`lint` and `test` are both green. A red check leaves the PR open for review.
+Because the merge is performed with `GITHUB_TOKEN`, the resulting push to
+`main` does not trigger `pages.yml`; that is harmless today since `pages.yml`
+only copies static files that dependency bumps never touch, but run it from
+the Actions tab if a dependency ever does affect the published site.
+
 ---
 
 ## Conventions
