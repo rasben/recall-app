@@ -45,8 +45,6 @@ fn make_specta_builder() -> Builder<tauri::Wry> {
         commands::settings::clear_all_caches,
         commands::settings::get_cache_size,
         commands::settings::get_cached_day_event_counts,
-        commands::settings_telemetry::get_settings_telemetry,
-        commands::settings_telemetry::set_settings_telemetry,
         commands::telemetry::telemetry_track,
         commands::telemetry::telemetry_set_gauge,
     ])

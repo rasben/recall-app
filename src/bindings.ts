@@ -221,17 +221,6 @@ async getCachedDayEventCounts() : Promise<Result<{ [key in string]: number }, st
     else return { status: "error", error: e  as any };
 }
 },
-async getSettingsTelemetry() : Promise<SettingsTelemetry> {
-    return await TAURI_INVOKE("get_settings_telemetry");
-},
-async setSettingsTelemetry(settings: SettingsTelemetry) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("set_settings_telemetry", { settings }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 /**
  * Increment the counter `name` (e.g. `nav.prev`). Fire-and-forget; invalid
  * names are dropped silently.
@@ -321,11 +310,6 @@ export type SettingsIcal = { enabled?: boolean; urls?: string[];
  */
 emails?: string[] }
 export type SettingsJira = { enabled: boolean; site_url?: string; email?: string; api_token?: string; enabled_events?: JiraEvent[] }
-export type SettingsTelemetry = { 
-/**
- * Anonymous daily usage summary on/off. Defaults to on; see `telemetry.rs`.
- */
-enabled: boolean }
 export type SettingsUi = { theme: string }
 export type SettingsZulip = { enabled: boolean; realm_url?: string; email?: string; api_key?: string }
 /**

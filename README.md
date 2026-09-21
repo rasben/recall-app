@@ -53,7 +53,7 @@ npm run tauri dev
 
 ## Telemetry
 
-Recall sends **one anonymous usage summary per day** so I can tell whether anyone uses the app and which features matter. You can turn it off under **Settings → System**, which also wipes anything counted locally but not yet sent.
+Recall sends **one anonymous usage summary per day** so I can tell whether anyone uses the app and which features matter. There is no opt-out: nothing in it can identify you, and the list below is the complete contract.
 
 **What is sent, once a day:**
 

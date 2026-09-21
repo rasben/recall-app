@@ -157,12 +157,6 @@ const en = {
   // Welcome
   "settings.welcome.show": "Show welcome screen",
   "settings.welcome.description": "i get it. it's a really cool h1 effect.",
-  "settings.telemetry.legend": "Anonymous usage statistics",
-  "settings.telemetry.enable": "Send an anonymous daily usage summary",
-  "settings.telemetry.description":
-    "Once a day Recall sends a random install ID, app version, OS, which sources are enabled, and how often features were used. Never titles, URLs, names, tokens, or anything from your timeline.",
-  "settings.telemetry.learn_more": "See exactly what is sent.",
-  "settings.telemetry.error": "Could not save telemetry setting",
 
   // Timeline
   "timeline.no_sources":
@@ -380,12 +374,6 @@ const da: Translations = {
 
   "settings.welcome.show": "Vis velkomstskærm",
   "settings.welcome.description": "forstår dig godt. det er en fed h1 effekt.",
-  "settings.telemetry.legend": "Anonym brugsstatistik",
-  "settings.telemetry.enable": "Send en anonym daglig brugsopsummering",
-  "settings.telemetry.description":
-    "Én gang om dagen sender Recall et tilfældigt installations-ID, app-version, OS, hvilke kilder der er slået til, og hvor ofte funktionerne er brugt. Aldrig titler, URL'er, navne, tokens eller noget fra din tidslinje.",
-  "settings.telemetry.learn_more": "Se præcis hvad der sendes.",
-  "settings.telemetry.error": "Kunne ikke gemme telemetri-indstillingen",
 
   "timeline.no_sources":
     "Ingen datakilder aktiveret. Aktiver mindst én i indstillingerne.",

@@ -10,8 +10,7 @@
 //! What is never sent: titles, URLs, repo names or paths, ticket keys,
 //! usernames, emails, calendar summaries, hostnames, error message text,
 //! timezone, or any timestamp finer than the calendar day. The only identifier
-//! is a random UUID generated at first launch. Users can opt out in Settings →
-//! System, which also wipes the locally accumulated counters.
+//! is a random UUID generated at first launch.
 //!
 //! All errors are silently swallowed; telemetry must never affect the user.
 //!
@@ -235,12 +234,6 @@ fn ping(db_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
 
     let conn = open(db_path)?;
 
-    if !is_enabled(&conn) {
-        // Opted out: make sure nothing accumulates on disk either.
-        conn.execute("DELETE FROM telemetry_counters", [])?;
-        return Ok(());
-    }
-
     let today = Local::now().format("%Y-%m-%d").to_string();
     if get_setting(&conn, KEY_LAST_PING).as_deref() == Some(today.as_str()) {
         return Ok(());
@@ -262,14 +255,6 @@ fn ping(db_path: &Path) -> Result<(), Box<dyn std::error::Error>> {
     subtract_counters(&conn, &counters)?;
 
     Ok(())
-}
-
-/// Telemetry is on unless the user has explicitly turned it off.
-fn is_enabled(conn: &Connection) -> bool {
-    settings_json(conn, crate::commands::settings_telemetry::KEY)
-        .get("enabled")
-        .and_then(Value::as_bool)
-        .unwrap_or(true)
 }
 
 /// The random install id plus the time it was first created (ms since epoch),
@@ -550,16 +535,6 @@ mod tests {
         assert_eq!(install_age_bucket(0, 400 * day), "365dplus");
         // Clock skew must not underflow.
         assert_eq!(install_age_bucket(10 * day, 0), "0to7d");
-    }
-
-    #[test]
-    fn enabled_defaults_to_true_and_honours_opt_out() {
-        let conn = mem_db();
-        assert!(is_enabled(&conn));
-        set_setting(&conn, crate::commands::settings_telemetry::KEY, r#"{"enabled":false}"#).unwrap();
-        assert!(!is_enabled(&conn));
-        set_setting(&conn, crate::commands::settings_telemetry::KEY, r#"{"enabled":true}"#).unwrap();
-        assert!(is_enabled(&conn));
     }
 
     #[test]
