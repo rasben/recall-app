@@ -60,6 +60,10 @@ const MAX_EXPORT_DAYS: i64 = 366;
 type DayBuckets = HashMap<NaiveDate, Vec<(i64, TimelineEvent)>>;
 /// `(source name, error message)` for each source that failed during a fetch.
 type SourceErrors = Vec<(&'static str, String)>;
+/// What one source's `events_for_range` returns: rows tagged with their local day.
+type RangeResult = Result<Vec<(NaiveDate, i64, TimelineEvent)>, String>;
+/// What one source's `events_for_day` returns.
+type DayResult = Result<Vec<(i64, TimelineEvent)>, String>;
 
 /// Fetch every timeline source once over the contiguous range spanning `wanted`
 /// (its first..=last day) and bucket the results by local day. Only days present
@@ -69,7 +73,7 @@ type SourceErrors = Vec<(&'static str, String)>;
 /// per-source progress. Returns the per-day buckets plus the `(source, error)`
 /// of every source that failed, so callers can both skip caching partial
 /// results and report the gaps to the user.
-fn collect_range_events<F: Fn(&'static str, bool, Option<String>)>(
+fn collect_range_events<F: Fn(&'static str, bool, Option<String>) + Sync>(
     state: &State<'_, AppState>,
     wanted: &[NaiveDate],
     emit: F,
@@ -92,34 +96,76 @@ fn collect_range_events<F: Fn(&'static str, bool, Option<String>)>(
             }
         }
     };
-    // Run one source: emit progress, time it, and record the outcome as a
-    // duration bucket plus (on failure) a coarse error class — never the text.
-    let mut run = |source: &'static str,
-                   fetch: &dyn Fn() -> Result<Vec<(NaiveDate, i64, TimelineEvent)>, String>| {
-        emit(source, false, None);
+    let fail = |errors: &mut Vec<(&'static str, String)>, source: &'static str, e: String| {
+        errors.push((source, e));
+    };
+    // Runs on the source's own thread: time the fetch, record the outcome as a
+    // duration bucket plus (on failure) a coarse error class — never the text —
+    // and report done/error the moment that source finishes, not when the whole
+    // batch is joined.
+    let run = |source: &'static str, fetch: &dyn Fn() -> RangeResult| -> RangeResult {
         let started = Instant::now();
-        let result = fetch();
+        let r = fetch();
         telemetry::record_source_timing(state, "range_ms", source, started.elapsed());
-        match result {
-            Ok(r) => {
-                extend(r);
-                emit(source, true, None);
-            }
-            Err(e) => {
-                telemetry::record_source_error(state, source, &e);
-                emit(source, true, Some(e.clone()));
-                errors.push((source, e));
-            }
+        if let Err(e) = &r {
+            telemetry::record_source_error(state, source, e);
         }
+        emit(source, true, r.as_ref().err().cloned());
+        r
     };
 
-    run("Git", &|| git::events_for_range(state, fetch_start, fetch_end));
-    run("GitHub", &|| github::events_for_range(state, fetch_start, fetch_end));
-    run("Calendar", &|| ical::events_for_range(state, fetch_start, fetch_end));
-    run("Jira", &|| jira::events_for_range(state, fetch_start, fetch_end));
-    run("Zulip", &|| zulip::events_for_range(state, fetch_start, fetch_end));
+    emit("Git", false, None);
+    emit("GitHub", false, None);
+    emit("Calendar", false, None);
+    emit("Jira", false, None);
+    emit("Zulip", false, None);
+
+    // The sources are independent, so fetch them concurrently (the same
+    // `thread::scope` pattern git.rs uses per repo): the range takes as long
+    // as the slowest source instead of the sum of all five.
+    let (git, github, calendar, jira, zulip) = std::thread::scope(|scope| {
+        let git = scope.spawn(|| run("Git", &|| git::events_for_range(state, fetch_start, fetch_end)));
+        let github = scope.spawn(|| run("GitHub", &|| github::events_for_range(state, fetch_start, fetch_end)));
+        let calendar = scope.spawn(|| run("Calendar", &|| ical::events_for_range(state, fetch_start, fetch_end)));
+        let jira = scope.spawn(|| run("Jira", &|| jira::events_for_range(state, fetch_start, fetch_end)));
+        let zulip = scope.spawn(|| run("Zulip", &|| zulip::events_for_range(state, fetch_start, fetch_end)));
+        (join_source(git), join_source(github), join_source(calendar), join_source(jira), join_source(zulip))
+    });
+
+    match git {
+        Ok(r) => extend(r),
+        Err(e) => fail(&mut errors, "Git", e),
+    }
+
+    match github {
+        Ok(r) => extend(r),
+        Err(e) => fail(&mut errors, "GitHub", e),
+    }
+
+    match calendar {
+        Ok(r) => extend(r),
+        Err(e) => fail(&mut errors, "Calendar", e),
+    }
+
+    match jira {
+        Ok(r) => extend(r),
+        Err(e) => fail(&mut errors, "Jira", e),
+    }
+
+    match zulip {
+        Ok(r) => extend(r),
+        Err(e) => fail(&mut errors, "Zulip", e),
+    }
 
     (per_day, errors)
+}
+
+/// Join a scoped per-source fetch thread, turning a panic into a source error
+/// so it blocks caching like any other failure instead of taking the app down.
+fn join_source<T>(handle: std::thread::ScopedJoinHandle<'_, Result<T, String>>) -> Result<T, String> {
+    handle
+        .join()
+        .unwrap_or_else(|_| Err("source fetch thread panicked".to_string()))
 }
 
 #[tauri::command]
@@ -145,36 +191,82 @@ pub async fn get_timeline_for_day(
             }
         }
 
+        let loading = |source: &'static str| {
+            let _ = app.emit("timeline:source", SourceProgress { source, done: false, error: None });
+        };
+        let done = |source: &'static str| {
+            let _ = app.emit("timeline:source", SourceProgress { source, done: true, error: None });
+        };
+        let fail = |source: &'static str, err: String| {
+            let _ = app.emit("timeline:source", SourceProgress { source, done: true, error: Some(err) });
+        };
+
+        // Runs on the source's own thread: time the fetch, record the duration
+        // bucket, the returned-count bucket or the error class (never the
+        // message text), and report done/error the moment that source
+        // finishes, not when the whole batch is joined.
+        let run = |source: &'static str, fetch: &dyn Fn() -> DayResult| -> DayResult {
+            let started = Instant::now();
+            let r = fetch();
+            telemetry::record_source_timing(&state, "load_ms", source, started.elapsed());
+            match &r {
+                Ok(rows) => {
+                    telemetry::record_source_events(&state, source, rows.len());
+                    done(source);
+                }
+                Err(e) => {
+                    telemetry::record_source_error(&state, source, e);
+                    fail(source, e.clone());
+                }
+            }
+            r
+        };
+
         let mut rows: Vec<(i64, TimelineEvent)> = Vec::new();
         let mut any_error = false;
 
-        // Run one source: emit progress before/after, time it, and record the
-        // duration bucket, the returned-count bucket, or the error class.
-        let mut run = |source: &'static str,
-                       fetch: &dyn Fn() -> Result<Vec<(i64, TimelineEvent)>, String>| {
-            let _ = app.emit("timeline:source", SourceProgress { source, done: false, error: None });
-            let started = Instant::now();
-            let result = fetch();
-            telemetry::record_source_timing(&state, "load_ms", source, started.elapsed());
-            match result {
-                Ok(r) => {
-                    telemetry::record_source_events(&state, source, r.len());
-                    rows.extend(r);
-                    let _ = app.emit("timeline:source", SourceProgress { source, done: true, error: None });
-                }
-                Err(e) => {
-                    any_error = true;
-                    telemetry::record_source_error(&state, source, &e);
-                    let _ = app.emit("timeline:source", SourceProgress { source, done: true, error: Some(e) });
-                }
-            }
-        };
+        loading("Git");
+        loading("GitHub");
+        loading("Calendar");
+        loading("Jira");
+        loading("Zulip");
 
-        run("Git", &|| git::events_for_day(&state, &day));
-        run("GitHub", &|| github::events_for_day(&state, &day));
-        run("Calendar", &|| ical::events_for_day(&state, &day));
-        run("Jira", &|| jira::events_for_day(&state, &day));
-        run("Zulip", &|| zulip::events_for_day(&state, &day));
+        // The sources are independent, so fetch them concurrently (the same
+        // `thread::scope` pattern git.rs uses per repo): the day loads in the
+        // time of the slowest source instead of the sum of all five.
+        let (git, github, calendar, jira, zulip) = std::thread::scope(|scope| {
+            let git = scope.spawn(|| run("Git", &|| git::events_for_day(&state, &day)));
+            let github = scope.spawn(|| run("GitHub", &|| github::events_for_day(&state, &day)));
+            let calendar = scope.spawn(|| run("Calendar", &|| ical::events_for_day(&state, &day)));
+            let jira = scope.spawn(|| run("Jira", &|| jira::events_for_day(&state, &day)));
+            let zulip = scope.spawn(|| run("Zulip", &|| zulip::events_for_day(&state, &day)));
+            (join_source(git), join_source(github), join_source(calendar), join_source(jira), join_source(zulip))
+        });
+
+        match git {
+            Ok(r) => rows.extend(r),
+            Err(_) => any_error = true,
+        }
+
+        match github {
+            Ok(r) => rows.extend(r),
+            Err(_) => any_error = true,
+        }
+
+        match calendar {
+            Ok(r) => rows.extend(r),
+            Err(_) => any_error = true,
+        }
+
+        match jira {
+            Ok(r) => rows.extend(r),
+            Err(_) => any_error = true,
+        }
+
+        match zulip {
+            Ok(r) => rows.extend(r),
+            Err(_) => any_error = true,
+        }
 
         rows.sort_by_key(|(ts, _)| *ts);
         let events: Vec<TimelineEvent> = rows.into_iter().map(|(_, ev)| ev).collect();
@@ -306,6 +398,56 @@ pub async fn export_timeline_for_range(
                 .map(|(source, error)| ExportSourceError { source: source.to_string(), error })
                 .collect(),
         })
+    })
+}
+
+/// Warm the per-day cache for every elapsed, not-yet-cached day in
+/// `[start, end]` (inclusive, `YYYY-MM-DD`) with a single range fetch, so each
+/// source is queried once for the whole span instead of once per day. Today
+/// and future days are skipped (never cached). No progress events are emitted:
+/// this runs in the background and must not disturb the visible day's
+/// per-source progress. Like every other path, nothing is cached if any
+/// source failed.
+#[tauri::command]
+#[specta::specta]
+pub async fn prefetch_days(
+    state: State<'_, AppState>,
+    start: String,
+    end: String,
+) -> Result<(), String> {
+    tokio::task::block_in_place(|| {
+        let start_day = NaiveDate::parse_from_str(&start, "%Y-%m-%d")
+            .map_err(|_| format!("Invalid start date (expected YYYY-MM-DD): {start}"))?;
+        let end_day = NaiveDate::parse_from_str(&end, "%Y-%m-%d")
+            .map_err(|_| format!("Invalid end date (expected YYYY-MM-DD): {end}"))?;
+        if end_day < start_day {
+            return Err(format!("End date {end} is before start date {start}"));
+        }
+        if (end_day - start_day).num_days() + 1 > MAX_EXPORT_DAYS {
+            return Err(format!("Range too large (max {MAX_EXPORT_DAYS} days)"));
+        }
+
+        let today = Local::now().date_naive();
+        let uncached: Vec<NaiveDate> = days_in_range(start_day, end_day)
+            .into_iter()
+            .filter(|d| *d < today)
+            .filter(|d| cache::get_cached_day(&state, &d.format("%Y-%m-%d").to_string()).is_none())
+            .collect();
+        if uncached.is_empty() {
+            return Ok(());
+        }
+
+        let (mut per_day, errors) = collect_range_events(&state, &uncached, |_, _, _| {});
+        if !errors.is_empty() {
+            return Ok(());
+        }
+        for day in uncached {
+            let mut rows = per_day.remove(&day).unwrap_or_default();
+            rows.sort_by_key(|(ts, _)| *ts);
+            let events: Vec<TimelineEvent> = rows.into_iter().map(|(_, ev)| ev).collect();
+            let _ = cache::save_cached_day(&state, &day.format("%Y-%m-%d").to_string(), &events);
+        }
+        Ok(())
     })
 }
 

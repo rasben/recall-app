@@ -141,6 +141,23 @@ async getDayCountsForMonth(year: number, month: number) : Promise<Result<{ [key 
     else return { status: "error", error: e  as any };
 }
 },
+/**
+ * Warm the per-day cache for every elapsed, not-yet-cached day in
+ * `[start, end]` (inclusive, `YYYY-MM-DD`) with a single range fetch, so each
+ * source is queried once for the whole span instead of once per day. Today
+ * and future days are skipped (never cached). No progress events are emitted:
+ * this runs in the background and must not disturb the visible day's
+ * per-source progress. Like every other path, nothing is cached if any
+ * source failed.
+ */
+async prefetchDays(start: string, end: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("prefetch_days", { start, end }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
 async testSettingsGit() : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("test_settings_git") };
