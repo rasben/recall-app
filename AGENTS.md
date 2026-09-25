@@ -47,6 +47,7 @@ Planned expansions (see `TODO.md` for the full list and priorities): Gmail (sent
 | `src/` | Frontend: SvelteKit routes, components, app shell |
 | `src-tauri/` | Tauri/Rust backend: commands, DB, app state |
 | `static/` | Static assets |
+| `docs/` | GitHub Pages landing page (`index.html`) and the public statistics page (`stats.html`, reads `/stats` and `/stats/features` from the worker client-side). Plain HTML, no build step. |
 | `worker/` | Cloudflare Worker that receives the daily telemetry summary into a D1 table (`schema.sql`) and serves `/stats` + `/stats/features`. Own `package.json`; `npm test` there runs Vitest against `node:sqlite` as a D1 stand-in. Deploy steps are in `worker/wrangler.toml`. |
 | `build/` | Vite build output (Tauri uses this as `frontendDist`; git-ignored) |
 

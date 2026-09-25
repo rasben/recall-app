@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Recall — Statistics</title>
+<style>
+  :root {
+    --bg: #F5F2EC;
+    --fg: #0B0B0F;
+    --muted: #6b6b6b;
+    --accent: #E85A2A;
+    --yellow: #ffdb33;
+    --border: rgba(11,11,15,0.10);
+    --bar: rgba(232,90,42,0.18);
+    --radius: 16px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0B0B0F; --fg: #F5F2EC; --muted: #9b9b9b; --border: rgba(245,242,236,0.12); --bar: rgba(232,90,42,0.28); }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font: 15px/1.6 ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif;
+    padding: 48px 32px 96px;
+  }
+  main { max-width: 1040px; margin: 0 auto; }
+  a { color: var(--accent); }
+
+  header { margin-bottom: 40px; display: flex; align-items: flex-start; gap: 28px; }
+  .logo-wrap img { width: 64px; height: 64px; border-radius: 16px; display: block; }
+  .header-text h1 { font-size: 36px; letter-spacing: -0.02em; margin: 0 0 10px; font-weight: 700; line-height: 1; }
+  .header-text p { color: var(--muted); margin: 0; max-width: 64ch; font-size: 15px; }
+  .accent { color: var(--accent); }
+  .back { font-size: 13px; color: var(--muted); text-decoration: none; display: inline-block; margin-bottom: 20px; }
+  .back:hover { color: var(--accent); }
+
+  section { margin-top: 48px; border-top: 1px solid var(--border); padding-top: 32px; }
+  section:first-of-type { margin-top: 0; border-top: 0; padding-top: 0; }
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  h2 { font-size: 22px; font-weight: 650; letter-spacing: -0.01em; margin: 0; }
+  h3 { font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 28px 0 10px; font-weight: 600; }
+  .hint { font-size: 13px; color: var(--muted); }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+  .tile { padding: 22px 24px; border: 1px solid var(--border); border-radius: var(--radius); }
+  .tile .label { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .tile .value { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+
+  .split { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  .panel { padding: 20px 24px; border: 1px solid var(--border); border-radius: var(--radius); }
+  .panel h3 { margin-top: 0; }
+
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
+  th { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  td.num, th.num { text-align: right; white-space: nowrap; }
+  tr:last-child td { border-bottom: 0; }
+  td.key { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+  .bar-cell { width: 40%; }
+  .bar { height: 10px; border-radius: 999px; background: var(--bar); position: relative; overflow: hidden; }
+  .bar > span { position: absolute; inset: 0; width: 0; background: var(--accent); border-radius: 999px; }
+
+  .window { display: inline-flex; gap: 4px; border: 1px solid var(--border); border-radius: 999px; padding: 3px; }
+  .window button {
+    font: inherit; font-size: 13px; padding: 4px 12px; border: 0; border-radius: 999px;
+    background: transparent; color: var(--muted); cursor: pointer;
+  }
+  .window button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+
+  .status { font-size: 13px; color: var(--muted); margin: 8px 0 0; }
+  .status.error { color: var(--accent); }
+  .empty { color: var(--muted); font-size: 14px; padding: 12px 0; }
+
+  @media (max-width: 640px) {
+    header { flex-direction: column; gap: 16px; }
+    .header-text h1 { font-size: 28px; }
+    .bar-cell { display: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="./">← Back to Recall</a>
+
+  <header>
+    <div class="logo-wrap">
+      <img src="static/logo.png" alt="Recall logo" />
+    </div>
+    <div class="header-text">
+      <h1>Statistics <span class="accent">—</span></h1>
+      <p>
+        Anonymous usage numbers from the daily telemetry summary. Nothing here identifies a
+        person or an install; see the
+        <a href="https://github.com/rasben/recall-app#telemetry">telemetry contract</a> for
+        exactly what the app sends.
+      </p>
+    </div>
+  </header>
+
+  <section>
+    <div class="section-head">
+      <h2>Installs</h2>
+      <span class="hint">Distinct installs that sent a summary in the period</span>
+    </div>
+    <div class="tiles">
+      <div class="tile"><div class="label">Today</div><div class="value" id="today">—</div></div>
+      <div class="tile"><div class="label">Last 7 days</div><div class="value" id="active-7d">—</div></div>
+      <div class="tile"><div class="label">Last 35 days</div><div class="value" id="active-35d">—</div></div>
+    </div>
+    <p class="status" id="installs-status"></p>
+
+    <div class="split" style="margin-top: 24px;">
+      <div class="panel">
+        <h3>By version</h3>
+        <div id="by-version"></div>
+      </div>
+      <div class="panel">
+        <h3>By platform</h3>
+        <div id="by-platform"></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Feature usage</h2>
+      <div class="window" id="window" role="group" aria-label="Time window">
+        <button type="button" data-days="7">7 days</button>
+        <button type="button" data-days="30" aria-pressed="true">30 days</button>
+        <button type="button" data-days="90">90 days</button>
+        <button type="button" data-days="365">1 year</button>
+      </div>
+    </div>
+    <p class="hint">
+      <strong>Total</strong> is the number of times something happened across all installs;
+      <strong>installs</strong> is how many distinct installs did it at least once.
+    </p>
+    <p class="status" id="features-status"></p>
+    <div id="features"></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <h2>Health</h2>
+      <span class="hint">Per-source fetch timings, event volumes and error classes, same window as above</span>
+    </div>
+    <div id="health"></div>
+  </section>
+</main>
+
+<script>
+  const BASE_URL = "https://recall-telemetry.recall-app.workers.dev";
+
+  // Human labels for counter-key prefixes. Unknown prefixes fall back to the raw prefix.
+  const GROUPS = {
+    app: "App",
+    welcome: "Welcome screen",
+    onboarding: "Onboarding",
+    timeline: "Timeline",
+    nav: "Date navigation",
+    group_mode: "Grouping",
+    filter: "Source filters",
+    harvest: "Harvest check marks",
+    export: "Export for AI",
+    link: "Outbound links",
+    settings: "Settings",
+    cache: "Cache",
+    update: "Update toast",
+    ical: "Calendar sync",
+  };
+
+  // Health matrices: prefix → { title, bucket order }. Keys look like `<prefix>.<source>.<bucket>`.
+  const HEALTH = {
+    load_ms: { title: "Day fetch duration", buckets: ["lt1s", "1to3s", "3to10s", "gt10s"] },
+    range_ms: { title: "Range fetch duration", buckets: ["lt1s", "1to3s", "3to10s", "gt10s"] },
+    events: { title: "Events per loaded day", buckets: ["0", "1to10", "11to50", "50plus"] },
+    error: { title: "Errors by class", buckets: ["auth", "rate_limit", "network", "config", "other"] },
+  };
+  const BUCKET_LABELS = {
+    lt1s: "< 1 s", "1to3s": "1–3 s", "3to10s": "3–10 s", gt10s: "> 10 s",
+    "0": "0", "1to10": "1–10", "11to50": "11–50", "50plus": "50+",
+    auth: "Auth", rate_limit: "Rate limit", network: "Network", config: "Config", other: "Other",
+  };
+
+  const fmt = (n) => Number(n ?? 0).toLocaleString("en-US");
+  const el = (id) => document.getElementById(id);
+
+  function setStatus(id, text, isError = false) {
+    const node = el(id);
+    node.textContent = text;
+    node.classList.toggle("error", isError);
+  }
+
+  function countTable(counts) {
+    const entries = Object.entries(counts ?? {}).sort((a, b) => b[1] - a[1]);
+    if (entries.length === 0) return '<p class="empty">No data yet.</p>';
+    const max = Math.max(...entries.map(([, n]) => n));
+    return `<table>${entries.map(([label, n]) => `
+      <tr>
+        <td class="key">${escape(label)}</td>
+        <td class="bar-cell"><div class="bar"><span style="width:${(100 * n) / max}%"></span></div></td>
+        <td class="num">${fmt(n)}</td>
+      </tr>`).join("")}</table>`;
+  }
+
+  function escape(s) {
+    return String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  }
+
+  async function loadInstalls() {
+    try {
+      const res = await fetch(`${BASE_URL}/stats`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      el("today").textContent = fmt(data.today);
+      el("active-7d").textContent = fmt(data.active_7d);
+      el("active-35d").textContent = fmt(data.active_35d ?? data.active);
+      el("by-version").innerHTML = countTable(data.by_version);
+      el("by-platform").innerHTML = countTable(data.by_platform);
+      setStatus("installs-status", "");
+    } catch (err) {
+      setStatus("installs-status", `Could not load install stats (${err.message}).`, true);
+    }
+  }
+
+  function renderFeatures(counters) {
+    const groups = new Map();
+    for (const [key, { total, installs }] of Object.entries(counters)) {
+      const prefix = key.split(".")[0];
+      if (HEALTH[prefix]) continue;
+      if (!groups.has(prefix)) groups.set(prefix, []);
+      groups.get(prefix).push({ key, total, installs });
+    }
+    if (groups.size === 0) {
+      el("features").innerHTML = '<p class="empty">No feature counters in this window.</p>';
+      return;
+    }
+    const order = Object.keys(GROUPS);
+    const sorted = [...groups.entries()].sort(([a], [b]) => {
+      const ia = order.indexOf(a), ib = order.indexOf(b);
+      return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib) || a.localeCompare(b);
+    });
+    el("features").innerHTML = sorted.map(([prefix, rows]) => {
+      rows.sort((a, b) => b.total - a.total);
+      const max = Math.max(...rows.map((r) => r.total));
+      return `
+        <h3>${escape(GROUPS[prefix] ?? prefix)}</h3>
+        <table>
+          <thead><tr><th>Counter</th><th class="bar-cell"></th><th class="num">Total</th><th class="num">Installs</th></tr></thead>
+          <tbody>${rows.map((r) => `
+            <tr>
+              <td class="key">${escape(r.key)}</td>
+              <td class="bar-cell"><div class="bar"><span style="width:${(100 * r.total) / max}%"></span></div></td>
+              <td class="num">${fmt(r.total)}</td>
+              <td class="num">${fmt(r.installs)}</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>`;
+    }).join("");
+  }
+
+  function renderHealth(counters) {
+    const html = Object.entries(HEALTH).map(([prefix, { title, buckets }]) => {
+      const bySource = new Map();
+      for (const [key, { total }] of Object.entries(counters)) {
+        const parts = key.split(".");
+        if (parts[0] !== prefix || parts.length < 3) continue;
+        const source = parts.slice(1, -1).join(".");
+        const bucket = parts[parts.length - 1];
+        if (!bySource.has(source)) bySource.set(source, {});
+        bySource.get(source)[bucket] = (bySource.get(source)[bucket] ?? 0) + total;
+      }
+      if (bySource.size === 0) return "";
+      const sources = [...bySource.keys()].sort();
+      return `
+        <h3>${escape(title)}</h3>
+        <table>
+          <thead><tr><th>Source</th>${buckets.map((b) => `<th class="num">${escape(BUCKET_LABELS[b] ?? b)}</th>`).join("")}<th class="num">Total</th></tr></thead>
+          <tbody>${sources.map((s) => {
+            const row = bySource.get(s);
+            const total = Object.values(row).reduce((a, b) => a + b, 0);
+            return `<tr><td class="key">${escape(s)}</td>${buckets.map((b) => `<td class="num">${row[b] ? fmt(row[b]) : "·"}</td>`).join("")}<td class="num">${fmt(total)}</td></tr>`;
+          }).join("")}
+          </tbody>
+        </table>`;
+    }).join("");
+    el("health").innerHTML = html || '<p class="empty">No health counters in this window.</p>';
+  }
+
+  let currentDays = 30;
+  async function loadFeatures(days) {
+    currentDays = days;
+    for (const btn of el("window").querySelectorAll("button")) {
+      btn.setAttribute("aria-pressed", String(Number(btn.dataset.days) === days));
+    }
+    setStatus("features-status", "Loading…");
+    try {
+      const res = await fetch(`${BASE_URL}/stats/features?days=${days}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      if (data.days !== currentDays) return; // a newer request has taken over
+      renderFeatures(data.counters ?? {});
+      renderHealth(data.counters ?? {});
+      setStatus("features-status", "");
+    } catch (err) {
+      setStatus("features-status", `Could not load feature stats (${err.message}).`, true);
+    }
+  }
+
+  el("window").addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-days]");
+    if (btn) loadFeatures(Number(btn.dataset.days));
+  });
+
+  loadInstalls();
+  loadFeatures(currentDays);
+</script>
+</body>
+</html>
