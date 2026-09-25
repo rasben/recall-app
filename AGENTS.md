@@ -47,6 +47,7 @@ Planned expansions (see `TODO.md` for the full list and priorities): Gmail (sent
 | `src/` | Frontend: SvelteKit routes, components, app shell |
 | `src-tauri/` | Tauri/Rust backend: commands, DB, app state |
 | `static/` | Static assets |
+| `scripts/` | `stats.mjs`: zero-dependency terminal viewer for the telemetry worker's public `/stats` + `/stats/features` endpoints (`npm run stats`; `--once` prints and exits, `--days N`, `--url` for `wrangler dev`). |
 | `worker/` | Cloudflare Worker that receives the daily telemetry summary into a D1 table (`schema.sql`) and serves `/stats` + `/stats/features`. Own `package.json`; `npm test` there runs Vitest against `node:sqlite` as a D1 stand-in. Deploy steps are in `worker/wrangler.toml`. |
 | `build/` | Vite build output (Tauri uses this as `frontendDist`; git-ignored) |
 
@@ -157,6 +158,10 @@ These patterns are intentional; follow them when adding settings areas or data s
 
 - Frontend: `npm run build` → output in `build/`
 - Desktop: `npm run tauri build` (runs `npm run build` then Tauri bundle).
+
+### Telemetry statistics
+
+- `npm run stats` — interactive TUI over the telemetry worker's public stats (install counts, feature counters, per-source health). `npm run stats -- --once` prints once (also the default when stdout is not a TTY).
 
 ### Typecheck & format
 
