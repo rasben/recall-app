@@ -37,7 +37,7 @@
     "@tailwindcss/typography": "^0.5.20",
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/cli": "^2",
-    "@types/node": "^26.6.2",
+    "@types/node": "^26.6.5",
     "clsx": "^2.1.1",
     "mode-watcher": "^1.1.0",
     "prettier": "^3.9.10",
