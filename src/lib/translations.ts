@@ -209,11 +209,14 @@ const en = {
   "export.md_no_activity": "No tracked activity.",
   "export.prompt": `First, before doing anything else, ask me whether you should also pull in data from any other sources you can access (such as chat sessions), and wait for my answer before continuing.
 
-Then summarize the activity below per day as an easy-to-read list. It is used to update Harvest time tracking, so:
-- Whenever activity can be tied to a Jira ticket ID (e.g. DDF-123, BUPL-123), group and label it by that ID — the ticket ID is the single most important thing for Harvest, so include it whenever it can be determined.
+Then summarize the activity below as one table per day, with the columns **Ticket/project**, **Task**, **Hours** and **Reasoning**. It is used to update Harvest time tracking, so:
+- Whenever activity can be tied to a Jira ticket ID (e.g. DDF-123, BUPL-123), group and label it by that ID — the ticket ID is the single most important thing for Harvest, so include it whenever it can be determined. Look for it in commit messages, branch names, PR titles and Jira links, but don't guess.
 - Group the remaining entries by project (e.g. DDF, BUPL).
 - Within each ticket or project, break the work into separate tasks so each can be logged as its own Harvest entry — don't lump everything under one heading.
-- You may combine routine, related items into a single entry (e.g. a batch of Dependabot dependency-update PRs), but keep unrelated work (such as a feature) as its own entry.`,
+- You may combine routine, related items into a single entry (e.g. a batch of Dependabot dependency-update PRs), but keep unrelated work (such as a feature) as its own entry.
+- Estimate the hours for each entry in quarter hours (0.25). Base them on meeting durations from the calendar and the time span between related activities — the tracked activities are only traces of the work, which also happens in between them.
+- Briefly explain in **Reasoning** what the estimate is based on, and flag it if it's a rough guess.
+- End each table with a row for the day's total hours.`,
   "settings.export.title": "AI export prompt",
   "settings.export.description":
     "The intro prepended to a Markdown export when “Add a prompt intro” is on. Leave it as the default to follow the app language, or write your own. Save an empty box to fall back to the default.",
@@ -427,11 +430,14 @@ const da: Translations = {
   "export.md_no_activity": "Ingen registreret aktivitet.",
   "export.prompt": `Spørg mig først, før du gør noget andet, om du også skal inddrage data fra andre kilder, du har adgang til (såsom chat-sessioner), og vent på mit svar, før du fortsætter.
 
-Opsummér derefter aktiviteten nedenfor per dag som en letlæselig liste. Den bruges til at opdatere Harvest-tidsregistrering, så:
-- Når aktivitet kan knyttes til et Jira-sags-ID (f.eks. DDF-123, BUPL-123), så gruppér og mærk den efter det ID — sags-ID'et er det vigtigste for Harvest, så medtag det, når det kan bestemmes.
+Opsummér derefter aktiviteten nedenfor som én tabel per dag med kolonnerne **Sag/projekt**, **Opgave**, **Timer** og **Begrundelse**. Oversigten bruges til at opdatere Harvest-tidsregistrering, så:
+- Når aktivitet kan knyttes til et Jira-sags-ID (f.eks. DDF-123, BUPL-123), så gruppér og mærk den efter det ID — sags-ID'et er det vigtigste for Harvest, så medtag det, når det kan bestemmes. Kig efter det i commit-beskeder, branch-navne, PR-titler og Jira-links, men gæt ikke.
 - Gruppér de resterende poster efter projekt (f.eks. DDF, BUPL).
 - Inddel arbejdet inden for hver sag eller hvert projekt i separate opgaver, så hver kan registreres som sin egen Harvest-post — saml ikke det hele under én overskrift.
-- Du må gerne kombinere rutineprægede, relaterede poster i én post (f.eks. en stak Dependabot-opdaterings-PR'er), men hold urelateret arbejde (såsom en feature) som sin egen post.`,
+- Du må gerne kombinere rutineprægede, relaterede poster i én post (f.eks. en stak Dependabot-opdaterings-PR'er), men hold urelateret arbejde (såsom en feature) som sin egen post.
+- Estimér timerne for hver post i kvarte timer (0,25). Brug møders varighed fra kalenderen og tidsrummet mellem relaterede aktiviteter — de registrerede aktiviteter er kun spor af arbejdet, som også foregår imellem dem.
+- Forklar kort i **Begrundelse**, hvad estimatet bygger på, og markér det, hvis det er et løst gæt.
+- Afslut hver tabel med en række med dagens samlede timer.`,
   "settings.export.title": "AI-eksport-prompt",
   "settings.export.description":
     "Introteksten der sættes foran en Markdown-eksport, når “Tilføj en prompt-intro” er slået til. Lad den stå som standard for at følge appens sprog, eller skriv din egen. Gem et tomt felt for at falde tilbage til standarden.",
