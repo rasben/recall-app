@@ -9,7 +9,7 @@
     "db:init:local": "wrangler d1 execute recall-telemetry --local --file=./schema.sql"
   },
   "devDependencies": {
-    "vitest": "^5.0.1",
+    "vitest": "^5.0.5",
     "wrangler": "^4.151.0"
   }
 }
