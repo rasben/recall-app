@@ -121,7 +121,7 @@ These patterns are intentional; follow them when adding settings areas or data s
 | Layer | Technology |
 |-------|------------|
 | Frontend | Svelte 5, SvelteKit 3, Vite 8, TypeScript (strict, ~6.0) |
-| Styling | Tailwind CSS 4 (`@tailwindcss/vite`), tw-animate-css, @tailwindcss/forms, @tailwindcss/typography |
+| Styling | Tailwind CSS 4 (`@tailwindcss/vite`), tw-animate-css |
 | UI | bits-ui (shadcn-svelte), svelte-sonner, @lucide/svelte |
 | Desktop | Tauri 2 |
 | Backend | Rust (edition 2021), tauri-specta, rusqlite, once_cell, uuid (v5 for Harvest-done row ids), ical (iCal feed parsing), rrule (RRULE recurrence expansion) |
@@ -213,6 +213,12 @@ Because the merge is performed with `GITHUB_TOKEN`, the resulting push to
 `main` does not trigger `pages.yml`; that is harmless today since `pages.yml`
 only copies static files that dependency bumps never touch, but run it from
 the Actions tab if a dependency ever does affect the published site.
+
+**Dependabot config** (`.github/dependabot.yml`): `@sveltejs/*` packages are
+grouped into one PR, because `@sveltejs/kit` and its adapters require each
+other's major version and cannot be bumped separately. TypeScript major
+updates are ignored while svelte-check and `@sveltejs/kit` only accept
+TypeScript 6; lift the ignore once both accept 7.
 
 ---
 

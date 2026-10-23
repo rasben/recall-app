@@ -5,6 +5,18 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      # @sveltejs/kit and its adapters peer-depend on each other's major
+      # version, so separate PRs for them can never install on their own.
+      sveltejs:
+        patterns:
+          - "@sveltejs/*"
+    ignore:
+      # TypeScript 7 (the native compiler) drops the JS API that svelte-check
+      # uses, and neither svelte-check nor @sveltejs/kit accept it yet. Remove
+      # this once both list typescript 7 in their peerDependencies.
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: cargo
     directory: /src-tauri
