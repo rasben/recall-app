@@ -46,7 +46,7 @@ npm run tauri dev
 
 ### Tech-Stack
 
-- Svelte 5 + SvelteKit 2
+- Svelte 5 + SvelteKit 3
 - Tauri 2
 - Rust backend
 - SQLite for settings/credentials.
