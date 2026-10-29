@@ -225,6 +225,24 @@ Then summarize the activity below as one table per day, with the columns **Ticke
   "settings.export.saved": "Prompt saved",
   "settings.export.error": "Could not save the prompt.",
 
+  "settings.claude.title": "Claude",
+  "settings.claude.description":
+    "Have Claude (the desktop app's Code tab) write a Harvest overview of your previous working day every weekday morning. Claude only gets the timeline from Recall's command-line tool, never your GitHub, Jira or Zulip credentials.",
+  "settings.claude.step_skill": "Add a skill that tells Claude how to use the recall command:",
+  "settings.claude.step_rule": "Let Claude run that command without asking, by adding",
+  "settings.claude.step_open":
+    "Open Claude with a request to schedule the task. Check it and press Enter to send it.",
+  "settings.claude.installed": "done",
+  "settings.claude.time_label": "Weekdays at",
+  "settings.claude.setup": "Set up with Claude",
+  "settings.claude.done": "Claude is open: send the prefilled message to create the task.",
+  "settings.claude.error": "Could not set up Claude.",
+  "settings.claude.note":
+    "Scheduled tasks only run while the Claude app is open and the computer is awake. A missed run happens the next time Claude starts.",
+  "settings.claude.unsupported": "Setting up Claude is not supported on Windows yet.",
+  "settings.claude.no_cli":
+    "The recall command-line tool was not found next to the app, so Claude has nothing to run. Install a release build of Recall.",
+
   "export.copy": "Copy to clipboard",
   "export.copying": "Preparing…",
   "export.copied": "Copied {count} events to clipboard",
@@ -445,6 +463,24 @@ Opsummér derefter aktiviteten nedenfor som én tabel per dag med kolonnerne **S
   "settings.export.revert": "Nulstil til standard",
   "settings.export.saved": "Prompt gemt",
   "settings.export.error": "Kunne ikke gemme prompten.",
+
+  "settings.claude.title": "Claude",
+  "settings.claude.description":
+    "Lad Claude (desktop-appens Code-fane) skrive et Harvest-overblik over din forrige arbejdsdag hver hverdagsmorgen. Claude får kun tidslinjen fra Recalls kommandolinjeværktøj, aldrig dine GitHub-, Jira- eller Zulip-legitimationsoplysninger.",
+  "settings.claude.step_skill": "Tilføj en skill, der fortæller Claude, hvordan recall-kommandoen bruges:",
+  "settings.claude.step_rule": "Lad Claude køre kommandoen uden at spørge ved at tilføje",
+  "settings.claude.step_open":
+    "Åbn Claude med en anmodning om at planlægge opgaven. Tjek den, og tryk Enter for at sende den.",
+  "settings.claude.installed": "udført",
+  "settings.claude.time_label": "Hverdage kl.",
+  "settings.claude.setup": "Sæt op med Claude",
+  "settings.claude.done": "Claude er åben: send den udfyldte besked for at oprette opgaven.",
+  "settings.claude.error": "Kunne ikke sætte Claude op.",
+  "settings.claude.note":
+    "Planlagte opgaver kører kun, mens Claude-appen er åben og computeren er vågen. En mistet kørsel sker næste gang Claude starter.",
+  "settings.claude.unsupported": "Opsætning af Claude understøttes endnu ikke på Windows.",
+  "settings.claude.no_cli":
+    "Recalls kommandolinjeværktøj blev ikke fundet ved siden af appen, så Claude har intet at køre. Installér en release-build af Recall.",
 
   "export.copy": "Kopiér til udklipsholder",
   "export.copying": "Forbereder…",

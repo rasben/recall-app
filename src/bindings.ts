@@ -250,6 +250,26 @@ async telemetryTrack(name: string) : Promise<void> {
  */
 async telemetrySetGauge(name: string, value: string) : Promise<void> {
     await TAURI_INVOKE("telemetry_set_gauge", { name, value });
+},
+async getClaudeSetupStatus() : Promise<Result<ClaudeSetupStatus, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_claude_setup_status") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Write the skill, allow the CLI in Claude's settings, then open Claude with
+ * a prefilled request to schedule the overview on weekdays at `time` (`HH:MM`).
+ */
+async setupClaude(time: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("setup_claude", { time }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -264,6 +284,29 @@ async telemetrySetGauge(name: string, value: string) : Promise<void> {
 /** user-defined types **/
 
 export type CacheSizeResult = { bytes: number; cached_days: number }
+export type ClaudeSetupStatus = { 
+/**
+ * False where the setup is not offered (Windows: Claude runs commands
+ * through Git Bash there, and the path/permission rule story is untested).
+ */
+supported: boolean; 
+/**
+ * Shell command that runs the bundled CLI; `None` when no `recall` binary
+ * sits next to the app (e.g. a `tauri dev` build that never built it).
+ */
+command: string | null; 
+/**
+ * Permission rule added to Claude's settings, for `command`.
+ */
+allow_rule: string | null; skill_path: string; settings_path: string; 
+/**
+ * The skill file exists with exactly the content this build would write.
+ */
+skill_installed: boolean; 
+/**
+ * Claude's settings already allow `allow_rule`.
+ */
+rule_installed: boolean }
 export type ClearCachesResult = { rows_deleted: number }
 /**
  * One day's worth of merged timeline events, used by the export command so the
