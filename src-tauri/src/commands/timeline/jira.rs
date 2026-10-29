@@ -19,8 +19,7 @@ use base64::{engine::general_purpose::STANDARD, Engine as _};
 use chrono::{DateTime, Local, NaiveDate, Utc};
 use serde::Deserialize;
 use std::collections::BTreeMap;
-use tauri::State;
-use crate::commands::settings_jira::get_settings_jira;
+use crate::commands::settings_jira::load_settings_jira;
 use crate::state::AppState;
 use crate::timeline::{sanitize_event_url, TimelineEvent, TimelineEventSource};
 
@@ -92,8 +91,8 @@ pub(crate) fn jira_request_json(
     Ok((status, body))
 }
 
-pub(super) fn test_connection(state: &State<'_, AppState>) -> Result<(), String> {
-    let Some(settings) = get_settings_jira(state.clone()) else {
+pub(super) fn test_connection(state: &AppState) -> Result<(), String> {
+    let Some(settings) = load_settings_jira(state) else {
         return Err("Jira is not configured".into());
     };
     let base = normalize_site_url(&settings.site_url);
@@ -115,7 +114,7 @@ pub(super) fn test_connection(state: &State<'_, AppState>) -> Result<(), String>
 }
 
 pub(super) fn events_for_day(
-    state: &State<'_, AppState>,
+    state: &AppState,
     day: &str,
 ) -> Result<Vec<(i64, TimelineEvent)>, String> {
     let day_naive =
@@ -125,11 +124,11 @@ pub(super) fn events_for_day(
 }
 
 pub(super) fn events_for_range(
-    state: &State<'_, AppState>,
+    state: &AppState,
     start_day: NaiveDate,
     end_day: NaiveDate,
 ) -> Result<Vec<(NaiveDate, i64, TimelineEvent)>, String> {
-    let Some(settings) = get_settings_jira(state.clone()) else {
+    let Some(settings) = load_settings_jira(state) else {
         return Ok(Vec::new());
     };
     if !settings.enabled {

@@ -2,7 +2,6 @@ use base64::{engine::general_purpose::STANDARD, Engine as _};
 use chrono::{DateTime, Local, NaiveDate, TimeZone, Utc};
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
-use tauri::State;
 
 /// Upper bound on messages fetched per API call (Zulip server caps at ~1000).
 const ZULIP_PAGE_SIZE: u32 = 1000;
@@ -11,7 +10,7 @@ const ZULIP_PAGE_SIZE: u32 = 1000;
 /// single day, and if we don't reach the target day by then, something is wrong.
 const ZULIP_MAX_PAGES: u32 = 10;
 
-use crate::commands::settings_zulip::get_settings_zulip;
+use crate::commands::settings_zulip::load_settings_zulip;
 use crate::state::AppState;
 use crate::timeline::{sanitize_event_url, TimelineEvent, TimelineEventSource};
 
@@ -19,8 +18,8 @@ fn normalize_realm_url(raw: &str) -> String {
     raw.trim().trim_end_matches('/').to_string()
 }
 
-pub(super) fn test_connection(state: &State<'_, AppState>) -> Result<(), String> {
-    let Some(settings) = get_settings_zulip(state.clone()) else {
+pub(super) fn test_connection(state: &AppState) -> Result<(), String> {
+    let Some(settings) = load_settings_zulip(state) else {
         return Err("Zulip is not configured".into());
     };
     let realm = normalize_realm_url(&settings.realm_url);
@@ -49,7 +48,7 @@ pub(super) fn test_connection(state: &State<'_, AppState>) -> Result<(), String>
 }
 
 pub(super) fn events_for_day(
-    state: &State<'_, AppState>,
+    state: &AppState,
     day: &str,
 ) -> Result<Vec<(i64, TimelineEvent)>, String> {
     let day_naive =
@@ -59,11 +58,11 @@ pub(super) fn events_for_day(
 }
 
 pub(super) fn events_for_range(
-    state: &State<'_, AppState>,
+    state: &AppState,
     start_day: NaiveDate,
     end_day: NaiveDate,
 ) -> Result<Vec<(NaiveDate, i64, TimelineEvent)>, String> {
-    let Some(settings) = get_settings_zulip(state.clone()) else {
+    let Some(settings) = load_settings_zulip(state) else {
         return Ok(Vec::new());
     };
     if !settings.enabled {

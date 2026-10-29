@@ -41,6 +41,12 @@ pub fn set_settings_github(
 #[tauri::command]
 #[specta::specta]
 pub fn get_settings_github(state: State<'_, AppState>) -> Option<SettingsGitHub> {
-    let json = get_val(&state, KEY)?;
+    load_settings_github(&state)
+}
+
+/// [`get_settings_github`] for callers holding a plain `&AppState` (the
+/// timeline source, the CLI) rather than a Tauri `State`.
+pub(crate) fn load_settings_github(state: &AppState) -> Option<SettingsGitHub> {
+    let json = get_val(state, KEY)?;
     serde_json::from_str(&json).ok()
 }

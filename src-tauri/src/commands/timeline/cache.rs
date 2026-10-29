@@ -6,7 +6,6 @@
 //! stays fresh as activity lands.
 
 use rusqlite::params;
-use tauri::State;
 
 use crate::commands::settings::now;
 use crate::state::AppState;
@@ -19,7 +18,7 @@ use crate::timeline::TimelineEvent;
 const MAX_CACHED_DAYS: i64 = 730;
 
 pub(super) fn get_cached_day(
-    state: &State<'_, AppState>,
+    state: &AppState,
     day: &str,
 ) -> Option<Vec<TimelineEvent>> {
     let conn = state.db.lock().ok()?;
@@ -31,7 +30,7 @@ pub(super) fn get_cached_day(
 }
 
 pub(super) fn save_cached_day(
-    state: &State<'_, AppState>,
+    state: &AppState,
     day: &str,
     events: &[TimelineEvent],
 ) -> Result<(), String> {
@@ -63,7 +62,7 @@ mod tests {
     use crate::timeline::TimelineEventSource;
     use chrono::NaiveDate;
 
-    fn row_count(state: &State<'_, AppState>) -> i64 {
+    fn row_count(state: &AppState) -> i64 {
         let conn = state.db.lock().unwrap();
         conn.query_row("SELECT COUNT(*) FROM timeline_day_cache", [], |r| r.get(0))
             .unwrap()

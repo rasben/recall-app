@@ -74,7 +74,7 @@ type DayResult = Result<Vec<(i64, TimelineEvent)>, String>;
 /// of every source that failed, so callers can both skip caching partial
 /// results and report the gaps to the user.
 fn collect_range_events<F: Fn(&'static str, bool, Option<String>) + Sync>(
-    state: &State<'_, AppState>,
+    state: &AppState,
     wanted: &[NaiveDate],
     emit: F,
 ) -> (DayBuckets, SourceErrors) {
@@ -333,71 +333,80 @@ pub async fn export_timeline_for_range(
     end: String,
 ) -> Result<ExportResult, String> {
     tokio::task::block_in_place(|| {
-        let start_day = NaiveDate::parse_from_str(&start, "%Y-%m-%d")
-            .map_err(|_| format!("Invalid start date (expected YYYY-MM-DD): {start}"))?;
-        let end_day = NaiveDate::parse_from_str(&end, "%Y-%m-%d")
-            .map_err(|_| format!("Invalid end date (expected YYYY-MM-DD): {end}"))?;
-        if end_day < start_day {
-            return Err(format!("End date {end} is before start date {start}"));
+        let result = export_range(&state, &start, &end);
+        if result.is_ok() {
+            telemetry::record(&state, "export.range");
         }
-        if (end_day - start_day).num_days() + 1 > MAX_EXPORT_DAYS {
-            return Err(format!("Range too large (max {MAX_EXPORT_DAYS} days)"));
-        }
-        telemetry::record(&state, "export.range");
+        result
+    })
+}
 
-        let today = Local::now().date_naive();
+/// Blocking body of [`export_timeline_for_range`], shared with the CLI. Only
+/// fails on invalid input; source failures are reported in `errors`.
+pub(crate) fn export_range(state: &AppState, start: &str, end: &str) -> Result<ExportResult, String> {
+    let start_day = NaiveDate::parse_from_str(start, "%Y-%m-%d")
+        .map_err(|_| format!("Invalid start date (expected YYYY-MM-DD): {start}"))?;
+    let end_day = NaiveDate::parse_from_str(end, "%Y-%m-%d")
+        .map_err(|_| format!("Invalid end date (expected YYYY-MM-DD): {end}"))?;
+    if end_day < start_day {
+        return Err(format!("End date {end} is before start date {start}"));
+    }
+    if (end_day - start_day).num_days() + 1 > MAX_EXPORT_DAYS {
+        return Err(format!("Range too large (max {MAX_EXPORT_DAYS} days)"));
+    }
 
-        let range_days = days_in_range(start_day, end_day);
+    let today = Local::now().date_naive();
 
-        // Reuse cached rows for elapsed days; collect the rest for one live
-        // fetch. Today and any future day are always fetched live, never cached.
-        let mut by_day: HashMap<NaiveDate, Vec<TimelineEvent>> = HashMap::new();
-        let mut uncached: Vec<NaiveDate> = Vec::new();
-        for &d in &range_days {
-            if d < today {
-                let iso = d.format("%Y-%m-%d").to_string();
-                match cache::get_cached_day(&state, &iso) {
-                    Some(cached) => { by_day.insert(d, cached); }
-                    None => uncached.push(d),
-                }
-            } else {
-                uncached.push(d);
+    let range_days = days_in_range(start_day, end_day);
+
+    // Reuse cached rows for elapsed days; collect the rest for one live
+    // fetch. Today and any future day are always fetched live, never cached.
+    let mut by_day: HashMap<NaiveDate, Vec<TimelineEvent>> = HashMap::new();
+    let mut uncached: Vec<NaiveDate> = Vec::new();
+    for &d in &range_days {
+        if d < today {
+            let iso = d.format("%Y-%m-%d").to_string();
+            match cache::get_cached_day(state, &iso) {
+                Some(cached) => { by_day.insert(d, cached); }
+                None => uncached.push(d),
             }
+        } else {
+            uncached.push(d);
         }
+    }
 
-        // No progress events here: an export is a one-shot copy, and the
-        // returned `errors` (not a side-channel event) is what the UI needs.
-        let (mut per_day, errors) = collect_range_events(&state, &uncached, |_, _, _| {});
-        let any_error = !errors.is_empty();
+    // No progress events here: an export is a one-shot copy, and the
+    // returned `errors` (not a side-channel event) is what the UI needs.
+    let (mut per_day, errors) = collect_range_events(state, &uncached, |_, _, _| {});
+    let any_error = !errors.is_empty();
 
-        for day in &uncached {
-            let mut rows = per_day.remove(day).unwrap_or_default();
-            rows.sort_by_key(|(ts, _)| *ts);
-            let events: Vec<TimelineEvent> = rows.into_iter().map(|(_, ev)| ev).collect();
-            if *day < today && !any_error {
-                let iso = day.format("%Y-%m-%d").to_string();
-                let _ = cache::save_cached_day(&state, &iso, &events);
-            }
-            by_day.insert(*day, events);
+    for day in &uncached {
+        let mut rows = per_day.remove(day).unwrap_or_default();
+        rows.sort_by_key(|(ts, _)| *ts);
+        let events: Vec<TimelineEvent> = rows.into_iter().map(|(_, ev)| ev).collect();
+        if *day < today && !any_error {
+            let iso = day.format("%Y-%m-%d").to_string();
+            let _ = cache::save_cached_day(state, &iso, &events);
         }
+        by_day.insert(*day, events);
+    }
 
-        // Assemble the ordered output for every day in the range, including
-        // days with no activity (empty events vec).
-        let days: Vec<ExportDay> = range_days
-            .into_iter()
-            .map(|d| ExportDay {
-                date: d.format("%Y-%m-%d").to_string(),
-                events: by_day.remove(&d).unwrap_or_default(),
-            })
-            .collect();
-
-        Ok(ExportResult {
-            days,
-            errors: errors
-                .into_iter()
-                .map(|(source, error)| ExportSourceError { source: source.to_string(), error })
-                .collect(),
+    // Assemble the ordered output for every day in the range, including
+    // days with no activity (empty events vec).
+    let days: Vec<ExportDay> = range_days
+        .into_iter()
+        .map(|d| ExportDay {
+            date: d.format("%Y-%m-%d").to_string(),
+            events: by_day.remove(&d).unwrap_or_default(),
         })
+        .collect();
+
+    Ok(ExportResult {
+        days,
+        errors: errors
+            .into_iter()
+            .map(|(source, error)| ExportSourceError { source: source.to_string(), error })
+            .collect(),
     })
 }
 
@@ -615,7 +624,7 @@ mod tests {
 
     /// Point the Git source at a directory that does not exist: a
     /// deterministic, network-free way to make one source fail.
-    fn break_git(state: &State<'_, AppState>) {
+    fn break_git(state: &AppState) {
         let path = std::env::temp_dir().join(format!("recall-missing-{}", uuid::Uuid::new_v4()));
         seed_setting(
             state,
@@ -624,7 +633,7 @@ mod tests {
         );
     }
 
-    fn enable_calendar(state: &State<'_, AppState>) {
+    fn enable_calendar(state: &AppState) {
         seed_setting(
             state,
             crate::commands::settings_ical::KEY,
@@ -632,7 +641,7 @@ mod tests {
         );
     }
 
-    fn insert_calendar_event(state: &State<'_, AppState>, uid: &str, day: NaiveDate, hh: u32, mm: u32) {
+    fn insert_calendar_event(state: &AppState, uid: &str, day: NaiveDate, hh: u32, mm: u32) {
         let conn = state.db.lock().unwrap();
         conn.execute(
             "INSERT INTO ical_events (url, uid, dtstart, dtend, summary, event_url, declined)
@@ -654,7 +663,7 @@ mod tests {
         runtime().block_on(export_timeline_for_range(state(app), start.to_string(), end.to_string()))
     }
 
-    fn cached_days(state: &State<'_, AppState>) -> Vec<String> {
+    fn cached_days(state: &AppState) -> Vec<String> {
         let conn = state.db.lock().unwrap();
         let mut stmt = conn.prepare("SELECT day FROM timeline_day_cache ORDER BY day").unwrap();
         stmt.query_map([], |r| r.get(0)).unwrap().map(|r| r.unwrap()).collect()

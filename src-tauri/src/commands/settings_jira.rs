@@ -58,6 +58,12 @@ pub fn set_settings_jira(state: State<'_, AppState>, settings: SettingsJira) -> 
 #[tauri::command]
 #[specta::specta]
 pub fn get_settings_jira(state: State<'_, AppState>) -> Option<SettingsJira> {
-    let json = get_val(&state, KEY)?;
+    load_settings_jira(&state)
+}
+
+/// [`get_settings_jira`] for callers holding a plain `&AppState` (the
+/// timeline source, the CLI) rather than a Tauri `State`.
+pub(crate) fn load_settings_jira(state: &AppState) -> Option<SettingsJira> {
+    let json = get_val(state, KEY)?;
     serde_json::from_str(&json).ok()
 }
