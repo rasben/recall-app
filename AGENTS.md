@@ -161,7 +161,7 @@ These patterns are intentional; follow them when adding settings areas or data s
 
 ### CLI
 
-- `npm run cli:install` — `cargo install` the `recall-cli` binary into `~/.cargo/bin` (not bundled with the installers). During development: `cargo run --manifest-path src-tauri/Cargo.toml --bin recall-cli -- timeline --format markdown`. `--db` points it at a different database.
+- `npm run cli:install` — `cargo install` the `recall-cli` binary into `~/.cargo/bin`. `tauri build` also bundles it: on macOS it sits next to the app binary in `recall.app/Contents/MacOS/` (not verified for the Windows/Linux bundles). During development: `cargo run --manifest-path src-tauri/Cargo.toml --bin recall-cli -- timeline --format markdown`. `--db` points it at a different database.
 
 ### Telemetry statistics
 

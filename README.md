@@ -55,7 +55,7 @@ npm run tauri dev
 
 `recall-cli` prints your timeline for a day or range, using the data sources and credentials you set up in the app. It is meant for scripts and AI agents: they get the merged timeline without being handed your GitHub / Jira / Zulip tokens.
 
-It is not bundled with the installers yet. Build and install it from a checkout (it lands in `~/.cargo/bin`):
+On macOS it ships inside the app: `/Applications/recall.app/Contents/MacOS/recall-cli` (symlink it onto your `PATH` if you like). Or build and install it from a checkout (it lands in `~/.cargo/bin`):
 
 ```
 npm run cli:install
