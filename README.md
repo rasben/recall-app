@@ -51,6 +51,33 @@ npm run tauri dev
 - Rust backend
 - SQLite for settings/credentials.
 
+## Command line (`recall-cli`)
+
+`recall-cli` prints your timeline for a day or range, using the data sources and credentials you set up in the app. It is meant for scripts and AI agents: they get the merged timeline without being handed your GitHub / Jira / Zulip tokens.
+
+It is not bundled with the installers yet. Build and install it from a checkout (it lands in `~/.cargo/bin`):
+
+```
+npm run cli:install
+```
+
+```
+recall-cli timeline                              # yesterday, as JSON
+recall-cli timeline --date last-workday --format markdown
+recall-cli timeline --from 2026-10-26 --to yesterday
+recall-cli help
+```
+
+Each event has a `logged` flag: whether you have ticked it off as logged in Harvest in the app. Exit status `2` means the timeline was printed but some sources failed (they are listed under `errors`), so it is incomplete. Before reading, it re-fetches your iCal feeds unless they were synced in the last 15 minutes (`--no-calendar-sync` skips that).
+
+### Daily Harvest overview with Claude
+
+Create a scheduled task in the Claude desktop app (a local one: a cloud routine cannot reach a program on your machine) that runs every weekday morning, with a prompt along the lines of:
+
+> Run `recall-cli timeline --date last-workday --format markdown`. Summarise what I worked on, grouped by project/ticket, with rough time spans, so I can enter it in Harvest. Skip events marked as logged in Harvest. If the exit status is 2, say which sources failed.
+
+Allow the task to run `recall-cli timeline` and nothing else. The CLI is what keeps your credentials away from Claude, but they are still in plain text in the app's database (see the security warning below), so a session that may run arbitrary shell commands could read them directly.
+
 ## Telemetry
 
 Recall sends **one anonymous usage summary per day** so I can tell whether anyone uses the app and which features matter. There is no opt-out: nothing in it can identify you, and the list below is the complete contract.
@@ -59,7 +86,7 @@ Recall sends **one anonymous usage summary per day** so I can tell whether anyon
 
 - A random install ID (UUID generated at first launch), the date, app version, OS family and CPU architecture (e.g. `macos/aarch64`), UI language, theme, current grouping mode, and how long ago the app was installed (bucketed: `0to7d`, `8to30d`, …).
 - A configuration snapshot as **booleans and buckets only**: which sources are enabled, which GitHub / Jira event types are opted in, how many calendar URLs are configured (`0`, `1`, `2`, `3plus`), and whether a custom export prompt is set.
-- **Counters** accumulated since the previous summary: launches, days viewed, navigation clicks, grouping-mode switches, source-filter toggles, Harvest check marks, exports (format and preset), outbound link clicks per source, settings saves and test-connection outcomes per source, cache clears, and update-toast interactions.
+- **Counters** accumulated since the previous summary: launches, days viewed, navigation clicks, grouping-mode switches, source-filter toggles, Harvest check marks, exports (format and preset), `recall-cli` timeline runs, outbound link clicks per source, settings saves and test-connection outcomes per source, cache clears, and update-toast interactions.
 - **Health counters**: per-source fetch duration buckets (`lt1s`, `1to3s`, `3to10s`, `gt10s`), per-source event-count buckets per loaded day (`0`, `1to10`, `11to50`, `50plus`), per-source error *classes* (`auth`, `rate_limit`, `network`, `config`, `other`), and calendar sync ok/fail counts.
 
 **What is never sent:** titles, URLs, repository names or paths, ticket keys, usernames, emails, calendar summaries, hostnames, error message text, your timezone, or any timestamp finer than the calendar day. The server does not log IP addresses.

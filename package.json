@@ -12,6 +12,7 @@
     "format": "prettier --write src",
     "tauri": "tauri",
     "stats": "node scripts/stats.mjs",
+    "cli:install": "cargo install --path src-tauri --bin recall-cli --locked",
     "tests": "npm run test",
     "test": "npm run test:rust && npm run test:frontend",
     "test:rust": "cargo test --lib --manifest-path src-tauri/Cargo.toml",

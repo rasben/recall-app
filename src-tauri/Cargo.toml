@@ -4,6 +4,9 @@ version = "0.0.0"
 description = "A Tauri App"
 authors = ["Benjamin Rasmussen"]
 edition = "2021"
+# `src/bin/recall-cli.rs` is a second binary; keep `cargo run` / `tauri dev`
+# pointed at the desktop app.
+default-run = "recall-app"
 
 [lib]
 name = "recall_app_lib"
@@ -31,6 +34,8 @@ tokio = { version = "1", features = ["rt"] }
 ureq = { version = "3.3", features = ["json"] }
 base64 = "0.23"
 urlencoding = "2"
+# Same major as Tauri's, so `default_db_path` resolves exactly like `app_data_dir`.
+dirs = "7"
 
 [dev-dependencies]
 # `test` enables `tauri::test::mock_app()`, so unit tests can build a real

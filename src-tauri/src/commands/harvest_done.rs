@@ -22,6 +22,12 @@ pub fn get_timeline_harvest_done_for_event_ids(
     state: State<'_, AppState>,
     event_ids: Vec<String>,
 ) -> Result<Vec<String>, String> {
+    done_event_ids(&state, event_ids)
+}
+
+/// The subset of `event_ids` marked as logged in Harvest. Plain-`AppState`
+/// body of [`get_timeline_harvest_done_for_event_ids`], shared with the CLI.
+pub(crate) fn done_event_ids(state: &AppState, event_ids: Vec<String>) -> Result<Vec<String>, String> {
     if event_ids.is_empty() {
         return Ok(Vec::new());
     }

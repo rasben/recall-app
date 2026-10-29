@@ -1,12 +1,11 @@
 use chrono::{Local, NaiveDate, TimeZone};
 use rusqlite::params;
-use tauri::State;
 
 use crate::commands::settings_ical::load_settings_ical;
 use crate::state::AppState;
 use crate::timeline::{sanitize_event_url, TimelineEvent, TimelineEventSource};
 
-pub(super) fn test_connection(state: &State<'_, AppState>) -> Result<(), String> {
+pub(super) fn test_connection(state: &AppState) -> Result<(), String> {
     let settings = load_settings_ical(state);
     let urls: Vec<String> = settings
         .urls
@@ -40,7 +39,7 @@ pub(super) fn test_connection(state: &State<'_, AppState>) -> Result<(), String>
 }
 
 pub(super) fn events_for_day(
-    state: &State<'_, AppState>,
+    state: &AppState,
     day: &str,
 ) -> Result<Vec<(i64, TimelineEvent)>, String> {
     let day_naive =
@@ -54,7 +53,7 @@ pub(super) fn events_for_day(
 }
 
 pub(super) fn events_for_range(
-    state: &State<'_, AppState>,
+    state: &AppState,
     start_day: NaiveDate,
     end_day: NaiveDate,
 ) -> Result<Vec<(NaiveDate, i64, TimelineEvent)>, String> {
@@ -196,7 +195,7 @@ mod tests {
         NaiveDate::from_ymd_opt(2024, 3, 5).unwrap()
     }
 
-    fn enable(state: &State<'_, AppState>) {
+    fn enable(state: &AppState) {
         seed_setting(
             state,
             ICAL_KEY,
@@ -205,7 +204,7 @@ mod tests {
     }
 
     fn insert(
-        state: &State<'_, AppState>,
+        state: &AppState,
         uid: &str,
         dtstart: i64,
         dtend: Option<i64>,
