@@ -270,6 +270,31 @@ async setupClaude(time: string) : Promise<Result<null, string>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async getCliInstallStatus() : Promise<CliInstallStatus> {
+    return await TAURI_INVOKE("get_cli_install_status");
+},
+/**
+ * Link the bundled CLI to `/usr/local/bin/recall` (macOS).
+ */
+async installCli() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("install_cli") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Remove the `/usr/local/bin/recall` link, if it is Recall's.
+ */
+async uninstallCli() : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("uninstall_cli") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -286,13 +311,14 @@ async setupClaude(time: string) : Promise<Result<null, string>> {
 export type CacheSizeResult = { bytes: number; cached_days: number }
 export type ClaudeSetupStatus = { 
 /**
- * False where the setup is not offered (Windows: Claude runs commands
- * through Git Bash there, and the path/permission rule story is untested).
+ * Where the bundled CLI is. Setup is only offered when it is stable (see
+ * `CliAvailability::stable`); Windows is not offered because Claude runs
+ * commands through Git Bash there and the path/rule story is untested.
  */
-supported: boolean; 
+availability: CliAvailability; 
 /**
- * Shell command that runs the bundled CLI; `None` when no `recall` binary
- * sits next to the app (e.g. a `tauri dev` build that never built it).
+ * Shell command that runs the bundled CLI, by absolute path; `None` when
+ * the location is not stable.
  */
 command: string | null; 
 /**
@@ -308,6 +334,69 @@ skill_installed: boolean;
  */
 rule_installed: boolean }
 export type ClearCachesResult = { rows_deleted: number }
+/**
+ * How the bundled CLI can be reached from a shell.
+ */
+export type CliAvailability = 
+/**
+ * macOS app in a stable place: the CLI can be linked onto `PATH`.
+ */
+"Linkable" | 
+/**
+ * The package installed it into a folder on `PATH` (Linux `/usr/bin`).
+ */
+"OnPath" | 
+/**
+ * Stable location, but not on `PATH` and nothing to link it with (e.g. a
+ * Linux build run from its build folder): the user links it themselves.
+ */
+"Manual" | 
+/**
+ * macOS app running from the disk image or a translocated copy: its path
+ * changes once it is moved to Applications, so nothing may point at it.
+ */
+"NotInApplications" | 
+/**
+ * Running as an AppImage: the CLI is inside a mount that changes every launch.
+ */
+"AppImage" | 
+/**
+ * Not offered on Windows yet.
+ */
+"Windows" | 
+/**
+ * No `recall` binary next to the app (e.g. a `tauri dev` build).
+ */
+"Missing"
+export type CliInstallStatus = { availability: CliAvailability; 
+/**
+ * The bundled CLI, when found.
+ */
+cli_path: string | null; 
+/**
+ * Where the link goes (macOS only).
+ */
+link_path: string | null; 
+/**
+ * State of `link_path`; `None` when there is no link to manage.
+ */
+link: CliLink | null }
+/**
+ * The macOS `PATH` link's state.
+ */
+export type CliLink = "NotInstalled" | 
+/**
+ * Points at this app's CLI.
+ */
+"Installed" | 
+/**
+ * Points at a Recall CLI elsewhere (an older or moved copy of the app).
+ */
+"Stale" | 
+/**
+ * Something that is not Recall's: left alone.
+ */
+"Foreign"
 /**
  * One day's worth of merged timeline events, used by the export command so the
  * frontend can group events under their day without re-deriving the date from

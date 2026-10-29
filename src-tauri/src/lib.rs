@@ -51,6 +51,9 @@ fn make_specta_builder() -> Builder<tauri::Wry> {
         commands::telemetry::telemetry_set_gauge,
         commands::claude_setup::get_claude_setup_status,
         commands::claude_setup::setup_claude,
+        commands::cli_install::get_cli_install_status,
+        commands::cli_install::install_cli,
+        commands::cli_install::uninstall_cli,
     ])
 }
 

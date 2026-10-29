@@ -6,10 +6,13 @@
   import { onMount } from "svelte";
   import { commands, type ClaudeSetupStatus } from "../../bindings";
   import { t } from "$lib/i18n.svelte";
+  import { cliUnavailableKey } from "$lib/cli-availability";
 
   let status = $state<ClaudeSetupStatus | null>(null);
   let time = $state("08:30");
   let busy = $state(false);
+
+  let unavailable = $derived(status ? cliUnavailableKey(status.availability) : null);
 
   async function loadStatus() {
     const result = await commands.getClaudeSetupStatus();
@@ -35,11 +38,9 @@
   <legend>{t("settings.claude.title")}</legend>
   <p class="mb-3 text-sm text-muted-foreground">{t("settings.claude.description")}</p>
 
-  {#if status && !status.supported}
-    <p class="text-sm">{t("settings.claude.unsupported")}</p>
-  {:else if status && !status.command}
-    <p class="text-sm">{t("settings.claude.no_cli")}</p>
-  {:else if status}
+  {#if status && unavailable}
+    <p class="text-sm">{t(unavailable)}</p>
+  {:else if status?.command}
     <ol class="mb-4 list-decimal space-y-2 pl-5 text-sm">
       <li>
         {t("settings.claude.step_skill")}

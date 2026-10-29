@@ -55,7 +55,12 @@ npm run tauri dev
 
 `recall` prints your timeline for a day or range, using the data sources and credentials you set up in the app. It is meant for scripts and AI agents: they get the merged timeline without being handed your GitHub / Jira / Zulip tokens.
 
-On macOS it ships inside the app: `/Applications/recall.app/Contents/MacOS/recall` (symlink it onto your `PATH` if you like). Or build and install it from a checkout (it lands in `~/.cargo/bin`):
+How to get it:
+
+- **macOS:** in Recall, open **Settings → Export → Command line** and click **Install the recall command**. It links `/usr/local/bin/recall` to the copy inside the app, and macOS may ask for your password. Recall has to be in your Applications folder first.
+- **Linux (.deb / .rpm):** installed with the app as `/usr/bin/recall`. The AppImage runs from a temporary folder, so it can't provide the command.
+- **Windows:** not available yet.
+- **From a checkout:** `npm run cli:install` builds it into `~/.cargo/bin`:
 
 ```
 npm run cli:install
@@ -72,7 +77,7 @@ Each event has a `logged` flag: whether you have ticked it off as logged in Harv
 
 ### Daily Harvest overview with Claude
 
-On macOS and Linux, **Settings → Export → Set up with Claude** does this for you: it adds a `recall-harvest` skill to Claude, allows Claude to run `recall timeline` without asking, and opens Claude with a request to schedule the overview on weekday mornings. You check that request and press Enter.
+On macOS and with the Linux .deb/.rpm, **Settings → Export → Set up with Claude** does this for you: it adds a `recall-harvest` skill to Claude, allows Claude to run `recall timeline` without asking, and opens Claude with a request to schedule the overview on weekday mornings. You check that request and press Enter.
 
 To do it by hand, create a scheduled task in the Claude desktop app (a local one: a cloud routine cannot reach a program on your machine) that runs every weekday morning, with a prompt along the lines of:
 
@@ -88,7 +93,7 @@ Recall sends **one anonymous usage summary per day** so I can tell whether anyon
 
 - A random install ID (UUID generated at first launch), the date, app version, OS family and CPU architecture (e.g. `macos/aarch64`), UI language, theme, current grouping mode, and how long ago the app was installed (bucketed: `0to7d`, `8to30d`, …).
 - A configuration snapshot as **booleans and buckets only**: which sources are enabled, which GitHub / Jira event types are opted in, how many calendar URLs are configured (`0`, `1`, `2`, `3plus`), and whether a custom export prompt is set.
-- **Counters** accumulated since the previous summary: launches, days viewed, navigation clicks, grouping-mode switches, source-filter toggles, Harvest check marks, exports (format and preset), `recall` timeline runs, "Set up with Claude" outcomes (succeeded/failed), outbound link clicks per source, settings saves and test-connection outcomes per source, cache clears, and update-toast interactions.
+- **Counters** accumulated since the previous summary: launches, days viewed, navigation clicks, grouping-mode switches, source-filter toggles, Harvest check marks, exports (format and preset), `recall` timeline runs, "Set up with Claude" and `recall` command install/uninstall outcomes (succeeded/failed), outbound link clicks per source, settings saves and test-connection outcomes per source, cache clears, and update-toast interactions.
 - **Health counters**: per-source fetch duration buckets (`lt1s`, `1to3s`, `3to10s`, `gt10s`), per-source event-count buckets per loaded day (`0`, `1to10`, `11to50`, `50plus`), per-source error *classes* (`auth`, `rate_limit`, `network`, `config`, `other`), and calendar sync ok/fail counts.
 
 **What is never sent:** titles, URLs, repository names or paths, ticket keys, usernames, emails, calendar summaries, hostnames, error message text, your timezone, or any timestamp finer than the calendar day. The server does not log IP addresses.

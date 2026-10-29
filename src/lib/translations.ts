@@ -225,6 +225,30 @@ Then summarize the activity below as one table per day, with the columns **Ticke
   "settings.export.saved": "Prompt saved",
   "settings.export.error": "Could not save the prompt.",
 
+  "settings.cli.title": "Command line",
+  "settings.cli.description":
+    "The recall command prints your timeline in a terminal, for scripts and AI tools such as Claude. Run recall help to see how.",
+  "settings.cli.install_hint": "Install it so a terminal can find it. This creates a link at",
+  "settings.cli.install": "Install the recall command",
+  "settings.cli.update": "Point it at this copy of Recall",
+  "settings.cli.uninstall": "Uninstall the recall command",
+  "settings.cli.linked": "The recall command is installed at",
+  "settings.cli.stale":
+    "The recall command points to another copy of Recall (perhaps an older one, or one you moved).",
+  "settings.cli.foreign":
+    "already exists and belongs to another program, so Recall leaves it alone. You can still run the command by its full path.",
+  "settings.cli.on_path": "The recall command was installed with the app. Open a terminal and run recall help.",
+  "settings.cli.manual": "To run it as recall, link this file into a folder on your PATH:",
+  "settings.cli.installed_toast": "Installed. Open a new terminal window and run recall help.",
+  "settings.cli.uninstalled_toast": "The recall command was uninstalled.",
+  "settings.cli.error": "Could not change the recall command.",
+  "cli.unavailable.not_in_applications":
+    "Move Recall to your Applications folder and open it from there first. Recall is running from the disk image or a temporary copy, which goes away.",
+  "cli.unavailable.appimage":
+    "The AppImage runs from a temporary folder, so it can't provide a lasting recall command. Install the .deb or .rpm package to use it.",
+  "cli.unavailable.windows": "The recall command isn't available on Windows yet.",
+  "cli.unavailable.missing":
+    "The recall command-line tool was not found next to the app. Install a release build of Recall.",
   "settings.claude.title": "Claude",
   "settings.claude.description":
     "Have Claude (the desktop app's Code tab) write a Harvest overview of your previous working day every weekday morning. Claude only gets the timeline from Recall's command-line tool, never your GitHub, Jira or Zulip credentials.",
@@ -239,9 +263,6 @@ Then summarize the activity below as one table per day, with the columns **Ticke
   "settings.claude.error": "Could not set up Claude.",
   "settings.claude.note":
     "Scheduled tasks only run while the Claude app is open and the computer is awake. A missed run happens the next time Claude starts.",
-  "settings.claude.unsupported": "Setting up Claude is not supported on Windows yet.",
-  "settings.claude.no_cli":
-    "The recall command-line tool was not found next to the app, so Claude has nothing to run. Install a release build of Recall.",
 
   "export.copy": "Copy to clipboard",
   "export.copying": "Preparing…",
@@ -464,6 +485,30 @@ Opsummér derefter aktiviteten nedenfor som én tabel per dag med kolonnerne **S
   "settings.export.saved": "Prompt gemt",
   "settings.export.error": "Kunne ikke gemme prompten.",
 
+  "settings.cli.title": "Kommandolinje",
+  "settings.cli.description":
+    "Kommandoen recall udskriver din tidslinje i en terminal, til scripts og AI-værktøjer som Claude. Kør recall help for at se hvordan.",
+  "settings.cli.install_hint": "Installér den, så en terminal kan finde den. Det opretter et link i",
+  "settings.cli.install": "Installér recall-kommandoen",
+  "settings.cli.update": "Peg den på denne kopi af Recall",
+  "settings.cli.uninstall": "Afinstallér recall-kommandoen",
+  "settings.cli.linked": "Kommandoen recall er installeret i",
+  "settings.cli.stale":
+    "Kommandoen recall peger på en anden kopi af Recall (måske en ældre, eller en du har flyttet).",
+  "settings.cli.foreign":
+    "findes allerede og hører til et andet program, så Recall rører den ikke. Du kan stadig køre kommandoen via dens fulde sti.",
+  "settings.cli.on_path": "Kommandoen recall blev installeret sammen med appen. Åbn en terminal, og kør recall help.",
+  "settings.cli.manual": "Link denne fil ind i en mappe på din PATH for at køre den som recall:",
+  "settings.cli.installed_toast": "Installeret. Åbn et nyt terminalvindue, og kør recall help.",
+  "settings.cli.uninstalled_toast": "Kommandoen recall blev afinstalleret.",
+  "settings.cli.error": "Kunne ikke ændre recall-kommandoen.",
+  "cli.unavailable.not_in_applications":
+    "Flyt Recall til din Programmer-mappe, og åbn den derfra først. Recall kører fra disk-imaget eller en midlertidig kopi, som forsvinder.",
+  "cli.unavailable.appimage":
+    "AppImage'et kører fra en midlertidig mappe, så det kan ikke give en varig recall-kommando. Installér .deb- eller .rpm-pakken for at bruge den.",
+  "cli.unavailable.windows": "Kommandoen recall er endnu ikke tilgængelig på Windows.",
+  "cli.unavailable.missing":
+    "Recalls kommandolinjeværktøj blev ikke fundet ved siden af appen. Installér en release-build af Recall.",
   "settings.claude.title": "Claude",
   "settings.claude.description":
     "Lad Claude (desktop-appens Code-fane) skrive et Harvest-overblik over din forrige arbejdsdag hver hverdagsmorgen. Claude får kun tidslinjen fra Recalls kommandolinjeværktøj, aldrig dine GitHub-, Jira- eller Zulip-legitimationsoplysninger.",
@@ -478,9 +523,6 @@ Opsummér derefter aktiviteten nedenfor som én tabel per dag med kolonnerne **S
   "settings.claude.error": "Kunne ikke sætte Claude op.",
   "settings.claude.note":
     "Planlagte opgaver kører kun, mens Claude-appen er åben og computeren er vågen. En mistet kørsel sker næste gang Claude starter.",
-  "settings.claude.unsupported": "Opsætning af Claude understøttes endnu ikke på Windows.",
-  "settings.claude.no_cli":
-    "Recalls kommandolinjeværktøj blev ikke fundet ved siden af appen, så Claude har intet at køre. Installér en release-build af Recall.",
 
   "export.copy": "Kopiér til udklipsholder",
   "export.copying": "Forbereder…",

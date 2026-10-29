@@ -15,6 +15,7 @@ use serde_json::{Map, Value};
 use specta::Type;
 use tauri::State;
 
+use crate::commands::cli_install::{locate_cli, shell_quote, CliAvailability};
 use crate::state::AppState;
 use crate::telemetry;
 
@@ -22,11 +23,12 @@ const SKILL_NAME: &str = "recall-harvest";
 
 #[derive(Serialize, Type)]
 pub struct ClaudeSetupStatus {
-    /// False where the setup is not offered (Windows: Claude runs commands
-    /// through Git Bash there, and the path/permission rule story is untested).
-    pub supported: bool,
-    /// Shell command that runs the bundled CLI; `None` when no `recall` binary
-    /// sits next to the app (e.g. a `tauri dev` build that never built it).
+    /// Where the bundled CLI is. Setup is only offered when it is stable (see
+    /// `CliAvailability::stable`); Windows is not offered because Claude runs
+    /// commands through Git Bash there and the path/rule story is untested.
+    pub availability: CliAvailability,
+    /// Shell command that runs the bundled CLI, by absolute path; `None` when
+    /// the location is not stable.
     pub command: Option<String>,
     /// Permission rule added to Claude's settings, for `command`.
     pub allow_rule: Option<String>,
@@ -42,7 +44,7 @@ pub struct ClaudeSetupStatus {
 #[specta::specta]
 pub fn get_claude_setup_status() -> Result<ClaudeSetupStatus, String> {
     let claude = claude_dir()?;
-    let command = cli_command();
+    let (availability, command) = cli_command();
     let skill_path = skill_path(&claude);
     let settings_path = claude.join("settings.json");
 
@@ -55,7 +57,7 @@ pub fn get_claude_setup_status() -> Result<ClaudeSetupStatus, String> {
     });
 
     Ok(ClaudeSetupStatus {
-        supported: cfg!(not(windows)),
+        availability,
         command,
         allow_rule,
         skill_path: skill_path.display().to_string(),
@@ -76,11 +78,16 @@ pub fn setup_claude(state: State<'_, AppState>, time: String) -> Result<(), Stri
 }
 
 fn run_setup(time: &str) -> Result<(), String> {
-    if cfg!(windows) {
-        return Err("Setting up Claude is not supported on Windows yet".into());
-    }
     let (hour, minute) = parse_time(time)?;
-    let command = cli_command().ok_or("The recall command-line tool was not found next to the app")?;
+    let command = match cli_command() {
+        (_, Some(command)) => command,
+        (CliAvailability::Windows, None) => return Err("Setting up Claude is not supported on Windows yet".into()),
+        (CliAvailability::NotInApplications, None) => return Err("Move Recall to your Applications folder first".into()),
+        (CliAvailability::AppImage, None) => {
+            return Err("The AppImage cannot provide a stable recall command; install the .deb or .rpm package".into())
+        }
+        (_, None) => return Err("The recall command-line tool was not found next to the app".into()),
+    };
     let claude = claude_dir()?;
 
     write_atomically(&skill_path(&claude), &render_skill(&command))?;
@@ -109,23 +116,15 @@ fn skill_path(claude: &Path) -> PathBuf {
     claude.join("skills").join(SKILL_NAME).join("SKILL.md")
 }
 
-/// The `recall` binary bundled next to the app's own executable, as a shell
-/// command. Using the absolute path means it works without being on `PATH`,
-/// and the permission rule matches exactly what Claude runs.
-fn cli_command() -> Option<String> {
-    let exe = std::env::current_exe().ok()?;
-    let cli = exe.parent()?.join(format!("recall{}", std::env::consts::EXE_SUFFIX));
-    cli.is_file().then(|| shell_quote(&cli.to_string_lossy()))
-}
-
-/// Single-quote `s` for a POSIX shell unless it is made only of safe characters.
-fn shell_quote(s: &str) -> String {
-    let safe = |c: char| c.is_ascii_alphanumeric() || "/._-+".contains(c);
-    if !s.is_empty() && s.chars().all(safe) {
-        s.to_string()
-    } else {
-        format!("'{}'", s.replace('\'', r"'\''"))
-    }
+/// The bundled `recall` binary as a shell command, by absolute path: it works
+/// whether or not the CLI is on `PATH`, and the permission rule matches
+/// exactly what Claude runs. `None` unless that path is stable.
+fn cli_command() -> (CliAvailability, Option<String>) {
+    let (availability, cli) = locate_cli();
+    let command = cli
+        .filter(|_| availability.stable())
+        .map(|cli| shell_quote(&cli.to_string_lossy()));
+    (availability, command)
 }
 
 fn allow_rule(command: &str) -> String {
@@ -262,17 +261,6 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("recall-claude-{}", uuid::Uuid::new_v4()));
         fs::create_dir_all(&dir).unwrap();
         dir
-    }
-
-    #[test]
-    fn shell_quote_leaves_plain_paths_alone() {
-        assert_eq!(shell_quote(CMD), CMD);
-    }
-
-    #[test]
-    fn shell_quote_quotes_spaces_and_single_quotes() {
-        assert_eq!(shell_quote("/Users/a b/recall"), "'/Users/a b/recall'");
-        assert_eq!(shell_quote("/it's/recall"), r"'/it'\''s/recall'");
     }
 
     #[test]
