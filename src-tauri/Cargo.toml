@@ -4,7 +4,7 @@ version = "0.0.0"
 description = "A Tauri App"
 authors = ["Benjamin Rasmussen"]
 edition = "2021"
-# `src/bin/recall-cli.rs` is a second binary; keep `cargo run` / `tauri dev`
+# `src/bin/recall.rs` is a second binary; keep `cargo run` / `tauri dev`
 # pointed at the desktop app.
 default-run = "recall-app"
 

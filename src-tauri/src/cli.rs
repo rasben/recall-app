@@ -1,4 +1,4 @@
-//! `recall-cli`: headless access to the timeline for scripts and AI agents.
+//! `recall`: headless access to the timeline for scripts and AI agents.
 //!
 //! It reads the same SQLite database as the desktop app (settings, source
 //! credentials, day cache, Harvest checkmarks) and runs the same fetch code,
@@ -26,11 +26,11 @@ use crate::timeline::{TimelineEvent, TimelineEventSource};
 const CALENDAR_FRESH_MS: i64 = 15 * 60 * 1000;
 
 const USAGE: &str = "\
-recall-cli: print your Recall activity timeline
+recall: print your Recall activity timeline
 
 USAGE:
-    recall-cli timeline [OPTIONS]
-    recall-cli help
+    recall timeline [OPTIONS]
+    recall help
 
 OPTIONS:
     --date <DAY>        One day (sets both --from and --to)
@@ -77,7 +77,7 @@ enum Command {
     Timeline(TimelineArgs),
 }
 
-/// Entry point for the `recall-cli` binary.
+/// Entry point for the `recall` binary.
 pub fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let today = Local::now().date_naive();
@@ -92,17 +92,17 @@ pub fn main() -> ExitCode {
                 if complete {
                     ExitCode::SUCCESS
                 } else {
-                    eprintln!("recall-cli: some sources failed; the timeline is incomplete");
+                    eprintln!("recall: some sources failed; the timeline is incomplete");
                     ExitCode::from(2)
                 }
             }
             Err(e) => {
-                eprintln!("recall-cli: {e}");
+                eprintln!("recall: {e}");
                 ExitCode::from(1)
             }
         },
         Err(e) => {
-            eprintln!("recall-cli: {e}\n\nRun `recall-cli help` for usage.");
+            eprintln!("recall: {e}\n\nRun `recall help` for usage.");
             ExitCode::from(1)
         }
     }
@@ -533,7 +533,7 @@ mod tests {
 
     #[test]
     fn timeline_reads_an_existing_database_without_network() {
-        let dir = std::env::temp_dir().join(format!("recall-cli-{}", uuid::Uuid::new_v4()));
+        let dir = std::env::temp_dir().join(format!("recall-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("db.sqlite");
         db::init_schema(&rusqlite::Connection::open(&path).unwrap()).unwrap();
