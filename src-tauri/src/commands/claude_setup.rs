@@ -16,11 +16,17 @@ use specta::Type;
 use tauri::State;
 
 use crate::commands::cli_install::{locate_cli, shell_quote, CliAvailability};
+use crate::commands::settings::{get_val, save_val};
 use crate::commands::settings_export::prompt_languages;
 use crate::state::AppState;
 use crate::telemetry;
 
 const SKILL_NAME: &str = "recall-harvest";
+
+/// Where Recall remembers the time it last asked Claude to schedule the task
+/// (`"08:30"`). Not `settings_`-prefixed: it records what setup did rather
+/// than being a setting, so `save_val` must not count it as a settings save.
+const SCHEDULE_KEY: &str = "claude_setup_time";
 
 #[derive(Serialize, Type)]
 pub struct ClaudeSetupStatus {
@@ -39,11 +45,15 @@ pub struct ClaudeSetupStatus {
     pub skill_installed: bool,
     /// Claude's settings already allow `allow_rule`.
     pub rule_installed: bool,
+    /// Weekday time (`HH:MM`) of the last successful setup, if any. Claude
+    /// owns the task, so this is what Recall asked for, not necessarily what
+    /// the task says now.
+    pub scheduled_time: Option<String>,
 }
 
 #[tauri::command]
 #[specta::specta]
-pub fn get_claude_setup_status(lang: String) -> Result<ClaudeSetupStatus, String> {
+pub fn get_claude_setup_status(state: State<'_, AppState>, lang: String) -> Result<ClaudeSetupStatus, String> {
     let claude = claude_dir()?;
     let (availability, command) = cli_command();
     let skill_path = skill_path(&claude);
@@ -65,6 +75,7 @@ pub fn get_claude_setup_status(lang: String) -> Result<ClaudeSetupStatus, String
         settings_path: settings_path.display().to_string(),
         skill_installed,
         rule_installed,
+        scheduled_time: get_val(&state, SCHEDULE_KEY),
     })
 }
 
@@ -75,7 +86,7 @@ pub fn get_claude_setup_status(lang: String) -> Result<ClaudeSetupStatus, String
 #[tauri::command]
 #[specta::specta]
 pub fn setup_claude(state: State<'_, AppState>, time: String, lang: String) -> Result<(), String> {
-    let result = run_setup(&time, &lang);
+    let result = run_setup(&time, &lang).and_then(|()| save_val(&state, SCHEDULE_KEY, &time));
     telemetry::record(&state, if result.is_ok() { "claude.setup.ok" } else { "claude.setup.error" });
     result
 }
@@ -148,10 +159,12 @@ fn parse_time(time: &str) -> Result<(u32, u32), String> {
     Ok((hour, minute))
 }
 
-/// What the scheduled run executes: the timeline for the last working day,
+/// What the scheduled run executes: every day since the last working day,
 /// headed by the user's export prompt (theirs, or `lang`'s built-in default).
+/// On Tuesday to Friday that is just yesterday; on Monday it is Friday to
+/// Sunday, so weekend work is not lost (the task itself only runs on weekdays).
 fn timeline_invocation(command: &str, lang: &str) -> String {
-    format!("{command} timeline --date last-workday --format markdown --with-prompt --lang {lang}")
+    format!("{command} timeline --from last-workday --to yesterday --format markdown --with-prompt --lang {lang}")
 }
 
 fn render_skill(command: &str, lang: &str) -> String {
@@ -172,7 +185,7 @@ Recall is a desktop app that collects the user's activity from their tools into 
 {invocation}
 ```
 
-Run that command, changing only the options below. Do not read Recall's database or settings files, and do not call GitHub, Jira, Zulip or calendar APIs yourself: the command is the only way into that data.
+It covers every day since the last working day: just yesterday on Tuesday to Friday, Friday to Sunday on a Monday. Run that command, changing only the options below. Do not read Recall's database or settings files, and do not call GitHub, Jira, Zulip or calendar APIs yourself: the command is the only way into that data.
 
 Options:
 
@@ -187,17 +200,17 @@ Exit status:
 
 ## Writing the overview
 
-Everything above the first `---` line of the output is the user's own instructions for this overview: their "AI export prompt" from Recall's settings, which they can edit there. Follow them as if they had written them here. Below the line is the timeline: one section per day, one bullet per event (local time, source, title, details, link). Events marked "logged in Harvest" are already entered: leave them out.
+Everything above the first `---` line of the output is the user's own instructions for this overview: their "AI export prompt" from Recall's settings, which they can edit there. Follow them as if they had written them here. Below the line is the timeline: one section per day, one bullet per event (local time, source, title, details, link). Events marked "logged in Harvest" are already entered: leave them out. Leave out days with no tracked activity too (typically a weekend the user did not work); when there was weekend work, give those days their own tables like any other day.
 
 ## Naming the session
 
 When the overview is written, rename this session so it can be found later:
 
 ```
-Harvest · <weekday> <date> · <gist>
+Harvest · <days> · <gist>
 ```
 
-The weekday and date are the day the overview covers (not today), written in the language of the overview, e.g. `Harvest · Tue 28 Oct 2026 · BUPL security day`. The gist is two to five words naming the main work of that day. Use your tool for setting the session title if you have one; otherwise start your answer with that line as a heading.
+`<days>` is what the overview covers (not today), written in the language of the overview: the weekday and date of a single day, e.g. `Harvest · Tue 28 Oct 2026 · BUPL security day`, or the first and last day that had activity when it covers several, e.g. `Harvest · Fri 24 – Sat 25 Oct 2026 · BUPL release`. The gist is two to five words naming the main work. Use your tool for setting the session title if you have one; otherwise start your answer with that line as a heading.
 "#,
         rule = allow_rule(command),
         invocation = timeline_invocation(command, lang),
@@ -211,7 +224,8 @@ fn schedule_link(command: &str, lang: &str, hour: u32, minute: u32) -> String {
         "Create a scheduled task titled \"Recall: Harvest overview\" that runs every weekday at \
          {hour:02}:{minute:02} (cron `{minute} {hour} * * 1-5`). If a task with that title already \
          exists, update its schedule and prompt instead of creating a second one. Its prompt:\n\n\
-         Use the {SKILL_NAME} skill to write my Harvest overview for the last working day: run \
+         Use the {SKILL_NAME} skill to write my Harvest overview of every day since my last working \
+         day (on a Monday that includes the weekend): run \
          `{invocation}`, follow the instructions at the top of its output, and name the session \
          as the skill describes.",
         invocation = timeline_invocation(command, lang),
@@ -302,9 +316,9 @@ mod tests {
         assert!(skill.starts_with(&format!("---\nname: {SKILL_NAME}\ndescription: ")));
         assert!(skill.contains(&format!("allowed-tools: Bash({CMD} timeline *)\n---\n")));
         assert!(skill.contains(&format!(
-            "```\n{CMD} timeline --date last-workday --format markdown --with-prompt --lang da\n```"
+            "```\n{CMD} timeline --from last-workday --to yesterday --format markdown --with-prompt --lang da\n```"
         )));
-        assert!(skill.contains("Harvest · <weekday> <date> · <gist>"));
+        assert!(skill.contains("Harvest · <days> · <gist>"));
     }
 
     #[test]
@@ -314,7 +328,7 @@ mod tests {
         let prompt = urlencoding::decode(q).unwrap();
         assert!(prompt.contains("every weekday at 08:05 (cron `5 8 * * 1-5`)"), "{prompt}");
         assert!(prompt.contains(&format!(
-            "run `{CMD} timeline --date last-workday --format markdown --with-prompt --lang en`"
+            "run `{CMD} timeline --from last-workday --to yesterday --format markdown --with-prompt --lang en`"
         )));
         assert!(prompt.contains("update its schedule and prompt instead of creating a second one"));
         assert!(!q.contains(' ') && !q.contains('\n'), "prompt must be URL-encoded");

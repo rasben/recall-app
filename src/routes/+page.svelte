@@ -7,7 +7,7 @@
   import CloseIcon from "@lucide/svelte/icons/x";
   import Settings from "../components/settings/Settings.svelte";
   import Main from "../components/Main.svelte";
-  import Welcome from "../components/Welcome.svelte";
+  import SetupGuide from "../components/SetupGuide.svelte";
   import { commands } from "../bindings";
   import { track, setGauge } from "$lib/telemetry";
   import { i18n, t } from "$lib/i18n.svelte";
@@ -73,11 +73,11 @@
     if (!import.meta.env.DEV) checkForUpdate();
   });
 
-  function markWelcomed(openSettings = false) {
-    track("welcome.get_started");
+  /** The setup guide was finished or skipped: show the timeline from now on. */
+  function markWelcomed() {
     localStorage.setItem("recall:welcomed", "1");
     welcomed = true;
-    if (openSettings) settingsOpen = true;
+    settingsOpen = false;
   }
 
   function showWelcome() {
@@ -99,7 +99,7 @@
 </script>
 
 {#if welcomeChecked && !welcomed}
-  <Welcome onGetStarted={() => markWelcomed(true)} />
+  <SetupGuide onFinish={markWelcomed} />
 {:else}
   <Button
     variant={settingsOpen ? "secondary" : "outline"}

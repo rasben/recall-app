@@ -334,7 +334,13 @@ skill_installed: boolean;
 /**
  * Claude's settings already allow `allow_rule`.
  */
-rule_installed: boolean }
+rule_installed: boolean; 
+/**
+ * Weekday time (`HH:MM`) of the last successful setup, if any. Claude
+ * owns the task, so this is what Recall asked for, not necessarily what
+ * the task says now.
+ */
+scheduled_time: string | null }
 export type ClearCachesResult = { rows_deleted: number }
 /**
  * How the bundled CLI can be reached from a shell.

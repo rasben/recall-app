@@ -89,6 +89,8 @@
     {/if}
   </div>
 
+  <!-- Read-only rows (the setup guide's preview) pass no onToggle: no mark. -->
+  {#if onToggle}
   <button
     type="button"
     onclick={onToggle}
@@ -111,6 +113,7 @@
       {/if}
     </span>
   </button>
+  {/if}
   <span
     class="absolute right-0 top-0 shrink-0 bg-foreground px-1 py-0.5 font-head text-[8px] uppercase tracking-widest text-background"
   >
