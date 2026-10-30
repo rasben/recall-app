@@ -15,19 +15,21 @@
 
   let { onShowWelcome }: { onShowWelcome?: () => void } = $props();
 
-  type TabId = "general" | "sources" | "export" | "system";
+  type TabId = "general" | "sources" | "ai" | "system";
   let activeTab = $state<TabId>("sources");
+  let promptOpen = $state(false);
 
   /** Which tab a deep-link section (navState.openSettingsSection) lives in. */
-  const SECTION_TAB: Record<string, TabId> = { export: "export" };
+  const SECTION_TAB: Record<string, TabId> = { export: "ai" };
 
   // Another view (e.g. the export popover) can request a specific panel; jump
-  // to its tab and clear the request.
+  // to its tab and clear the request. "export" also unfolds the prompt editor.
   $effect(() => {
     const section = navState.openSettingsSection;
     if (!section) return;
     const tab = SECTION_TAB[section];
     if (tab) activeTab = tab;
+    if (section === "export") promptOpen = true;
     navState.openSettingsSection = null;
   });
 
@@ -42,7 +44,7 @@
   <Tabs.List class="h-auto w-full flex-wrap justify-start gap-1">
     <Tabs.Trigger value="general">{t("settings.tab.general")}</Tabs.Trigger>
     <Tabs.Trigger value="sources">{t("settings.tab.sources")}</Tabs.Trigger>
-    <Tabs.Trigger value="export">{t("settings.tab.export")}</Tabs.Trigger>
+    <Tabs.Trigger value="ai">{t("settings.tab.ai")}</Tabs.Trigger>
     <Tabs.Trigger value="system">{t("settings.tab.system")}</Tabs.Trigger>
   </Tabs.List>
 
@@ -58,13 +60,14 @@
     <SettingsCalendar />
   </Tabs.Content>
 
-  <Tabs.Content value="export" class={contentClass}>
-    <SettingsExport />
-    <SettingsCommandLine />
+  <Tabs.Content value="ai" class={contentClass}>
     <SettingsClaude />
+    <SettingsExport bind:open={promptOpen} />
   </Tabs.Content>
 
   <Tabs.Content value="system" class={contentClass}>
     <SettingsSystem {onShowWelcome} />
+    <h3 class="mt-8 font-head text-sm uppercase tracking-wide text-muted-foreground">{t("settings.advanced")}</h3>
+    <SettingsCommandLine />
   </Tabs.Content>
 </Tabs.Root>

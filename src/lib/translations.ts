@@ -31,7 +31,7 @@ const en = {
   "settings.title": "Settings",
   "settings.tab.general": "General",
   "settings.tab.sources": "Data sources",
-  "settings.tab.export": "Export",
+  "settings.tab.ai": "AI",
   "settings.tab.system": "System",
   "settings.language": "Language",
   "settings.language.error": "Could not set language.",
@@ -159,7 +159,7 @@ const en = {
   "settings.cache.cleared": "Caches cleared",
 
   // Welcome
-  "settings.welcome.show": "Show welcome screen",
+  "settings.welcome.show": "Show setup guide",
   "settings.welcome.description": "i get it. it's a really cool h1 effect.",
 
   // Timeline
@@ -244,9 +244,44 @@ const en = {
   "cli.unavailable.windows": "The recall command isn't available on Windows yet.",
   "cli.unavailable.missing":
     "The recall command-line tool was not found next to the app. Install a release build of Recall.",
-  "settings.claude.title": "Claude",
+  "settings.advanced": "Advanced",
+  "settings.export.collapse": "Hide",
+  "settings.export.using_default": "Default prompt",
+  "settings.export.using_custom": "Your prompt",
+  "settings.claude.ready": "Claude writes your Harvest overview on weekdays at {time}.",
+  "settings.claude.ready_hint":
+    "Each morning it covers the days since your last working day (on Mondays: Friday to Sunday), follows your AI export prompt below, and names the session after them.",
+  "settings.claude.change_time": "Change time",
+  "settings.claude.again": "Run setup again",
+  "settings.claude.outdated":
+    "This version of Recall sets Claude up a little differently. Update so the morning overview uses the latest instructions.",
+  "settings.claude.update": "Update",
+  "settings.claude.save_time": "Save and update Claude",
+  "settings.claude.cancel": "Cancel",
+  "settings.claude.details": "What this changes on your computer",
+  "settings.claude.install_cli": "Also install the recall command for the terminal (macOS may ask for your password)",
+
+  "guide.step.sources": "Connect your tools",
+  "guide.step.preview": "See it work",
+  "guide.step.claude": "Daily overview",
+  "guide.sources.title": "Connect your tools",
+  "guide.sources.description":
+    "Turn on the tools you use. Each needs a token or an address once, and you can change everything later in Settings.",
+  "guide.preview.title": "See it work",
+  "guide.preview.description": "This is what Recall found for {day}, your last working day.",
+  "guide.preview.loading": "Fetching your activity…",
+  "guide.preview.errors": "Some tools could not be reached:",
+  "guide.preview.empty": "Nothing found for that day. You can connect more tools later in Settings.",
+  "guide.claude.title": "A Harvest overview every morning",
+  "guide.claude.description":
+    "Optional: if you use the Claude desktop app, it can write an overview of your previous working day every weekday morning (on Mondays, the weekend too), ready to copy into Harvest. Skip this if you don't use Claude.",
+  "guide.back": "Back",
+  "guide.next": "Next",
+  "guide.skip": "Skip",
+  "guide.finish": "Go to my timeline",
+  "settings.claude.title": "Daily overview with Claude",
   "settings.claude.description":
-    "Have Claude (the desktop app's Code tab) write a Harvest overview of your previous working day every weekday morning, following your AI export prompt above. Claude only gets the timeline from Recall's command-line tool, never your GitHub, Jira or Zulip credentials.",
+    "Have Claude (the desktop app's Code tab) write a Harvest overview every weekday morning of the days since your last working day (on Mondays: Friday to Sunday), following your AI export prompt. Claude only gets the timeline from Recall's command-line tool, never your GitHub, Jira or Zulip credentials.",
   "settings.claude.step_skill": "Add a skill that tells Claude how to use the recall command:",
   "settings.claude.step_rule": "Let Claude run that command without asking, by adding",
   "settings.claude.step_open":
@@ -293,7 +328,7 @@ const da: Translations = {
   "settings.title": "Indstillinger",
   "settings.tab.general": "Generelt",
   "settings.tab.sources": "Datakilder",
-  "settings.tab.export": "Eksport",
+  "settings.tab.ai": "AI",
   "settings.tab.system": "System",
   "settings.language": "Sprog",
   "settings.language.error": "Kunne ikke sætte sprog",
@@ -411,7 +446,7 @@ const da: Translations = {
   "settings.cache.error": "Kunne ikke rydde cacher",
   "settings.cache.cleared": "Cacher ryddet",
 
-  "settings.welcome.show": "Vis velkomstskærm",
+  "settings.welcome.show": "Vis opsætningsguiden",
   "settings.welcome.description": "forstår dig godt. det er en fed h1 effekt.",
 
   "timeline.no_sources":
@@ -495,9 +530,44 @@ const da: Translations = {
   "cli.unavailable.windows": "Kommandoen recall er endnu ikke tilgængelig på Windows.",
   "cli.unavailable.missing":
     "Recalls kommandolinjeværktøj blev ikke fundet ved siden af appen. Installér en release-build af Recall.",
-  "settings.claude.title": "Claude",
+  "settings.advanced": "Avanceret",
+  "settings.export.collapse": "Skjul",
+  "settings.export.using_default": "Standard-prompt",
+  "settings.export.using_custom": "Din prompt",
+  "settings.claude.ready": "Claude skriver dit Harvest-overblik på hverdage kl. {time}.",
+  "settings.claude.ready_hint":
+    "Hver morgen dækker det dagene siden din seneste arbejdsdag (om mandagen: fredag til søndag), følger din AI-eksport-prompt nedenfor og navngiver sessionen efter dem.",
+  "settings.claude.change_time": "Skift tidspunkt",
+  "settings.claude.again": "Kør opsætningen igen",
+  "settings.claude.outdated":
+    "Denne version af Recall sætter Claude lidt anderledes op. Opdatér, så morgenoverblikket bruger de nyeste instruktioner.",
+  "settings.claude.update": "Opdatér",
+  "settings.claude.save_time": "Gem og opdatér Claude",
+  "settings.claude.cancel": "Annullér",
+  "settings.claude.details": "Hvad det ændrer på din computer",
+  "settings.claude.install_cli": "Installér også recall-kommandoen til terminalen (macOS beder måske om din adgangskode)",
+
+  "guide.step.sources": "Forbind dine værktøjer",
+  "guide.step.preview": "Se det virke",
+  "guide.step.claude": "Dagligt overblik",
+  "guide.sources.title": "Forbind dine værktøjer",
+  "guide.sources.description":
+    "Slå de værktøjer til, du bruger. Hvert af dem skal have en token eller en adresse én gang, og du kan ændre det hele senere under Indstillinger.",
+  "guide.preview.title": "Se det virke",
+  "guide.preview.description": "Det her fandt Recall for {day}, din seneste arbejdsdag.",
+  "guide.preview.loading": "Henter din aktivitet…",
+  "guide.preview.errors": "Nogle værktøjer kunne ikke nås:",
+  "guide.preview.empty": "Intet fundet for den dag. Du kan forbinde flere værktøjer senere under Indstillinger.",
+  "guide.claude.title": "Et Harvest-overblik hver morgen",
+  "guide.claude.description":
+    "Valgfrit: Hvis du bruger Claude-desktopappen, kan den skrive et overblik over din forrige arbejdsdag hver hverdagsmorgen (om mandagen også weekenden), klar til at kopiere ind i Harvest. Spring over, hvis du ikke bruger Claude.",
+  "guide.back": "Tilbage",
+  "guide.next": "Næste",
+  "guide.skip": "Spring over",
+  "guide.finish": "Gå til min tidslinje",
+  "settings.claude.title": "Dagligt overblik med Claude",
   "settings.claude.description":
-    "Lad Claude (desktop-appens Code-fane) skrive et Harvest-overblik over din forrige arbejdsdag hver hverdagsmorgen efter din AI-eksport-prompt ovenfor. Claude får kun tidslinjen fra Recalls kommandolinjeværktøj, aldrig dine GitHub-, Jira- eller Zulip-legitimationsoplysninger.",
+    "Lad Claude (desktop-appens Code-fane) skrive et Harvest-overblik hver hverdagsmorgen over dagene siden din seneste arbejdsdag (om mandagen: fredag til søndag) efter din AI-eksport-prompt. Claude får kun tidslinjen fra Recalls kommandolinjeværktøj, aldrig dine GitHub-, Jira- eller Zulip-legitimationsoplysninger.",
   "settings.claude.step_skill": "Tilføj en skill, der fortæller Claude, hvordan recall-kommandoen bruges:",
   "settings.claude.step_rule": "Lad Claude køre kommandoen uden at spørge ved at tilføje",
   "settings.claude.step_open":

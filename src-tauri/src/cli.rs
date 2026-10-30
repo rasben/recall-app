@@ -505,6 +505,20 @@ mod tests {
     }
 
     #[test]
+    fn last_workday_to_yesterday_covers_the_weekend_on_mondays() {
+        // What the scheduled Claude task runs. Monday 2026-10-26: Fri to Sun.
+        let monday = |list: &[&str]| match parse_args(&args(list), d("2026-10-26")).unwrap() {
+            Command::Timeline(t) => (t.start, t.end),
+            Command::Help => panic!("expected a timeline command"),
+        };
+        let range = ["timeline", "--from", "last-workday", "--to", "yesterday"];
+        assert_eq!(monday(&range), (d("2026-10-23"), d("2026-10-25")));
+        // Any other weekday: just yesterday.
+        let t = parse_timeline(&range);
+        assert_eq!((t.start, t.end), (d("2026-10-28"), d("2026-10-28")));
+    }
+
+    #[test]
     fn last_workday_skips_the_weekend() {
         // Monday, Sunday and Saturday all look back to Friday 2026-10-23.
         for today in ["2026-10-26", "2026-10-25", "2026-10-24"] {
