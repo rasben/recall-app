@@ -16,6 +16,7 @@ use specta::Type;
 use tauri::State;
 
 use crate::commands::cli_install::{locate_cli, shell_quote, CliAvailability};
+use crate::commands::settings_export::prompt_languages;
 use crate::state::AppState;
 use crate::telemetry;
 
@@ -42,7 +43,7 @@ pub struct ClaudeSetupStatus {
 
 #[tauri::command]
 #[specta::specta]
-pub fn get_claude_setup_status() -> Result<ClaudeSetupStatus, String> {
+pub fn get_claude_setup_status(lang: String) -> Result<ClaudeSetupStatus, String> {
     let claude = claude_dir()?;
     let (availability, command) = cli_command();
     let skill_path = skill_path(&claude);
@@ -50,7 +51,7 @@ pub fn get_claude_setup_status() -> Result<ClaudeSetupStatus, String> {
 
     let skill_installed = command
         .as_deref()
-        .is_some_and(|cmd| fs::read_to_string(&skill_path).is_ok_and(|s| s == render_skill(cmd)));
+        .is_some_and(|cmd| fs::read_to_string(&skill_path).is_ok_and(|s| s == render_skill(cmd, &lang)));
     let allow_rule = command.as_deref().map(allow_rule);
     let rule_installed = allow_rule.as_deref().is_some_and(|rule| {
         read_settings(&settings_path).is_ok_and(|mut s| matches!(add_allow_rule(&mut s, rule), Ok(false)))
@@ -69,16 +70,21 @@ pub fn get_claude_setup_status() -> Result<ClaudeSetupStatus, String> {
 
 /// Write the skill, allow the CLI in Claude's settings, then open Claude with
 /// a prefilled request to schedule the overview on weekdays at `time` (`HH:MM`).
+/// `lang` is the UI language: the run uses that language's built-in export
+/// prompt unless the user has written their own.
 #[tauri::command]
 #[specta::specta]
-pub fn setup_claude(state: State<'_, AppState>, time: String) -> Result<(), String> {
-    let result = run_setup(&time);
+pub fn setup_claude(state: State<'_, AppState>, time: String, lang: String) -> Result<(), String> {
+    let result = run_setup(&time, &lang);
     telemetry::record(&state, if result.is_ok() { "claude.setup.ok" } else { "claude.setup.error" });
     result
 }
 
-fn run_setup(time: &str) -> Result<(), String> {
+fn run_setup(time: &str, lang: &str) -> Result<(), String> {
     let (hour, minute) = parse_time(time)?;
+    if !prompt_languages().any(|l| l == lang) {
+        return Err(format!("Unknown language `{lang}`"));
+    }
     let command = match cli_command() {
         (_, Some(command)) => command,
         (CliAvailability::Windows, None) => return Err("Setting up Claude is not supported on Windows yet".into()),
@@ -90,7 +96,7 @@ fn run_setup(time: &str) -> Result<(), String> {
     };
     let claude = claude_dir()?;
 
-    write_atomically(&skill_path(&claude), &render_skill(&command))?;
+    write_atomically(&skill_path(&claude), &render_skill(&command, lang))?;
 
     let settings_path = claude.join("settings.json");
     let mut settings = read_settings(&settings_path)?;
@@ -100,7 +106,7 @@ fn run_setup(time: &str) -> Result<(), String> {
         write_atomically(&settings_path, &json)?;
     }
 
-    tauri_plugin_opener::open_url(schedule_link(&command, hour, minute), None::<&str>)
+    tauri_plugin_opener::open_url(schedule_link(&command, lang, hour, minute), None::<&str>)
         .map_err(|e| format!("Could not open Claude: {e}"))
 }
 
@@ -142,7 +148,13 @@ fn parse_time(time: &str) -> Result<(u32, u32), String> {
     Ok((hour, minute))
 }
 
-fn render_skill(command: &str) -> String {
+/// What the scheduled run executes: the timeline for the last working day,
+/// headed by the user's export prompt (theirs, or `lang`'s built-in default).
+fn timeline_invocation(command: &str, lang: &str) -> String {
+    format!("{command} timeline --date last-workday --format markdown --with-prompt --lang {lang}")
+}
+
+fn render_skill(command: &str, lang: &str) -> String {
     format!(
         r#"---
 name: {SKILL_NAME}
@@ -157,47 +169,52 @@ allowed-tools: {rule}
 Recall is a desktop app that collects the user's activity from their tools into one timeline per day. Its command-line tool prints that timeline:
 
 ```
-{command} timeline --date last-workday --format markdown
+{invocation}
 ```
 
-Run that command, changing only the options below. Do not read Recall's database or settings files, and do not call GitHub, Jira, Zulip or calendar APIs yourself: the command is the only way in.
+Run that command, changing only the options below. Do not read Recall's database or settings files, and do not call GitHub, Jira, Zulip or calendar APIs yourself: the command is the only way into that data.
 
 Options:
 
 - `--date DAY` for one day, or `--from DAY --to DAY` for a range. DAY is `YYYY-MM-DD`, `today`, `yesterday` or `last-workday` (the most recent weekday before today, so Friday when run on a Monday).
-- `--format markdown` (easiest to read) or `--format json`.
-
-The output has one section per day and one bullet per event: local time, source, title, details and link. Events marked "logged in Harvest" (`"logged": true` in JSON) are already entered: leave them out.
+- `--with-prompt` puts the user's instructions for the overview at the top (see below); `--lang` only picks the language of the built-in instructions.
 
 Exit status:
 
 - `0`: the timeline is complete.
-- `2`: some sources failed and are listed at the top under "Incomplete". Still write the overview, but say clearly which sources are missing.
+- `2`: some sources failed and are listed under "Incomplete". Still write the overview, but say clearly which sources are missing.
 - `1`: an error. Report the message; do not try to work around it.
 
 ## Writing the overview
 
-Make one table per day with the columns **Ticket/project**, **Task**, **Hours** and **Reasoning**, ending with a row for the day's total. It is used to fill in Harvest, so:
+Everything above the first `---` line of the output is the user's own instructions for this overview: their "AI export prompt" from Recall's settings, which they can edit there. Follow them as if they had written them here. Below the line is the timeline: one section per day, one bullet per event (local time, source, title, details, link). Events marked "logged in Harvest" are already entered: leave them out.
 
-- Whenever activity can be tied to a Jira ticket ID (e.g. ABC-123), group and label it by that ID. Look for it in commit messages, branch names, PR titles and Jira links, but don't guess. Group the rest by project or repository.
-- Within a ticket or project, split separate tasks into their own rows; routine related items (such as a batch of dependency-update PRs) may share one.
-- Estimate hours in quarter hours (0.25), from meeting times and the span between related events: the events are only traces of work that also happens between them. Say in **Reasoning** what an estimate rests on, and flag rough guesses.
-- Point out long stretches with no events instead of guessing what happened.
+## Naming the session
+
+When the overview is written, rename this session so it can be found later:
+
+```
+Harvest · <weekday> <date> · <gist>
+```
+
+The weekday and date are the day the overview covers (not today), written in the language of the overview, e.g. `Harvest · Tue 28 Oct 2026 · BUPL security day`. The gist is two to five words naming the main work of that day. Use your tool for setting the session title if you have one; otherwise start your answer with that line as a heading.
 "#,
         rule = allow_rule(command),
+        invocation = timeline_invocation(command, lang),
     )
 }
 
-/// `claude://` link that opens a new Code session with the scheduling request
-/// typed in (not sent).
-fn schedule_link(command: &str, hour: u32, minute: u32) -> String {
+/// `claude://` link that opens a new Code session with a request (typed in,
+/// not sent) to create the scheduled task, or update it when setup is re-run.
+fn schedule_link(command: &str, lang: &str, hour: u32, minute: u32) -> String {
     let prompt = format!(
         "Create a scheduled task titled \"Recall: Harvest overview\" that runs every weekday at \
-         {hour:02}:{minute:02} (cron `{minute} {hour} * * 1-5`), with this prompt:\n\n\
-         Use the {SKILL_NAME} skill: run `{command} timeline --date last-workday --format markdown` \
-         and turn the output into the Harvest overview the skill describes (one table per day: \
-         ticket/project, task, hours in quarter hours, reasoning). Leave out events already \
-         marked as logged in Harvest. If some sources failed, say which."
+         {hour:02}:{minute:02} (cron `{minute} {hour} * * 1-5`). If a task with that title already \
+         exists, update its schedule and prompt instead of creating a second one. Its prompt:\n\n\
+         Use the {SKILL_NAME} skill to write my Harvest overview for the last working day: run \
+         `{invocation}`, follow the instructions at the top of its output, and name the session \
+         as the skill describes.",
+        invocation = timeline_invocation(command, lang),
     );
     format!("claude://code/new?q={}", urlencoding::encode(&prompt))
 }
@@ -266,6 +283,8 @@ mod tests {
     #[test]
     fn allow_rule_covers_every_timeline_invocation() {
         assert_eq!(allow_rule(CMD), format!("Bash({CMD} timeline *)"));
+        // The rule's prefix matches what the skill and the task run.
+        assert!(timeline_invocation(CMD, "da").starts_with(&format!("{CMD} timeline ")));
     }
 
     #[test]
@@ -279,19 +298,25 @@ mod tests {
 
     #[test]
     fn skill_has_frontmatter_and_the_exact_command() {
-        let skill = render_skill(CMD);
+        let skill = render_skill(CMD, "da");
         assert!(skill.starts_with(&format!("---\nname: {SKILL_NAME}\ndescription: ")));
         assert!(skill.contains(&format!("allowed-tools: Bash({CMD} timeline *)\n---\n")));
-        assert!(skill.contains(&format!("{CMD} timeline --date last-workday --format markdown")));
+        assert!(skill.contains(&format!(
+            "```\n{CMD} timeline --date last-workday --format markdown --with-prompt --lang da\n```"
+        )));
+        assert!(skill.contains("Harvest · <weekday> <date> · <gist>"));
     }
 
     #[test]
     fn schedule_link_prefills_a_weekday_cron_and_the_command() {
-        let link = schedule_link(CMD, 8, 5);
+        let link = schedule_link(CMD, "en", 8, 5);
         let q = link.strip_prefix("claude://code/new?q=").expect("Code deep link");
         let prompt = urlencoding::decode(q).unwrap();
         assert!(prompt.contains("every weekday at 08:05 (cron `5 8 * * 1-5`)"), "{prompt}");
-        assert!(prompt.contains(&format!("run `{CMD} timeline --date last-workday --format markdown`")));
+        assert!(prompt.contains(&format!(
+            "run `{CMD} timeline --date last-workday --format markdown --with-prompt --lang en`"
+        )));
+        assert!(prompt.contains("update its schedule and prompt instead of creating a second one"));
         assert!(!q.contains(' ') && !q.contains('\n'), "prompt must be URL-encoded");
     }
 

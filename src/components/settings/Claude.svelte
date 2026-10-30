@@ -5,7 +5,7 @@
   import { toast } from "svelte-sonner";
   import { onMount } from "svelte";
   import { commands, type ClaudeSetupStatus } from "../../bindings";
-  import { t } from "$lib/i18n.svelte";
+  import { i18n, t } from "$lib/i18n.svelte";
   import { cliUnavailableKey } from "$lib/cli-availability";
 
   let status = $state<ClaudeSetupStatus | null>(null);
@@ -15,13 +15,13 @@
   let unavailable = $derived(status ? cliUnavailableKey(status.availability) : null);
 
   async function loadStatus() {
-    const result = await commands.getClaudeSetupStatus();
+    const result = await commands.getClaudeSetupStatus(i18n.lang);
     if (result.status === "ok") status = result.data;
   }
 
   async function setup() {
     busy = true;
-    const result = await commands.setupClaude(time);
+    const result = await commands.setupClaude(time, i18n.lang);
     busy = false;
     if (result.status === "error") {
       toast.error(t("settings.claude.error"), { description: result.error, richColors: true });

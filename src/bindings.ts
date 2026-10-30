@@ -251,9 +251,9 @@ async telemetryTrack(name: string) : Promise<void> {
 async telemetrySetGauge(name: string, value: string) : Promise<void> {
     await TAURI_INVOKE("telemetry_set_gauge", { name, value });
 },
-async getClaudeSetupStatus() : Promise<Result<ClaudeSetupStatus, string>> {
+async getClaudeSetupStatus(lang: string) : Promise<Result<ClaudeSetupStatus, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("get_claude_setup_status") };
+    return { status: "ok", data: await TAURI_INVOKE("get_claude_setup_status", { lang }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -262,10 +262,12 @@ async getClaudeSetupStatus() : Promise<Result<ClaudeSetupStatus, string>> {
 /**
  * Write the skill, allow the CLI in Claude's settings, then open Claude with
  * a prefilled request to schedule the overview on weekdays at `time` (`HH:MM`).
+ * `lang` is the UI language: the run uses that language's built-in export
+ * prompt unless the user has written their own.
  */
-async setupClaude(time: string) : Promise<Result<null, string>> {
+async setupClaude(time: string, lang: string) : Promise<Result<null, string>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("setup_claude", { time }) };
+    return { status: "ok", data: await TAURI_INVOKE("setup_claude", { time, lang }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };

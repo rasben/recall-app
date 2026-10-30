@@ -69,19 +69,20 @@ npm run cli:install
 ```
 recall timeline                              # yesterday, as JSON
 recall timeline --date last-workday --format markdown
+recall timeline --date last-workday --format markdown --with-prompt   # headed by your AI export prompt
 recall timeline --from 2026-10-26 --to yesterday
 recall help
 ```
 
-Each event has a `logged` flag: whether you have ticked it off as logged in Harvest in the app. Exit status `2` means the timeline was printed but some sources failed (they are listed under `errors`), so it is incomplete. Before reading, it re-fetches your iCal feeds unless they were synced in the last 15 minutes (`--no-calendar-sync` skips that).
+Each event has a `logged` flag: whether you have ticked it off as logged in Harvest in the app. Exit status `2` means the timeline was printed but some sources failed (they are listed under `errors`), so it is incomplete. Before reading, it re-fetches your iCal feeds unless they were synced in the last 15 minutes (`--no-calendar-sync` skips that). `--with-prompt` starts the output with your AI export prompt from **Settings → Export**, exactly like the app's "Add a prompt intro"; `--lang da` picks the Danish built-in prompt when you haven't written your own.
 
 ### Daily Harvest overview with Claude
 
-On macOS and with the Linux .deb/.rpm, **Settings → Export → Set up with Claude** does this for you: it adds a `recall-harvest` skill to Claude, allows Claude to run `recall timeline` without asking, and opens Claude with a request to schedule the overview on weekday mornings. You check that request and press Enter.
+On macOS and with the Linux .deb/.rpm, **Settings → Export → Set up with Claude** does this for you: it adds a `recall-harvest` skill to Claude, allows Claude to run `recall timeline` without asking, and opens Claude with a request to schedule the overview on weekday mornings (or to update the task, if you run it again). You check that request and press Enter. The overview follows your AI export prompt, so editing that prompt changes the next morning's overview too, and each run names its session after the day it covers, e.g. `Harvest · Tue 28 Oct 2026 · BUPL security day`.
 
 To do it by hand, create a scheduled task in the Claude desktop app (a local one: a cloud routine cannot reach a program on your machine) that runs every weekday morning, with a prompt along the lines of:
 
-> Run `recall timeline --date last-workday --format markdown`. Summarise what I worked on, grouped by project/ticket, with rough time spans, so I can enter it in Harvest. Skip events marked as logged in Harvest. If the exit status is 2, say which sources failed.
+> Run `recall timeline --date last-workday --format markdown --with-prompt` and follow the instructions at the top of its output. Skip events marked as logged in Harvest. If the exit status is 2, say which sources failed.
 
 Allow the task to run `recall timeline` and nothing else. The CLI is what keeps your credentials away from Claude, but they are still in plain text in the app's database (see the security warning below), so a session that may run arbitrary shell commands could read them directly.
 
