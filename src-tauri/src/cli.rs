@@ -14,6 +14,7 @@ use serde::Serialize;
 
 use crate::commands::harvest_done::done_event_ids;
 use crate::commands::settings::now;
+use crate::commands::settings_export::{effective_export_prompt, prompt_languages};
 use crate::commands::settings_ical;
 use crate::commands::timeline::{export_range, ExportResult, ExportSourceError};
 use crate::db;
@@ -38,6 +39,11 @@ OPTIONS:
     --to <DAY>          Last day of the range (default: today)
                         With none of these, the range is yesterday.
     --format <FORMAT>   json (default) or markdown
+    --with-prompt       Start the output with your AI export prompt from the
+                        app's settings (Markdown: above a `---` line; JSON:
+                        a `prompt` field), like the app's prompt intro option
+    --lang <LANG>       Language of the built-in prompt when you have not
+                        written your own: en (default) or da
     --no-calendar-sync  Use the calendar events already in the database
                         instead of re-fetching the iCal feeds first
     --db <PATH>         Database to read (default: the desktop app's)
@@ -67,6 +73,9 @@ struct TimelineArgs {
     start: NaiveDate,
     end: NaiveDate,
     format: Format,
+    /// `Some(lang)` with `--with-prompt`: prepend the export prompt, using
+    /// `lang`'s built-in default when no custom prompt is set.
+    prompt_lang: Option<String>,
     calendar_sync: bool,
     db: Option<PathBuf>,
 }
@@ -119,6 +128,8 @@ fn parse_args(args: &[String], today: NaiveDate) -> Result<Command, String> {
     let mut from = None;
     let mut to = None;
     let mut format = Format::Json;
+    let mut with_prompt = false;
+    let mut lang = "en".to_string();
     let mut calendar_sync = true;
     let mut db = None;
     while let Some(flag) = it.next() {
@@ -141,6 +152,15 @@ fn parse_args(args: &[String], today: NaiveDate) -> Result<Command, String> {
                     other => return Err(format!("unknown format `{other}` (use json or markdown)")),
                 }
             }
+            "--with-prompt" => with_prompt = true,
+            "--lang" => {
+                let value = value()?;
+                if !prompt_languages().any(|l| l == value) {
+                    let known = prompt_languages().collect::<Vec<_>>().join(" or ");
+                    return Err(format!("unknown language `{value}` (use {known})"));
+                }
+                lang = value.clone();
+            }
             "--no-calendar-sync" => calendar_sync = false,
             "--db" => db = Some(PathBuf::from(value()?)),
             "help" | "--help" | "-h" => return Ok(Command::Help),
@@ -162,7 +182,8 @@ fn parse_args(args: &[String], today: NaiveDate) -> Result<Command, String> {
         return Err(format!("--to {end} is before --from {start}"));
     }
 
-    Ok(Command::Timeline(TimelineArgs { start, end, format, calendar_sync, db }))
+    let prompt_lang = with_prompt.then_some(lang);
+    Ok(Command::Timeline(TimelineArgs { start, end, format, prompt_lang, calendar_sync, db }))
 }
 
 fn parse_day(raw: &str, today: NaiveDate) -> Result<NaiveDate, String> {
@@ -221,15 +242,18 @@ fn timeline(args: &TimelineArgs) -> Result<(String, bool), String> {
         .collect();
     let logged: HashSet<String> = done_event_ids(&state, ids)?.into_iter().collect();
 
+    let prompt = args.prompt_lang.as_deref().map(|lang| effective_export_prompt(&state, lang));
     let output = match args.format {
-        Format::Json => to_json(&result, &start, &end, &logged),
-        Format::Markdown => to_markdown(&result, &start, &end, &logged),
+        Format::Json => to_json(&result, &start, &end, &logged, prompt.as_deref()),
+        Format::Markdown => to_markdown(&result, &start, &end, &logged, prompt.as_deref()),
     };
     Ok((output, result.errors.is_empty()))
 }
 
 #[derive(Serialize)]
 struct JsonOutput<'a> {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    prompt: Option<&'a str>,
     range: JsonRange<'a>,
     days: Vec<JsonDay<'a>>,
     errors: &'a [ExportSourceError],
@@ -260,8 +284,15 @@ struct JsonEvent<'a> {
     logged: bool,
 }
 
-fn to_json(result: &ExportResult, start: &str, end: &str, logged: &HashSet<String>) -> String {
+fn to_json(
+    result: &ExportResult,
+    start: &str,
+    end: &str,
+    logged: &HashSet<String>,
+    prompt: Option<&str>,
+) -> String {
     let out = JsonOutput {
+        prompt,
         range: JsonRange { start, end },
         days: result
             .days
@@ -320,15 +351,26 @@ fn event_markdown(ev: &TimelineEvent, logged: bool) -> String {
 }
 
 /// Mirrors the app's Markdown export (`src/lib/export.ts` `toMarkdown`, English
-/// labels, no prompt), plus a note on failed sources and logged events.
-fn to_markdown(result: &ExportResult, start: &str, end: &str, logged: &HashSet<String>) -> String {
+/// labels), plus a note on failed sources and logged events. `prompt` goes
+/// first, above a `---` divider, as with the app's "Add a prompt intro".
+fn to_markdown(
+    result: &ExportResult,
+    start: &str,
+    end: &str,
+    logged: &HashSet<String>,
+    prompt: Option<&str>,
+) -> String {
     let range = if start == end { start.to_string() } else { format!("{start} → {end}") };
-    let mut lines = vec![
+    let mut lines = Vec::new();
+    if let Some(prompt) = prompt {
+        lines.extend([prompt.to_string(), String::new(), "---".to_string(), String::new()]);
+    }
+    lines.extend([
         format!("# Activity timeline ({range})"),
         String::new(),
         "_Exported from Recall, a personal work-tracking app. Times are local. Each bullet is one tracked activity (commit, PR, calendar event, ticket update, message, …)._".to_string(),
         String::new(),
-    ];
+    ]);
 
     if !result.errors.is_empty() {
         lines.push("> **Incomplete:** these sources failed, so their activity is missing:".to_string());
@@ -421,6 +463,7 @@ mod tests {
                 start: d("2026-10-28"),
                 end: d("2026-10-28"),
                 format: Format::Json,
+                prompt_lang: None,
                 calendar_sync: true,
                 db: None,
             }
@@ -493,7 +536,7 @@ mod tests {
     #[test]
     fn markdown_matches_the_app_export_and_marks_logged_events() {
         let logged: HashSet<String> = ["jira:LB-1".to_string()].into();
-        let md = to_markdown(&sample(), "2026-10-27", "2026-10-28", &logged);
+        let md = to_markdown(&sample(), "2026-10-27", "2026-10-28", &logged, None);
         assert!(md.starts_with("# Activity timeline (2026-10-27 → 2026-10-28)\n"));
         assert!(md.contains("## 2026-10-27 — Tuesday, October 27\n"));
         assert!(md.contains("- **09:05** `Git` — Fix login — recall main (https://example.com/c/abc)\n"));
@@ -507,7 +550,7 @@ mod tests {
     fn markdown_lists_failed_sources_up_front() {
         let mut result = sample();
         result.errors.push(ExportSourceError { source: "Jira".into(), error: "401".into() });
-        let md = to_markdown(&result, "2026-10-27", "2026-10-28", &HashSet::new());
+        let md = to_markdown(&result, "2026-10-27", "2026-10-28", &HashSet::new(), None);
         assert!(md.contains("> **Incomplete:**"));
         assert!(md.contains("> - Jira: 401\n"));
     }
@@ -518,7 +561,7 @@ mod tests {
         result.errors.push(ExportSourceError { source: "Zulip".into(), error: "timeout".into() });
         let logged: HashSet<String> = ["git:abc".to_string()].into();
         let v: serde_json::Value =
-            serde_json::from_str(&to_json(&result, "2026-10-27", "2026-10-28", &logged)).unwrap();
+            serde_json::from_str(&to_json(&result, "2026-10-27", "2026-10-28", &logged, None)).unwrap();
         assert_eq!(v["range"], serde_json::json!({ "start": "2026-10-27", "end": "2026-10-28" }));
         let first = &v["days"][0]["events"][0];
         assert_eq!(first["source"], "git");
@@ -529,6 +572,63 @@ mod tests {
         assert!(second.get("detail").is_none() && second.get("url").is_none());
         assert_eq!(v["days"][1]["events"], serde_json::json!([]));
         assert_eq!(v["errors"][0]["source"], "Zulip");
+    }
+
+    #[test]
+    fn with_prompt_defaults_to_english_and_lang_is_validated() {
+        assert_eq!(parse_timeline(&["timeline"]).prompt_lang, None);
+        assert_eq!(parse_timeline(&["timeline", "--with-prompt"]).prompt_lang.as_deref(), Some("en"));
+        assert_eq!(
+            parse_timeline(&["timeline", "--with-prompt", "--lang", "da"]).prompt_lang.as_deref(),
+            Some("da")
+        );
+        // --lang alone changes nothing: there is no prompt to translate.
+        assert_eq!(parse_timeline(&["timeline", "--lang", "da"]).prompt_lang, None);
+        let err = parse_args(&args(&["timeline", "--lang", "sv"]), d(THURSDAY)).unwrap_err();
+        assert!(err.contains("unknown language"), "{err}");
+    }
+
+    #[test]
+    fn markdown_puts_the_prompt_above_a_divider() {
+        let md = to_markdown(&sample(), "2026-10-27", "2026-10-28", &HashSet::new(), Some("Do the thing."));
+        assert!(md.starts_with("Do the thing.\n\n---\n\n# Activity timeline (2026-10-27 → 2026-10-28)\n"), "{md}");
+    }
+
+    #[test]
+    fn json_carries_the_prompt_only_when_asked() {
+        let with: serde_json::Value =
+            serde_json::from_str(&to_json(&sample(), "a", "b", &HashSet::new(), Some("Do it."))).unwrap();
+        assert_eq!(with["prompt"], "Do it.");
+        let without: serde_json::Value =
+            serde_json::from_str(&to_json(&sample(), "a", "b", &HashSet::new(), None)).unwrap();
+        assert!(without.get("prompt").is_none());
+    }
+
+    #[test]
+    fn timeline_with_prompt_uses_the_stored_custom_prompt() {
+        let dir = std::env::temp_dir().join(format!("recall-cli-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("db.sqlite");
+        let conn = rusqlite::Connection::open(&path).unwrap();
+        db::init_schema(&conn).unwrap();
+        conn.execute(
+            "INSERT INTO settings (key, value, updated_at) VALUES ('settings_export', '{\"prompt\":\"My own words.\"}', 0)",
+            [],
+        )
+        .unwrap();
+        drop(conn);
+
+        let t = TimelineArgs {
+            start: d("2026-10-27"),
+            end: d("2026-10-27"),
+            format: Format::Markdown,
+            prompt_lang: Some("da".into()),
+            calendar_sync: false,
+            db: Some(path),
+        };
+        let (out, _) = timeline(&t).unwrap();
+        assert!(out.starts_with("My own words.\n\n---\n\n"), "{out}");
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
@@ -543,6 +643,7 @@ mod tests {
             start: d("2026-10-27"),
             end: d("2026-10-28"),
             format: Format::Json,
+            prompt_lang: None,
             calendar_sync: true,
             db: Some(path.clone()),
         };
