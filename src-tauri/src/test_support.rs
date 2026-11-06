@@ -46,7 +46,7 @@ pub(crate) fn state(app: &App<MockRuntime>) -> State<'_, AppState> {
 
 /// Store a raw JSON settings document under `key`, bypassing the typed
 /// `set_settings_*` commands (so tests can also seed legacy or partial shapes).
-pub(crate) fn seed_setting(state: &State<'_, AppState>, key: &str, json: &str) {
+pub(crate) fn seed_setting(state: &AppState, key: &str, json: &str) {
     crate::commands::settings::save_val(state, key, json).expect("seed setting");
 }
 

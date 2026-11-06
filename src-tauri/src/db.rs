@@ -1,7 +1,34 @@
 use rusqlite::Connection;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
+
+/// Must equal `identifier` in `tauri.conf.json`: Tauri names the app data
+/// folder after it, and the CLI has no `AppHandle` to ask.
+pub(crate) const APP_IDENTIFIER: &str = "com.recall-app.app";
+
+/// The app's `db.sqlite`, resolved the way Tauri's `app_data_dir` does
+/// (`dirs::data_dir()/{identifier}`), for callers without an `AppHandle`.
+pub(crate) fn default_db_path() -> Result<PathBuf, String> {
+    dirs::data_dir()
+        .map(|dir| dir.join(APP_IDENTIFIER).join("db.sqlite"))
+        .ok_or_else(|| "failed to resolve the user data directory".to_string())
+}
+
+/// Open a database the app has already created. Unlike `init_db` this never
+/// creates one: a missing file means the app was never set up on this machine.
+pub(crate) fn open_existing(db_path: &Path) -> Result<Connection, String> {
+    if !db_path.is_file() {
+        return Err(format!(
+            "no Recall database at {} (open the Recall app and configure a data source first)",
+            db_path.display()
+        ));
+    }
+    let conn = Connection::open(db_path)
+        .map_err(|e| format!("failed to open db at {}: {e}", db_path.display()))?;
+    init_schema(&conn)?;
+    Ok(conn)
+}
 
 pub fn init_db(app_handle: &AppHandle) -> Result<(Connection, PathBuf), String> {
     let app_dir = app_handle
@@ -106,6 +133,33 @@ pub(crate) fn init_schema(conn: &Connection) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The CLI finds the app's DB through `APP_IDENTIFIER`; if it drifts from
+    /// the Tauri config the CLI would silently read the wrong (absent) DB.
+    #[test]
+    fn app_identifier_matches_tauri_config() {
+        let conf: serde_json::Value =
+            serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();
+        assert_eq!(conf["identifier"], APP_IDENTIFIER);
+        assert!(
+            conf["app"].get("appDirectoriesOverride").is_none(),
+            "default_db_path assumes Tauri's default app data dir"
+        );
+    }
+
+    #[test]
+    fn default_db_path_lives_in_the_identifier_folder() {
+        let path = default_db_path().unwrap();
+        assert!(path.ends_with(format!("{APP_IDENTIFIER}/db.sqlite")));
+    }
+
+    #[test]
+    fn open_existing_refuses_to_create_a_database() {
+        let dir = std::env::temp_dir().join(format!("recall-missing-{}", uuid::Uuid::new_v4()));
+        let err = open_existing(&dir.join("db.sqlite")).unwrap_err();
+        assert!(err.contains("no Recall database"), "{err}");
+        assert!(!dir.exists());
+    }
 
     fn table_names(conn: &Connection) -> Vec<String> {
         let mut stmt = conn

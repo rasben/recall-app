@@ -7,9 +7,8 @@ use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use chrono::{Local, NaiveDate, TimeZone};
-use tauri::State;
 
-use crate::commands::settings_git::get_settings_git;
+use crate::commands::settings_git::load_settings_git;
 use crate::state::AppState;
 use crate::timeline::{sanitize_event_url, TimelineEvent, TimelineEventSource};
 
@@ -41,8 +40,8 @@ fn git_command() -> Command {
     }
 }
 
-pub(super) fn test_connection(state: &State<'_, AppState>) -> Result<(), String> {
-    let Some(settings) = get_settings_git(state.clone()) else {
+pub(super) fn test_connection(state: &AppState) -> Result<(), String> {
+    let Some(settings) = load_settings_git(state) else {
         return Err("Git is not configured".into());
     };
     let root = settings.path;
@@ -68,7 +67,7 @@ pub(super) fn test_connection(state: &State<'_, AppState>) -> Result<(), String>
 }
 
 pub(super) fn events_for_day(
-    state: &State<'_, AppState>,
+    state: &AppState,
     day: &str,
 ) -> Result<Vec<(i64, TimelineEvent)>, String> {
     let day_naive = NaiveDate::parse_from_str(day, "%Y-%m-%d")
@@ -78,11 +77,11 @@ pub(super) fn events_for_day(
 }
 
 pub(super) fn events_for_range(
-    state: &State<'_, AppState>,
+    state: &AppState,
     start_day: NaiveDate,
     end_day: NaiveDate,
 ) -> Result<Vec<(NaiveDate, i64, TimelineEvent)>, String> {
-    let Some(settings) = get_settings_git(state.clone()) else {
+    let Some(settings) = load_settings_git(state) else {
         return Ok(Vec::new());
     };
     if !settings.enabled {
