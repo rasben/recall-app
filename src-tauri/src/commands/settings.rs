@@ -14,7 +14,7 @@ pub(crate) fn now() -> i64 {
         .as_millis() as i64
 }
 
-pub(crate) fn save_val(state: &State<'_, AppState>, key: &str, value: &str) -> Result<(), String> {
+pub(crate) fn save_val(state: &AppState, key: &str, value: &str) -> Result<(), String> {
     let conn = state.db.lock().map_err(|_| "Failed to access database")?;
 
     conn.execute(
@@ -32,7 +32,7 @@ pub(crate) fn save_val(state: &State<'_, AppState>, key: &str, value: &str) -> R
     Ok(())
 }
 
-pub(crate) fn get_val(state: &State<'_, AppState>, key: &str) -> Option<String> {
+pub(crate) fn get_val(state: &AppState, key: &str) -> Option<String> {
     let conn = state.db.lock().ok()?;
 
     let mut stmt = conn
@@ -104,7 +104,7 @@ mod tests {
     use crate::test_support::{event, mock_app, mock_app_at, state};
     use crate::timeline::{TimelineEvent, TimelineEventSource};
 
-    fn seed_cache_row(state: &State<'_, AppState>, day: &str, events: &[TimelineEvent]) {
+    fn seed_cache_row(state: &AppState, day: &str, events: &[TimelineEvent]) {
         let conn = state.db.lock().unwrap();
         conn.execute(
             "INSERT INTO timeline_day_cache (day, events_json, updated_at) VALUES (?1, ?2, ?3)",
@@ -113,7 +113,7 @@ mod tests {
         .unwrap();
     }
 
-    fn seed_ical_row(state: &State<'_, AppState>, uid: &str) {
+    fn seed_ical_row(state: &AppState, uid: &str) {
         let conn = state.db.lock().unwrap();
         conn.execute(
             "INSERT INTO ical_events (url, uid, dtstart, summary) VALUES ('u', ?1, 1, 's')",
@@ -122,7 +122,7 @@ mod tests {
         .unwrap();
     }
 
-    fn count(state: &State<'_, AppState>, table: &str) -> i64 {
+    fn count(state: &AppState, table: &str) -> i64 {
         let conn = state.db.lock().unwrap();
         conn.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0))
             .unwrap()

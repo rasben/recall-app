@@ -20,7 +20,6 @@ use rusqlite::{params, Connection, OptionalExtension};
 use serde_json::{json, Map, Value};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
-use tauri::State;
 
 use crate::commands::settings::save_val;
 use crate::state::AppState;
@@ -84,7 +83,7 @@ pub fn record(state: &AppState, key: &str) {
 
 /// Store a gauge (current state such as `lang = "da"`). Both name and value
 /// must be short lowercase identifiers; anything else is dropped.
-pub fn set_gauge(state: &State<'_, AppState>, name: &str, value: &str) {
+pub fn set_gauge(state: &AppState, name: &str, value: &str) {
     if !valid_key(name) || !valid_key(value) || value.len() > MAX_GAUGE_LEN {
         #[cfg(debug_assertions)]
         eprintln!("[telemetry] dropped invalid gauge {name:?}={value:?}");

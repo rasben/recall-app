@@ -1,9 +1,8 @@
 use chrono::{DateTime, Local, NaiveDate, TimeZone, Utc};
 use serde::Deserialize;
 use serde_json::Value;
-use tauri::State;
 
-use crate::commands::settings_github::{get_settings_github, GitHubEvent};
+use crate::commands::settings_github::{load_settings_github, GitHubEvent};
 use crate::state::AppState;
 use crate::timeline::{sanitize_event_url, TimelineEvent, TimelineEventSource};
 
@@ -24,7 +23,7 @@ struct GhRepo {
 }
 
 pub(super) fn events_for_day(
-    state: &State<'_, AppState>,
+    state: &AppState,
     day: &str,
 ) -> Result<Vec<(i64, TimelineEvent)>, String> {
     let day_naive =
@@ -34,11 +33,11 @@ pub(super) fn events_for_day(
 }
 
 pub(super) fn events_for_range(
-    state: &State<'_, AppState>,
+    state: &AppState,
     start_day: NaiveDate,
     end_day: NaiveDate,
 ) -> Result<Vec<(NaiveDate, i64, TimelineEvent)>, String> {
-    let Some(settings) = get_settings_github(state.clone()) else {
+    let Some(settings) = load_settings_github(state) else {
         return Ok(Vec::new());
     };
     if !settings.enabled {
@@ -323,8 +322,8 @@ fn parse_github_datetime(s: &str) -> Result<DateTime<Utc>, String> {
         .map_err(|e| format!("Invalid GitHub timestamp {s:?}: {e}"))
 }
 
-pub(super) fn test_connection(state: &State<'_, AppState>) -> Result<(), String> {
-    let Some(settings) = get_settings_github(state.clone()) else {
+pub(super) fn test_connection(state: &AppState) -> Result<(), String> {
+    let Some(settings) = load_settings_github(state) else {
         return Err("GitHub is not configured".into());
     };
     if settings.username.is_empty() || settings.token.is_empty() {

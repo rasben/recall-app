@@ -28,7 +28,7 @@ pub struct SettingsIcal {
     pub emails: Vec<String>,
 }
 
-pub(crate) fn load_settings_ical(state: &State<'_, AppState>) -> SettingsIcal {
+pub(crate) fn load_settings_ical(state: &AppState) -> SettingsIcal {
     get_val(state, KEY)
         .and_then(|j| serde_json::from_str(&j).ok())
         .unwrap_or_default()
@@ -113,9 +113,25 @@ pub fn trigger_ical_sync(state: State<'_, AppState>) {
     start_sync(&state);
 }
 
-pub(crate) fn start_sync(state: &State<'_, AppState>) {
+pub(crate) fn start_sync(state: &AppState) {
+    if let Some(job) = prepare_sync(state) {
+        tauri::async_runtime::spawn_blocking(job);
+    }
+}
+
+/// Run a sync on the calling thread and return once it has finished. Used by
+/// the CLI, which has no event loop to poll `get_ical_sync_status` from.
+pub(crate) fn sync_blocking(state: &AppState) {
+    if let Some(job) = prepare_sync(state) {
+        job();
+    }
+}
+
+/// Claim the `ical_syncing` flag and capture what a sync needs. `None` when a
+/// sync is already running or the calendar source has nothing to fetch.
+fn prepare_sync(state: &AppState) -> Option<impl FnOnce() + Send + 'static> {
     if state.ical_syncing.swap(true, Ordering::AcqRel) {
-        return; // already running
+        return None; // already running
     }
 
     let settings = load_settings_ical(state);
@@ -127,7 +143,7 @@ pub(crate) fn start_sync(state: &State<'_, AppState>) {
 
     if !settings.enabled || urls.is_empty() {
         state.ical_syncing.store(false, Ordering::Release);
-        return;
+        return None;
     }
 
     // The sync opens its own connection so it never contends with the main DB mutex.
@@ -135,9 +151,19 @@ pub(crate) fn start_sync(state: &State<'_, AppState>) {
     let syncing = Arc::clone(&state.ical_syncing);
     let emails = settings.emails.clone();
 
-    tauri::async_runtime::spawn_blocking(move || {
-        run_sync(db_path, syncing, urls, emails);
-    });
+    Some(move || run_sync(db_path, syncing, urls, emails))
+}
+
+/// Unix millis of the last finished sync (successful or not), if any.
+pub(crate) fn last_synced_at(state: &AppState) -> Option<i64> {
+    let conn = state.db.lock().ok()?;
+    conn.query_row(
+        "SELECT last_synced_at FROM ical_sync_meta WHERE id = 1",
+        [],
+        |row| row.get(0),
+    )
+    .ok()
+    .flatten()
 }
 
 fn run_sync(
@@ -650,7 +676,7 @@ mod command_tests {
     use super::*;
     use crate::test_support::{mock_app, seed_setting, state};
 
-    fn count(state: &State<'_, AppState>, table: &str) -> i64 {
+    fn count(state: &AppState, table: &str) -> i64 {
         let conn = state.db.lock().unwrap();
         conn.query_row(&format!("SELECT COUNT(*) FROM {table}"), [], |r| r.get(0))
             .unwrap()

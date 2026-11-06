@@ -23,6 +23,12 @@ pub fn set_settings_git(state: State<'_, AppState>, settings: SettingsGit) -> Re
 #[tauri::command]
 #[specta::specta]
 pub fn get_settings_git(state: State<'_, AppState>) -> Option<SettingsGit> {
-    let json = get_val(&state, KEY)?;
+    load_settings_git(&state)
+}
+
+/// [`get_settings_git`] for callers holding a plain `&AppState` (the
+/// timeline source, the CLI) rather than a Tauri `State`.
+pub(crate) fn load_settings_git(state: &AppState) -> Option<SettingsGit> {
+    let json = get_val(state, KEY)?;
     serde_json::from_str(&json).ok()
 }

@@ -35,6 +35,12 @@ pub fn set_settings_zulip(
 #[tauri::command]
 #[specta::specta]
 pub fn get_settings_zulip(state: State<'_, AppState>) -> Option<SettingsZulip> {
-    let json = get_val(&state, KEY)?;
+    load_settings_zulip(&state)
+}
+
+/// [`get_settings_zulip`] for callers holding a plain `&AppState` (the
+/// timeline source, the CLI) rather than a Tauri `State`.
+pub(crate) fn load_settings_zulip(state: &AppState) -> Option<SettingsZulip> {
+    let json = get_val(state, KEY)?;
     serde_json::from_str(&json).ok()
 }
