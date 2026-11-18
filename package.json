@@ -41,7 +41,7 @@
     "mode-watcher": "^1.1.0",
     "prettier": "^3.9.10",
     "prettier-plugin-svelte": "^4.1.1",
-    "sass": "^1.107.1",
+    "sass": "^1.108.2",
     "svelte": "^5.57.3",
     "svelte-check": "^4.7.8",
     "svelte-sonner": "^1.2.3",
