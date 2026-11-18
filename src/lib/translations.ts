@@ -1,3 +1,7 @@
+// The default AI-export prompts live in a JSON file so the Rust side (the
+// `recall` CLI) can embed the same text.
+import exportPrompts from "./export-prompts.json";
+
 export type Lang = "en" | "da";
 
 const en = {
@@ -207,23 +211,53 @@ const en = {
   "export.md_intro":
     "Exported from Recall, a personal work-tracking app. Times are local. Each bullet is one tracked activity (commit, PR, calendar event, ticket update, message, …).",
   "export.md_no_activity": "No tracked activity.",
-  "export.prompt": `First, before doing anything else, ask me whether you should also pull in data from any other sources you can access (such as chat sessions), and wait for my answer before continuing.
-
-Then summarize the activity below as one table per day, with the columns **Ticket/project**, **Task**, **Hours** and **Reasoning**. It is used to update Harvest time tracking, so:
-- Whenever activity can be tied to a Jira ticket ID (e.g. DDF-123, BUPL-123), group and label it by that ID — the ticket ID is the single most important thing for Harvest, so include it whenever it can be determined. Look for it in commit messages, branch names, PR titles and Jira links, but don't guess.
-- Group the remaining entries by project (e.g. DDF, BUPL).
-- Within each ticket or project, break the work into separate tasks so each can be logged as its own Harvest entry — don't lump everything under one heading.
-- You may combine routine, related items into a single entry (e.g. a batch of Dependabot dependency-update PRs), but keep unrelated work (such as a feature) as its own entry.
-- Estimate the hours for each entry in quarter hours (0.25). Base them on meeting durations from the calendar and the time span between related activities — the tracked activities are only traces of the work, which also happens in between them.
-- Briefly explain in **Reasoning** what the estimate is based on, and flag it if it's a rough guess.
-- End each table with a row for the day's total hours.`,
+  "export.prompt": exportPrompts.en,
   "settings.export.title": "AI export prompt",
   "settings.export.description":
-    "The intro prepended to a Markdown export when “Add a prompt intro” is on. Leave it as the default to follow the app language, or write your own. Save an empty box to fall back to the default.",
+    "The intro prepended to a Markdown export when “Add a prompt intro” is on. Claude's scheduled Harvest overview follows it too. Leave it as the default to follow the app language, or write your own. Save an empty box to fall back to the default.",
   "settings.export.save": "Save prompt",
   "settings.export.revert": "Revert to default",
   "settings.export.saved": "Prompt saved",
   "settings.export.error": "Could not save the prompt.",
+
+  "settings.cli.title": "Command line",
+  "settings.cli.description":
+    "The recall command prints your timeline in a terminal, for scripts and AI tools such as Claude. Run recall help to see how.",
+  "settings.cli.install_hint": "Install it so a terminal can find it. This creates a link at",
+  "settings.cli.install": "Install the recall command",
+  "settings.cli.update": "Point it at this copy of Recall",
+  "settings.cli.uninstall": "Uninstall the recall command",
+  "settings.cli.linked": "The recall command is installed at",
+  "settings.cli.stale":
+    "The recall command points to another copy of Recall (perhaps an older one, or one you moved).",
+  "settings.cli.foreign":
+    "already exists and belongs to another program, so Recall leaves it alone. You can still run the command by its full path.",
+  "settings.cli.on_path": "The recall command was installed with the app. Open a terminal and run recall help.",
+  "settings.cli.manual": "To run it as recall, link this file into a folder on your PATH:",
+  "settings.cli.installed_toast": "Installed. Open a new terminal window and run recall help.",
+  "settings.cli.uninstalled_toast": "The recall command was uninstalled.",
+  "settings.cli.error": "Could not change the recall command.",
+  "cli.unavailable.not_in_applications":
+    "Move Recall to your Applications folder and open it from there first. Recall is running from the disk image or a temporary copy, which goes away.",
+  "cli.unavailable.appimage":
+    "The AppImage runs from a temporary folder, so it can't provide a lasting recall command. Install the .deb or .rpm package to use it.",
+  "cli.unavailable.windows": "The recall command isn't available on Windows yet.",
+  "cli.unavailable.missing":
+    "The recall command-line tool was not found next to the app. Install a release build of Recall.",
+  "settings.claude.title": "Claude",
+  "settings.claude.description":
+    "Have Claude (the desktop app's Code tab) write a Harvest overview of your previous working day every weekday morning, following your AI export prompt above. Claude only gets the timeline from Recall's command-line tool, never your GitHub, Jira or Zulip credentials.",
+  "settings.claude.step_skill": "Add a skill that tells Claude how to use the recall command:",
+  "settings.claude.step_rule": "Let Claude run that command without asking, by adding",
+  "settings.claude.step_open":
+    "Open Claude with a request to schedule the task. Check it and press Enter to send it.",
+  "settings.claude.installed": "done",
+  "settings.claude.time_label": "Weekdays at",
+  "settings.claude.setup": "Set up with Claude",
+  "settings.claude.done": "Claude is open: send the prefilled message to create the task.",
+  "settings.claude.error": "Could not set up Claude.",
+  "settings.claude.note":
+    "Scheduled tasks only run while the Claude app is open and the computer is awake. A missed run happens the next time Claude starts.",
 
   "export.copy": "Copy to clipboard",
   "export.copying": "Preparing…",
@@ -428,23 +462,53 @@ const da: Translations = {
   "export.md_intro":
     "Eksporteret fra Recall, en personlig arbejdsregistrerings-app. Tidspunkter er lokale. Hvert punkt er én registreret aktivitet (commit, PR, kalenderbegivenhed, sagsopdatering, besked, …).",
   "export.md_no_activity": "Ingen registreret aktivitet.",
-  "export.prompt": `Spørg mig først, før du gør noget andet, om du også skal inddrage data fra andre kilder, du har adgang til (såsom chat-sessioner), og vent på mit svar, før du fortsætter.
-
-Opsummér derefter aktiviteten nedenfor som én tabel per dag med kolonnerne **Sag/projekt**, **Opgave**, **Timer** og **Begrundelse**. Oversigten bruges til at opdatere Harvest-tidsregistrering, så:
-- Når aktivitet kan knyttes til et Jira-sags-ID (f.eks. DDF-123, BUPL-123), så gruppér og mærk den efter det ID — sags-ID'et er det vigtigste for Harvest, så medtag det, når det kan bestemmes. Kig efter det i commit-beskeder, branch-navne, PR-titler og Jira-links, men gæt ikke.
-- Gruppér de resterende poster efter projekt (f.eks. DDF, BUPL).
-- Inddel arbejdet inden for hver sag eller hvert projekt i separate opgaver, så hver kan registreres som sin egen Harvest-post — saml ikke det hele under én overskrift.
-- Du må gerne kombinere rutineprægede, relaterede poster i én post (f.eks. en stak Dependabot-opdaterings-PR'er), men hold urelateret arbejde (såsom en feature) som sin egen post.
-- Estimér timerne for hver post i kvarte timer (0,25). Brug møders varighed fra kalenderen og tidsrummet mellem relaterede aktiviteter — de registrerede aktiviteter er kun spor af arbejdet, som også foregår imellem dem.
-- Forklar kort i **Begrundelse**, hvad estimatet bygger på, og markér det, hvis det er et løst gæt.
-- Afslut hver tabel med en række med dagens samlede timer.`,
+  "export.prompt": exportPrompts.da,
   "settings.export.title": "AI-eksport-prompt",
   "settings.export.description":
-    "Introteksten der sættes foran en Markdown-eksport, når “Tilføj en prompt-intro” er slået til. Lad den stå som standard for at følge appens sprog, eller skriv din egen. Gem et tomt felt for at falde tilbage til standarden.",
+    "Introteksten der sættes foran en Markdown-eksport, når “Tilføj en prompt-intro” er slået til. Claudes planlagte Harvest-overblik følger den også. Lad den stå som standard for at følge appens sprog, eller skriv din egen. Gem et tomt felt for at falde tilbage til standarden.",
   "settings.export.save": "Gem prompt",
   "settings.export.revert": "Nulstil til standard",
   "settings.export.saved": "Prompt gemt",
   "settings.export.error": "Kunne ikke gemme prompten.",
+
+  "settings.cli.title": "Kommandolinje",
+  "settings.cli.description":
+    "Kommandoen recall udskriver din tidslinje i en terminal, til scripts og AI-værktøjer som Claude. Kør recall help for at se hvordan.",
+  "settings.cli.install_hint": "Installér den, så en terminal kan finde den. Det opretter et link i",
+  "settings.cli.install": "Installér recall-kommandoen",
+  "settings.cli.update": "Peg den på denne kopi af Recall",
+  "settings.cli.uninstall": "Afinstallér recall-kommandoen",
+  "settings.cli.linked": "Kommandoen recall er installeret i",
+  "settings.cli.stale":
+    "Kommandoen recall peger på en anden kopi af Recall (måske en ældre, eller en du har flyttet).",
+  "settings.cli.foreign":
+    "findes allerede og hører til et andet program, så Recall rører den ikke. Du kan stadig køre kommandoen via dens fulde sti.",
+  "settings.cli.on_path": "Kommandoen recall blev installeret sammen med appen. Åbn en terminal, og kør recall help.",
+  "settings.cli.manual": "Link denne fil ind i en mappe på din PATH for at køre den som recall:",
+  "settings.cli.installed_toast": "Installeret. Åbn et nyt terminalvindue, og kør recall help.",
+  "settings.cli.uninstalled_toast": "Kommandoen recall blev afinstalleret.",
+  "settings.cli.error": "Kunne ikke ændre recall-kommandoen.",
+  "cli.unavailable.not_in_applications":
+    "Flyt Recall til din Programmer-mappe, og åbn den derfra først. Recall kører fra disk-imaget eller en midlertidig kopi, som forsvinder.",
+  "cli.unavailable.appimage":
+    "AppImage'et kører fra en midlertidig mappe, så det kan ikke give en varig recall-kommando. Installér .deb- eller .rpm-pakken for at bruge den.",
+  "cli.unavailable.windows": "Kommandoen recall er endnu ikke tilgængelig på Windows.",
+  "cli.unavailable.missing":
+    "Recalls kommandolinjeværktøj blev ikke fundet ved siden af appen. Installér en release-build af Recall.",
+  "settings.claude.title": "Claude",
+  "settings.claude.description":
+    "Lad Claude (desktop-appens Code-fane) skrive et Harvest-overblik over din forrige arbejdsdag hver hverdagsmorgen efter din AI-eksport-prompt ovenfor. Claude får kun tidslinjen fra Recalls kommandolinjeværktøj, aldrig dine GitHub-, Jira- eller Zulip-legitimationsoplysninger.",
+  "settings.claude.step_skill": "Tilføj en skill, der fortæller Claude, hvordan recall-kommandoen bruges:",
+  "settings.claude.step_rule": "Lad Claude køre kommandoen uden at spørge ved at tilføje",
+  "settings.claude.step_open":
+    "Åbn Claude med en anmodning om at planlægge opgaven. Tjek den, og tryk Enter for at sende den.",
+  "settings.claude.installed": "udført",
+  "settings.claude.time_label": "Hverdage kl.",
+  "settings.claude.setup": "Sæt op med Claude",
+  "settings.claude.done": "Claude er åben: send den udfyldte besked for at oprette opgaven.",
+  "settings.claude.error": "Kunne ikke sætte Claude op.",
+  "settings.claude.note":
+    "Planlagte opgaver kører kun, mens Claude-appen er åben og computeren er vågen. En mistet kørsel sker næste gang Claude starter.",
 
   "export.copy": "Kopiér til udklipsholder",
   "export.copying": "Forbereder…",

@@ -7,6 +7,8 @@
   import SettingsJira from "./Jira.svelte";
   import SettingsZulip from "./Zulip.svelte";
   import SettingsExport from "./Export.svelte";
+  import SettingsCommandLine from "./CommandLine.svelte";
+  import SettingsClaude from "./Claude.svelte";
   import SettingsSystem from "./System.svelte";
   import { navState } from "$lib/nav-state.svelte";
   import { t } from "$lib/i18n.svelte";
@@ -58,6 +60,8 @@
 
   <Tabs.Content value="export" class={contentClass}>
     <SettingsExport />
+    <SettingsCommandLine />
+    <SettingsClaude />
   </Tabs.Content>
 
   <Tabs.Content value="system" class={contentClass}>
