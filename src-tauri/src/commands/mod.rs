@@ -1,3 +1,5 @@
+pub mod claude_setup;
+pub mod cli_install;
 pub mod harvest_done;
 pub mod settings;
 pub mod settings_export;
